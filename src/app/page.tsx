@@ -22,9 +22,34 @@ export default function SuperFinanceHub() {
     setTimeout(() => setIsRefreshing(false), 1000);
   };
 
-  const assets = [
-    { name: "Bitcoin", symbol: "BTC", price: "74,550.00", change: "+5.2%", isUp: true, volume: "39.9B", cap: "1.49T" },
-    { name: "Ethereum", symbol: "ETH", price: "2,335.34", change: "-1.1%", isUp: false, volume: "17.4B", cap: "281.8B" },
+  const assetGroups = [
+    {
+      title: "Cryptocurrency",
+      assets: [
+        { name: "Bitcoin", symbol: "BTC", price: "74,654.00", change: "+1.2%", isUp: true, volume: "40.3B", cap: "1.49T" },
+        { name: "Ethereum", symbol: "ETH", price: "2,338.27", change: "-0.5%", isUp: false, volume: "17.6B", cap: "282.1B" },
+      ]
+    },
+    {
+      title: "Commodities",
+      assets: [
+        { name: "Gold", symbol: "GC=F", price: "4,564.30", change: "+0.1%", isUp: true, volume: "97.5K", cap: "-" },
+      ]
+    },
+    {
+      title: "ETFs",
+      assets: [
+        { name: "S&P 500 ETF", symbol: "SPY", price: "709.82", change: "+0.8%", isUp: true, volume: "15.7M", cap: "-" },
+        { name: "Invesco QQQ", symbol: "QQQ", price: "658.60", change: "+1.1%", isUp: true, volume: "14.8M", cap: "-" },
+      ]
+    },
+    {
+      title: "Real Estate (REITs)",
+      assets: [
+        { name: "Vanguard Real Estate", symbol: "VNQ", price: "95.12", change: "-0.2%", isUp: false, volume: "1.29M", cap: "-" },
+        { name: "Schwab US REIT", symbol: "SCHH", price: "23.11", change: "-0.1%", isUp: false, volume: "3.61M", cap: "-" },
+      ]
+    }
   ];
 
   return (
@@ -54,7 +79,7 @@ export default function SuperFinanceHub() {
       </div>
 
       {/* Main Dashboard Layout */}
-      <div className="relative z-10 max-w-6xl mx-auto p-8 pt-24">
+      <div className="relative z-10 max-w-6xl mx-auto p-8 pt-24 pb-32">
         
         {/* Header Section */}
         <div className="flex justify-between items-end mb-12">
@@ -78,58 +103,73 @@ export default function SuperFinanceHub() {
           </button>
         </div>
 
-        {/* Bento Grid layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {assets.map((asset, index) => (
-            <motion.div
-              key={asset.symbol}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="group relative bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[32px] p-8 overflow-hidden hover:border-white/20 transition-all duration-500 hover:-translate-y-1"
-            >
-              {/* Asset Header */}
-              <div className="flex justify-between items-center mb-8">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full border border-white/10 bg-gradient-to-br from-white/10 to-transparent flex items-center justify-center font-bold text-xl">
-                    {asset.symbol[0]}
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold tracking-tight">{asset.name}</h2>
-                    <p className="text-zinc-500 text-sm font-mono">{asset.symbol}/USD</p>
-                  </div>
-                </div>
-                
-                {/* Live Pulse Indicator */}
-                <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/5">
-                  <div className={`w-2 h-2 rounded-full ${asset.isUp ? "bg-emerald-500 shadow-[0_0_10px_#10b981]" : "bg-rose-500 shadow-[0_0_10px_#f43f5e]"} animate-pulse`} />
-                  <span className="text-xs font-mono text-zinc-400">LIVE</span>
-                </div>
-              </div>
+        {/* Asset Groups Layout */}
+        <div className="space-y-16">
+          {assetGroups.map((group, groupIndex) => (
+            <div key={group.title}>
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: groupIndex * 0.1 }}
+                className="mb-6 border-b border-white/10 pb-4"
+              >
+                <h2 className="text-2xl font-semibold tracking-tight text-white/90">{group.title}</h2>
+              </motion.div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {group.assets.map((asset, index) => (
+                  <motion.div
+                    key={asset.symbol}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: (groupIndex * 0.1) + (index * 0.1) }}
+                    className="group relative bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[32px] p-8 overflow-hidden hover:border-white/20 transition-all duration-500 hover:-translate-y-1"
+                  >
+                    {/* Asset Header */}
+                    <div className="flex justify-between items-center mb-8">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full border border-white/10 bg-gradient-to-br from-white/10 to-transparent flex items-center justify-center font-bold text-xl">
+                          {asset.symbol[0]}
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-semibold tracking-tight">{asset.name}</h2>
+                          <p className="text-zinc-500 text-sm font-mono">{asset.symbol}/USD</p>
+                        </div>
+                      </div>
+                      
+                      {/* Live Pulse Indicator */}
+                      <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/5">
+                        <div className={`w-2 h-2 rounded-full ${asset.isUp ? "bg-emerald-500 shadow-[0_0_10px_#10b981]" : "bg-rose-500 shadow-[0_0_10px_#f43f5e]"} animate-pulse`} />
+                        <span className="text-xs font-mono text-zinc-400">LIVE</span>
+                      </div>
+                    </div>
 
-              {/* Price & Metrics */}
-              <div>
-                <div className="flex items-end gap-4 mb-6">
-                  <span className="text-5xl font-mono tracking-tight">${asset.price}</span>
-                  <span className={`flex items-center gap-1 font-mono text-lg mb-1 ${asset.isUp ? "text-emerald-400" : "text-rose-400"}`}>
-                    {asset.isUp ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
-                    {asset.change}
-                  </span>
-                </div>
-                
-                {/* Sub-data grid */}
-                <div className="grid grid-cols-2 gap-4 pt-6 border-t border-white/5">
-                  <div>
-                    <p className="text-zinc-500 text-xs font-mono uppercase tracking-wider mb-1">24h Volume</p>
-                    <p className="font-mono text-zinc-300">${asset.volume}</p>
-                  </div>
-                  <div>
-                    <p className="text-zinc-500 text-xs font-mono uppercase tracking-wider mb-1">Market Cap</p>
-                    <p className="font-mono text-zinc-300">${asset.cap}</p>
-                  </div>
-                </div>
+                    {/* Price & Metrics */}
+                    <div>
+                      <div className="flex items-end gap-4 mb-6">
+                        <span className="text-5xl font-mono tracking-tight">${asset.price}</span>
+                        <span className={`flex items-center gap-1 font-mono text-lg mb-1 ${asset.isUp ? "text-emerald-400" : "text-rose-400"}`}>
+                          {asset.isUp ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+                          {asset.change}
+                        </span>
+                      </div>
+                      
+                      {/* Sub-data grid */}
+                      <div className="grid grid-cols-2 gap-4 pt-6 border-t border-white/5">
+                        <div>
+                          <p className="text-zinc-500 text-xs font-mono uppercase tracking-wider mb-1">24h Volume</p>
+                          <p className="font-mono text-zinc-300">{asset.volume === "-" ? "-" : `$${asset.volume}`}</p>
+                        </div>
+                        <div>
+                          <p className="text-zinc-500 text-xs font-mono uppercase tracking-wider mb-1">Market Cap</p>
+                          <p className="font-mono text-zinc-300">{asset.cap === "-" ? "-" : `$${asset.cap}`}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
         
