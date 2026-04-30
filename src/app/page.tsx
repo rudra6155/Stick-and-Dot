@@ -4,6 +4,63 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { RefreshCw, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 
+const generatePath = (data: number[], width: number, height: number) => {
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const padding = height * 0.15;
+  const usableHeight = height - padding * 2;
+  
+  return data.map((val, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = padding + usableHeight - ((val - min) / range) * usableHeight;
+    return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+  }).join(' ');
+};
+
+const Sparkline = ({ data, isUp, width = 100, height = 40 }: { data: number[], isUp: boolean, width?: number, height?: number }) => {
+  const color = isUp ? "#10b981" : "#f43f5e"; // emerald-500 or rose-500
+  const path = generatePath(data, width, height);
+  const filterId = `glow-${isUp ? 'up' : 'down'}`;
+
+  return (
+    <div style={{ width, height }} className="relative opacity-70 group-hover:opacity-100 transition-opacity duration-500">
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+        <defs>
+          <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+        
+        {/* Glow effect path */}
+        <motion.path
+          d={path}
+          fill="none"
+          stroke={color}
+          strokeWidth="2"
+          filter={`url(#${filterId})`}
+          className="opacity-40"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 0.4 }}
+          transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
+        />
+        
+        {/* Main sharp path */}
+        <motion.path
+          d={path}
+          fill="none"
+          stroke={color}
+          strokeWidth="2"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
+        />
+      </svg>
+    </div>
+  );
+};
+
 export default function SuperFinanceHub() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -26,28 +83,28 @@ export default function SuperFinanceHub() {
     {
       title: "Cryptocurrency",
       assets: [
-        { name: "Bitcoin", symbol: "BTC", price: "74,654.00", change: "+1.2%", isUp: true, volume: "40.3B", cap: "1.49T" },
-        { name: "Ethereum", symbol: "ETH", price: "2,338.27", change: "-0.5%", isUp: false, volume: "17.6B", cap: "282.1B" },
+        { name: "Bitcoin", symbol: "BTC", price: "74,654.00", change: "+1.2%", isUp: true, volume: "40.3B", cap: "1.49T", history: [71000, 70500, 72000, 71800, 73500, 74000, 74654] },
+        { name: "Ethereum", symbol: "ETH", price: "2,338.27", change: "-0.5%", isUp: false, volume: "17.6B", cap: "282.1B", history: [2400, 2450, 2420, 2390, 2350, 2340, 2338.27] },
       ]
     },
     {
       title: "Commodities",
       assets: [
-        { name: "Gold", symbol: "GC=F", price: "4,564.30", change: "+0.1%", isUp: true, volume: "97.5K", cap: "-" },
+        { name: "Gold", symbol: "GC=F", price: "4,564.30", change: "+0.1%", isUp: true, volume: "97.5K", cap: "-", history: [4500, 4520, 4510, 4540, 4530, 4550, 4564.30] },
       ]
     },
     {
       title: "ETFs",
       assets: [
-        { name: "S&P 500 ETF", symbol: "SPY", price: "709.82", change: "+0.8%", isUp: true, volume: "15.7M", cap: "-" },
-        { name: "Invesco QQQ", symbol: "QQQ", price: "658.60", change: "+1.1%", isUp: true, volume: "14.8M", cap: "-" },
+        { name: "S&P 500 ETF", symbol: "SPY", price: "709.82", change: "+0.8%", isUp: true, volume: "15.7M", cap: "-", history: [700, 698, 702, 701, 705, 708, 709.82] },
+        { name: "Invesco QQQ", symbol: "QQQ", price: "658.60", change: "+1.1%", isUp: true, volume: "14.8M", cap: "-", history: [640, 642, 648, 645, 650, 655, 658.60] },
       ]
     },
     {
       title: "Real Estate (REITs)",
       assets: [
-        { name: "Vanguard Real Estate", symbol: "VNQ", price: "95.12", change: "-0.2%", isUp: false, volume: "1.29M", cap: "-" },
-        { name: "Schwab US REIT", symbol: "SCHH", price: "23.11", change: "-0.1%", isUp: false, volume: "3.61M", cap: "-" },
+        { name: "Vanguard Real Estate", symbol: "VNQ", price: "95.12", change: "-0.2%", isUp: false, volume: "1.29M", cap: "-", history: [97, 96.5, 96, 95.8, 95.5, 95.3, 95.12] },
+        { name: "Schwab US REIT", symbol: "SCHH", price: "23.11", change: "-0.1%", isUp: false, volume: "3.61M", cap: "-", history: [23.5, 23.4, 23.6, 23.3, 23.2, 23.15, 23.11] },
       ]
     }
   ];
@@ -146,12 +203,17 @@ export default function SuperFinanceHub() {
 
                     {/* Price & Metrics */}
                     <div>
-                      <div className="flex items-end gap-4 mb-6">
-                        <span className="text-5xl font-mono tracking-tight">${asset.price}</span>
-                        <span className={`flex items-center gap-1 font-mono text-lg mb-1 ${asset.isUp ? "text-emerald-400" : "text-rose-400"}`}>
-                          {asset.isUp ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
-                          {asset.change}
-                        </span>
+                      <div className="flex justify-between items-end mb-6">
+                        <div className="flex items-end gap-4">
+                          <span className="text-5xl font-mono tracking-tight">${asset.price}</span>
+                          <span className={`flex items-center gap-1 font-mono text-lg mb-1 ${asset.isUp ? "text-emerald-400" : "text-rose-400"}`}>
+                            {asset.isUp ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+                            {asset.change}
+                          </span>
+                        </div>
+                        
+                        {/* 7-Day Sparkline Chart */}
+                        <Sparkline data={asset.history} isUp={asset.isUp} />
                       </div>
                       
                       {/* Sub-data grid */}
