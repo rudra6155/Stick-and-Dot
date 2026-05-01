@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RefreshCw, TrendingUp, TrendingDown, DollarSign, Search, ChevronDown, Activity, Filter } from "lucide-react";
+import { RefreshCw, TrendingUp, TrendingDown, DollarSign, Search, ChevronDown, Activity, Filter, Settings2, Check } from "lucide-react";
 import MagneticElement from "@/components/MagneticElement";
 import { fetchAllAssets } from "./actions";
 
@@ -64,6 +64,18 @@ const Sparkline = ({ data, isUp, width = 100, height = 40 }: { data: number[], i
   );
 };
 
+const AVAILABLE_METRICS = [
+  { id: "volume", label: "24h Volume" },
+  { id: "marketCap", label: "Market Cap" },
+  { id: "high52Week", label: "52w High" },
+  { id: "low52Week", label: "52w Low" },
+  { id: "peRatio", label: "P/E Ratio" },
+  { id: "dividendYield", label: "Div Yield" },
+  { id: "ma50Day", label: "50-day MA" },
+  { id: "ma200Day", label: "200-day MA" },
+  { id: "beta", label: "Beta" }
+];
+
 export default function SuperFinanceHub() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [assets, setAssets] = useState<any[]>([]);
@@ -73,6 +85,10 @@ export default function SuperFinanceHub() {
   const [activeClass, setActiveClass] = useState("All");
   const [sortBy, setSortBy] = useState("Name");
   const [isSortOpen, setIsSortOpen] = useState(false);
+  
+  // Metrics Toggle State
+  const [isMetricsOpen, setIsMetricsOpen] = useState(false);
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(["volume", "marketCap", "peRatio"]);
 
   const loadData = async () => {
     setIsRefreshing(true);
@@ -100,9 +116,35 @@ export default function SuperFinanceHub() {
   };
 
   const formatPrice = (num: number | undefined) => {
-    if (num === undefined) return "-";
+    if (num === undefined || num === 0) return "-";
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
   };
+  
+  const formatPercentage = (num: number | undefined) => {
+    if (num === undefined || num === 0) return "-";
+    return (num * 100).toFixed(2) + "%";
+  }
+  
+  const formatMetric = (id: string, asset: any) => {
+    switch(id) {
+      case "volume": return formatNumber(asset.volume);
+      case "marketCap": return formatNumber(asset.marketCap);
+      case "high52Week": return formatPrice(asset.high52Week);
+      case "low52Week": return formatPrice(asset.low52Week);
+      case "peRatio": return asset.peRatio ? asset.peRatio.toFixed(2) : "-";
+      case "dividendYield": return formatPercentage(asset.dividendYield);
+      case "ma50Day": return formatPrice(asset.ma50Day);
+      case "ma200Day": return formatPrice(asset.ma200Day);
+      case "beta": return asset.beta ? asset.beta.toFixed(2) : "-";
+      default: return "-";
+    }
+  }
+
+  const toggleMetric = (id: string) => {
+    setSelectedMetrics(prev => 
+      prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+    );
+  }
 
   // Compute Derived Data
   const filteredAssets = useMemo(() => {
@@ -200,10 +242,51 @@ export default function SuperFinanceHub() {
             ))}
           </div>
 
-          {/* Sort Dropdown */}
-          <div className="relative min-w-[200px]">
+          {/* Display Metrics Dropdown */}
+          <div className="relative min-w-[180px]">
             <button 
-              onClick={() => setIsSortOpen(!isSortOpen)}
+              onClick={() => { setIsMetricsOpen(!isMetricsOpen); setIsSortOpen(false); }}
+              className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-black/40 border border-white/5 hover:border-white/20 rounded-2xl transition-all"
+            >
+              <div className="flex items-center gap-2">
+                <Settings2 className="w-4 h-4 text-zinc-400" />
+                <span className="text-sm font-medium text-zinc-300">Metrics: <span className="text-white">{selectedMetrics.length}</span></span>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${isMetricsOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            <AnimatePresence>
+              {isMetricsOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute top-full mt-2 right-0 w-64 bg-[#111] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 p-2 grid grid-cols-2 gap-1"
+                >
+                  {AVAILABLE_METRICS.map(metric => {
+                    const isSelected = selectedMetrics.includes(metric.id);
+                    return (
+                      <button
+                        key={metric.id}
+                        onClick={() => toggleMetric(metric.id)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${isSelected ? "bg-emerald-500/10 text-emerald-400" : "hover:bg-white/5 text-zinc-400"}`}
+                      >
+                        <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors ${isSelected ? "border-emerald-500 bg-emerald-500/20" : "border-zinc-700"}`}>
+                          {isSelected && <Check size={10} className="text-emerald-400" />}
+                        </div>
+                        {metric.label}
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Sort Dropdown */}
+          <div className="relative min-w-[180px]">
+            <button 
+              onClick={() => { setIsSortOpen(!isSortOpen); setIsMetricsOpen(false); }}
               className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-black/40 border border-white/5 hover:border-white/20 rounded-2xl transition-all"
             >
               <div className="flex items-center gap-2">
@@ -291,17 +374,26 @@ export default function SuperFinanceHub() {
                     </div>
                   </div>
                   
-                  {/* Sub-data grid */}
-                  <div className="grid grid-cols-2 gap-4 pt-5 border-t border-white/10">
-                    <div>
-                      <p className="text-zinc-500 text-[10px] font-mono uppercase tracking-widest mb-1">24h Volume</p>
-                      <p className="font-mono text-sm text-zinc-300">{formatNumber(asset.volume)}</p>
-                    </div>
-                    <div>
-                      <p className="text-zinc-500 text-[10px] font-mono uppercase tracking-widest mb-1">Market Cap</p>
-                      <p className="font-mono text-sm text-zinc-300">{formatNumber(asset.marketCap)}</p>
-                    </div>
-                  </div>
+                  {/* Sub-data grid (Dynamic) */}
+                  {selectedMetrics.length > 0 && (
+                    <motion.div layout className="grid grid-cols-2 gap-4 pt-5 border-t border-white/10">
+                      <AnimatePresence>
+                        {AVAILABLE_METRICS.filter(m => selectedMetrics.includes(m.id)).map(metric => (
+                          <motion.div 
+                            layout
+                            key={metric.id}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <p className="text-zinc-500 text-[10px] font-mono uppercase tracking-widest mb-1">{metric.label}</p>
+                            <p className="font-mono text-sm text-zinc-300">{formatMetric(metric.id, asset)}</p>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </motion.div>
+                  )}
                 </div>
               </motion.div>
             ))}
