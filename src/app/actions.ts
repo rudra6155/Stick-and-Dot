@@ -3,8 +3,27 @@
 import fs from "fs";
 import path from "path";
 
-export async function fetchAllAssets() {
-  // Read static JSON file instead of querying SQLite
+export type Asset = {
+  id: string;
+  name: string;
+  symbol: string;
+  assetClass: string;
+  price: number;
+  volume: number;
+  marketCap: number;
+  high52Week: number;
+  low52Week: number;
+  peRatio: number;
+  dividendYield: number;
+  ma50Day: number;
+  ma200Day: number;
+  beta: number;
+  history: number[];
+  change: string;
+  isUp: boolean;
+};
+
+export async function fetchAllAssets(): Promise<Asset[]> {
   const jsonPath = path.join(process.cwd(), "src/data/marketData.json");
   const rawData = fs.readFileSync(jsonPath, "utf-8");
   const data = JSON.parse(rawData);
@@ -12,12 +31,25 @@ export async function fetchAllAssets() {
   const cryptoRows = data.crypto_assets || [];
   const traditionalRows = data.traditional_assets || [];
   
-  // Clean Data: filter out old rows missing the deep metrics
-  const validCryptoRows = cryptoRows.filter((row: any) => row.high_52_week !== null);
-  const validTraditionalRows = traditionalRows.filter((row: any) => row.high_52_week !== null);
+  // Deduplicate by highest id
+  const latestCrypto = new Map();
+  cryptoRows.forEach((row: any) => {
+    if (!latestCrypto.has(row.asset_name) || latestCrypto.get(row.asset_name).id < row.id) {
+      latestCrypto.set(row.asset_name, row);
+    }
+  });
+
+  const latestTraditional = new Map();
+  traditionalRows.forEach((row: any) => {
+    if (!latestTraditional.has(row.ticker) || latestTraditional.get(row.ticker).id < row.id) {
+      latestTraditional.set(row.ticker, row);
+    }
+  });
   
-  // Normalize data and create a flat array
-  const allAssets = [
+  const validCryptoRows = Array.from(latestCrypto.values()).filter((row: any) => row.high_52_week !== null);
+  const validTraditionalRows = Array.from(latestTraditional.values()).filter((row: any) => row.high_52_week !== null);
+  
+  const allAssets: Asset[] = [
     ...validCryptoRows.map((row: any) => ({
       id: `crypto_${row.id}`,
       name: row.asset_name,
@@ -33,20 +65,19 @@ export async function fetchAllAssets() {
       ma50Day: row.ma_50_day,
       ma200Day: row.ma_200_day,
       beta: row.beta,
-      // Mock history since it's not in the DB
       history: Array.from({ length: 7 }, () => row.price * (1 + (Math.random() * 0.1 - 0.05))),
       change: ((Math.random() * 4) - 2).toFixed(1) + "%",
       isUp: Math.random() > 0.5,
     })),
     ...validTraditionalRows.map((row: any) => {
       let assetClass = row.asset_class;
-      if (assetClass === 'Commodity') assetClass = 'Gold'; // Simplify based on prompt
+      if (assetClass === 'Commodity') assetClass = 'Gold';
       
       return {
         id: `trad_${row.id}`,
         name: row.ticker,
         symbol: row.ticker,
-        assetClass: assetClass === 'Commodity' ? 'Gold' : assetClass, // e.g. ETF, REIT
+        assetClass: assetClass === 'Commodity' ? 'Gold' : assetClass,
         price: row.price,
         volume: row.volume,
         marketCap: row.market_cap,
@@ -57,7 +88,6 @@ export async function fetchAllAssets() {
         ma50Day: row.ma_50_day,
         ma200Day: row.ma_200_day,
         beta: row.beta,
-        // Mock history
         history: Array.from({ length: 7 }, () => row.price * (1 + (Math.random() * 0.1 - 0.05))),
         change: ((Math.random() * 4) - 2).toFixed(1) + "%",
         isUp: Math.random() > 0.5,

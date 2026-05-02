@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RefreshCw, TrendingUp, TrendingDown, DollarSign, Search, ChevronDown, Activity, Filter, Settings2, Check } from "lucide-react";
 import MagneticElement from "@/components/MagneticElement";
-import { fetchAllAssets } from "./actions";
+import { fetchAllAssets, type Asset } from "./actions";
 
 // Generate sparkline path
 const generatePath = (data: number[], width: number, height: number) => {
@@ -76,14 +76,51 @@ const AVAILABLE_METRICS = [
   { id: "beta", label: "Beta" }
 ];
 
+const SkeletonCard = () => (
+  <div className="relative bg-white/5 backdrop-blur-md border border-white/10 rounded-[32px] p-6 overflow-hidden animate-pulse">
+    <div className="flex justify-between items-start mb-8">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-full bg-white/10"></div>
+        <div>
+          <div className="h-6 w-24 bg-white/10 rounded mb-2"></div>
+          <div className="flex items-center gap-2">
+            <div className="h-4 w-12 bg-white/10 rounded"></div>
+            <div className="h-4 w-16 bg-white/10 rounded"></div>
+          </div>
+        </div>
+      </div>
+      <div className="w-16 h-6 bg-white/10 rounded-full"></div>
+    </div>
+    <div>
+      <div className="flex justify-between items-end mb-6">
+        <div className="flex flex-col gap-2">
+          <div className="h-10 w-32 bg-white/10 rounded"></div>
+          <div className="h-5 w-16 bg-white/10 rounded"></div>
+        </div>
+        <div className="w-[120px] h-[40px] bg-white/5 rounded"></div>
+      </div>
+      <div className="grid grid-cols-2 gap-4 pt-5 border-t border-white/5">
+        <div>
+          <div className="h-3 w-20 bg-white/10 rounded mb-2"></div>
+          <div className="h-4 w-24 bg-white/10 rounded"></div>
+        </div>
+        <div>
+          <div className="h-3 w-20 bg-white/10 rounded mb-2"></div>
+          <div className="h-4 w-24 bg-white/10 rounded"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 export default function SuperFinanceHub() {
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [assets, setAssets] = useState<any[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(true);
+  const [assets, setAssets] = useState<Asset[]>([]);
   
   // Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [activeClass, setActiveClass] = useState("All");
-  const [sortBy, setSortBy] = useState("Name");
+  const [sortBy, setSortBy] = useState("Price");
   const [isSortOpen, setIsSortOpen] = useState(false);
   
   // Metrics Toggle State
@@ -125,7 +162,7 @@ export default function SuperFinanceHub() {
     return (num * 100).toFixed(2) + "%";
   }
   
-  const formatMetric = (id: string, asset: any) => {
+  const formatMetric = (id: string, asset: Asset) => {
     switch(id) {
       case "volume": return formatNumber(asset.volume);
       case "marketCap": return formatNumber(asset.marketCap);
@@ -152,20 +189,21 @@ export default function SuperFinanceHub() {
       const matchesSearch = asset.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                             asset.symbol.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesClass = activeClass === "All" || 
-                          (activeClass === "Gold" && asset.assetClass === "Commodity") ||
                           asset.assetClass === activeClass;
       return matchesSearch && matchesClass;
     }).sort((a, b) => {
+      if (sortBy === "Price") return (b.price || 0) - (a.price || 0);
       if (sortBy === "Market Cap") return (b.marketCap || 0) - (a.marketCap || 0);
-      if (sortBy === "Highest Volume") return (b.volume || 0) - (a.volume || 0);
-      if (sortBy === "Top Gainers") return parseFloat(b.change) - parseFloat(a.change);
-      // Default to Name
+      if (sortBy === "Volume") return (b.volume || 0) - (a.volume || 0);
+      if (sortBy === "P/E") return (b.peRatio || 0) - (a.peRatio || 0);
+      if (sortBy === "Dividend Yield") return (b.dividendYield || 0) - (a.dividendYield || 0);
+      // Default
       return a.name.localeCompare(b.name);
     });
   }, [assets, searchQuery, activeClass, sortBy]);
 
   const assetClasses = ["All", "Crypto", "Gold", "ETF", "REIT"];
-  const sortOptions = ["Name", "Market Cap", "Highest Volume", "Top Gainers"];
+  const sortOptions = ["Price", "Market Cap", "Volume", "P/E", "Dividend Yield"];
 
   return (
     <div className="relative min-h-screen bg-black text-white overflow-hidden font-sans selection:bg-emerald-500/30">
@@ -324,80 +362,86 @@ export default function SuperFinanceHub() {
           layout
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          <AnimatePresence mode="popLayout">
-            {filteredAssets.map((asset, index) => (
-              <motion.div
-                layout
-                key={asset.id}
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
-                className="group relative bg-gradient-to-b from-white/[0.08] to-transparent backdrop-blur-3xl border border-white/10 rounded-[32px] p-6 overflow-hidden hover:border-white/30 hover:shadow-[0_0_40px_rgba(16,185,129,0.1)] transition-all duration-500 cursor-none"
-              >
-                {/* Asset Header */}
-                <div className="flex justify-between items-start mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full border border-white/20 bg-black/50 shadow-inner flex items-center justify-center font-bold text-xl text-white group-hover:scale-110 transition-transform duration-500">
-                      {asset.symbol[0]}
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold tracking-tight text-white/90 group-hover:text-white transition-colors">{asset.name}</h2>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-mono text-zinc-400 uppercase tracking-wider">{asset.assetClass}</span>
-                        <p className="text-zinc-500 text-xs font-mono">{asset.symbol}/USD</p>
+          {assets.length === 0 && isRefreshing ? (
+            <>
+              {[1, 2, 3, 4, 5, 6].map((i) => <SkeletonCard key={i} />)}
+            </>
+          ) : (
+            <AnimatePresence mode="popLayout">
+              {filteredAssets.map((asset, index) => (
+                <motion.div
+                  layout
+                  key={asset.id}
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                  transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
+                  className="group relative bg-gradient-to-b from-white/[0.08] to-transparent backdrop-blur-3xl border border-white/10 rounded-[32px] p-6 overflow-hidden hover:border-white/30 hover:shadow-[0_0_40px_rgba(16,185,129,0.1)] transition-all duration-500 cursor-none"
+                >
+                  {/* Asset Header */}
+                  <div className="flex justify-between items-start mb-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full border border-white/20 bg-black/50 shadow-inner flex items-center justify-center font-bold text-xl text-white group-hover:scale-110 transition-transform duration-500">
+                        {asset.symbol[0]}
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold tracking-tight text-white/90 group-hover:text-white transition-colors">{asset.name}</h2>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-mono text-zinc-400 uppercase tracking-wider">{asset.assetClass}</span>
+                          <p className="text-zinc-500 text-xs font-mono">{asset.symbol}/USD</p>
+                        </div>
                       </div>
                     </div>
+                    
+                    {/* Live Pulse Indicator */}
+                    <div className="flex items-center gap-2 px-2.5 py-1 bg-black/40 rounded-full border border-white/5">
+                      <div className={`w-1.5 h-1.5 rounded-full ${asset.isUp ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"} animate-pulse`} />
+                      <span className="text-[10px] font-mono text-zinc-400">LIVE</span>
+                    </div>
                   </div>
-                  
-                  {/* Live Pulse Indicator */}
-                  <div className="flex items-center gap-2 px-2.5 py-1 bg-black/40 rounded-full border border-white/5">
-                    <div className={`w-1.5 h-1.5 rounded-full ${asset.isUp ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"} animate-pulse`} />
-                    <span className="text-[10px] font-mono text-zinc-400">LIVE</span>
-                  </div>
-                </div>
 
-                {/* Price & Metrics */}
-                <div>
-                  <div className="flex justify-between items-end mb-6 relative">
-                    <div className="flex flex-col gap-1 z-10">
-                      <span className="text-4xl font-light font-mono tracking-tighter">{formatPrice(asset.price)}</span>
-                      <span className={`flex items-center gap-1 font-mono text-sm font-medium ${asset.isUp ? "text-emerald-400" : "text-rose-400"}`}>
-                        {asset.isUp ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-                        {asset.change}
-                      </span>
+                  {/* Price & Metrics */}
+                  <div>
+                    <div className="flex justify-between items-end mb-6 relative">
+                      <div className="flex flex-col gap-1 z-10">
+                        <span className="text-4xl font-light font-mono tracking-tighter">{formatPrice(asset.price)}</span>
+                        <span className={`flex items-center gap-1 font-mono text-sm font-medium ${asset.isUp ? "text-emerald-400" : "text-rose-400"}`}>
+                          {asset.isUp ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                          {asset.change}
+                        </span>
+                      </div>
+                      
+                      {/* 7-Day Sparkline Chart */}
+                      <div className="absolute right-0 bottom-0 opacity-80 group-hover:opacity-100 transition-opacity">
+                        <Sparkline data={asset.history} isUp={asset.isUp} width={120} height={40} />
+                      </div>
                     </div>
                     
-                    {/* 7-Day Sparkline Chart */}
-                    <div className="absolute right-0 bottom-0 opacity-80 group-hover:opacity-100 transition-opacity">
-                      <Sparkline data={asset.history} isUp={asset.isUp} width={120} height={40} />
-                    </div>
+                    {/* Sub-data grid (Dynamic) */}
+                    {selectedMetrics.length > 0 && (
+                      <motion.div layout className="grid grid-cols-2 gap-4 pt-5 border-t border-white/10">
+                        <AnimatePresence>
+                          {AVAILABLE_METRICS.filter(m => selectedMetrics.includes(m.id)).map(metric => (
+                            <motion.div 
+                              layout
+                              key={metric.id}
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.8 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <p className="text-zinc-500 text-[10px] font-mono uppercase tracking-widest mb-1">{metric.label}</p>
+                              <p className="font-mono text-sm text-zinc-300">{formatMetric(metric.id, asset)}</p>
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </motion.div>
+                    )}
                   </div>
-                  
-                  {/* Sub-data grid (Dynamic) */}
-                  {selectedMetrics.length > 0 && (
-                    <motion.div layout className="grid grid-cols-2 gap-4 pt-5 border-t border-white/10">
-                      <AnimatePresence>
-                        {AVAILABLE_METRICS.filter(m => selectedMetrics.includes(m.id)).map(metric => (
-                          <motion.div 
-                            layout
-                            key={metric.id}
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <p className="text-zinc-500 text-[10px] font-mono uppercase tracking-widest mb-1">{metric.label}</p>
-                            <p className="font-mono text-sm text-zinc-300">{formatMetric(metric.id, asset)}</p>
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    </motion.div>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
 
           {/* Empty State */}
           {filteredAssets.length === 0 && !isRefreshing && (
