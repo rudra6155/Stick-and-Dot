@@ -12,9 +12,13 @@ export async function fetchAllAssets() {
   const cryptoRows = data.crypto_assets || [];
   const traditionalRows = data.traditional_assets || [];
   
-  // Normalize data
-  const assets = [
-    ...cryptoRows.map((row: any) => ({
+  // Clean Data: filter out old rows missing the deep metrics
+  const validCryptoRows = cryptoRows.filter((row: any) => row.high_52_week !== null);
+  const validTraditionalRows = traditionalRows.filter((row: any) => row.high_52_week !== null);
+  
+  // Normalize data and create a flat array
+  const allAssets = [
+    ...validCryptoRows.map((row: any) => ({
       id: `crypto_${row.id}`,
       name: row.asset_name,
       symbol: row.asset_name === 'Bitcoin' ? 'BTC' : row.asset_name === 'Ethereum' ? 'ETH' : row.asset_name,
@@ -34,7 +38,7 @@ export async function fetchAllAssets() {
       change: ((Math.random() * 4) - 2).toFixed(1) + "%",
       isUp: Math.random() > 0.5,
     })),
-    ...traditionalRows.map((row: any) => {
+    ...validTraditionalRows.map((row: any) => {
       let assetClass = row.asset_class;
       if (assetClass === 'Commodity') assetClass = 'Gold'; // Simplify based on prompt
       
@@ -61,5 +65,5 @@ export async function fetchAllAssets() {
     })
   ];
   
-  return assets;
+  return allAssets;
 }
