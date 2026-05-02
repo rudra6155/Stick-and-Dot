@@ -1,7 +1,6 @@
 "use server";
 
-import fs from "fs";
-import path from "path";
+import marketData from '@/data/marketData.json';
 
 export type Asset = {
   id: string;
@@ -24,12 +23,8 @@ export type Asset = {
 };
 
 export async function fetchAllAssets(): Promise<Asset[]> {
-  const jsonPath = path.join(process.cwd(), "src/data/marketData.json");
-  const rawData = fs.readFileSync(jsonPath, "utf-8");
-  const data = JSON.parse(rawData);
-  
-  const cryptoRows = data.crypto_assets || [];
-  const traditionalRows = data.traditional_assets || [];
+  const cryptoRows = marketData.crypto_assets || [];
+  const traditionalRows = marketData.traditional_assets || [];
   
   // Deduplicate by highest id
   const latestCrypto = new Map();
