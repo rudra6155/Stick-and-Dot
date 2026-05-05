@@ -196,11 +196,13 @@ export default function SuperFinanceHub() {
   const sortOptions = ["Price", "Market Cap", "Volume", "P/E", "Dividend Yield"];
 
   return (
-    <div className="relative min-h-screen bg-black text-white font-sans selection:bg-emerald-500/30 overflow-x-hidden">
+    <div className="relative min-h-screen bg-black text-white font-sans selection:bg-emerald-500/30">
       
       {/* Global Backgrounds */}
       <div className="fixed inset-0 pointer-events-none z-0 bg-gradient-to-b from-[#000000] to-[#050508]" />
-      <DollarParticles />
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <DollarParticles />
+      </div>
 
       {/* Ticker Tape */}
       <div className="fixed top-0 left-0 w-full z-50">
@@ -214,7 +216,7 @@ export default function SuperFinanceHub() {
       >
         <HeroParticles />
         <div className="relative z-10 flex flex-col items-center pointer-events-none">
-          <h1 className="text-[12vw] md:text-8xl lg:text-9xl font-black tracking-tighter leading-none bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent text-center mb-6">
+          <h1 className="text-3xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-none bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent text-center mb-6">
             <AnimatedText text="THE MARKET." />
             <AnimatedText text="UNFILTERED." delayOffset={0.3} />
           </h1>
@@ -222,12 +224,12 @@ export default function SuperFinanceHub() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1, duration: 1 }}
-            className="text-zinc-400 font-mono text-sm md:text-base tracking-widest uppercase mb-20 text-center px-4"
+            className="text-zinc-400 font-mono text-sm tracking-widest uppercase mb-12 md:mb-20 text-center px-4"
           >
             You're in the driver's seat. 250 assets. Zero opinions.
           </motion.p>
 
-          <div className="flex gap-12 md:gap-24 opacity-80">
+          <div className="flex flex-col md:flex-row gap-8 md:gap-24 opacity-80">
             <AnimatedStat value={250} label="Assets" suffix="+" />
             <AnimatedStat value={10} label="Asset Classes" />
             <AnimatedStat value={100} label="Live Data" suffix="%" />
@@ -272,12 +274,12 @@ export default function SuperFinanceHub() {
             />
           </div>
 
-          <div className="flex gap-2 overflow-x-auto hide-scrollbar items-center pb-1 lg:pb-0 relative">
+          <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory hide-scrollbar items-center pb-1 lg:pb-0 relative w-full lg:w-auto">
             {assetClasses.map(cls => (
               <button
                 key={cls}
                 onClick={() => setActiveClass(cls)}
-                className={`relative px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all group ${activeClass === cls ? "text-black" : "text-zinc-400 hover:scale-105"}`}
+                className={`relative px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all group snap-start ${activeClass === cls ? "text-black" : "text-zinc-400 hover:scale-105"}`}
               >
                 {activeClass === cls && (
                   <motion.div 
@@ -292,8 +294,8 @@ export default function SuperFinanceHub() {
             ))}
           </div>
 
-          <div className="flex gap-2">
-            <div className="relative min-w-[140px]">
+          <div className="flex flex-col md:flex-row gap-2 w-full lg:w-auto">
+            <div className="relative w-full md:min-w-[140px]">
               <button 
                 onClick={() => { setIsMetricsOpen(!isMetricsOpen); setIsSortOpen(false); }}
                 className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white/5 border border-white/5 hover:border-white/20 rounded-2xl transition-all"
@@ -311,7 +313,7 @@ export default function SuperFinanceHub() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute top-full mt-2 right-0 w-64 bg-[#111] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 p-2 grid grid-cols-2 gap-1"
+                    className="absolute top-full mt-2 right-0 w-full md:w-64 bg-[#111] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 p-2 grid grid-cols-2 gap-1"
                   >
                     {AVAILABLE_METRICS.map(metric => {
                       const isSelected = selectedMetrics.includes(metric.id);
@@ -333,7 +335,7 @@ export default function SuperFinanceHub() {
               </AnimatePresence>
             </div>
 
-            <div className="relative min-w-[140px]">
+            <div className="relative w-full md:min-w-[140px]">
               <button 
                 onClick={() => { setIsSortOpen(!isSortOpen); setIsMetricsOpen(false); }}
                 className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white/5 border border-white/5 hover:border-white/20 rounded-2xl transition-all"
@@ -351,7 +353,7 @@ export default function SuperFinanceHub() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute top-full mt-2 right-0 w-48 bg-[#111] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50"
+                    className="absolute top-full mt-2 right-0 w-full md:w-48 bg-[#111] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50"
                   >
                     {sortOptions.map(opt => (
                       <button
@@ -412,6 +414,9 @@ export default function SuperFinanceHub() {
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .animate-ticker { animation: ticker 40s linear infinite; }
+        @media (max-width: 768px) {
+          .animate-ticker { animation-duration: 66s; }
+        }
       `}} />
     </div>
   );
@@ -428,10 +433,13 @@ function LiveClock() {
   return <div>{time} UTC</div>;
 }
 
+import { useCursor } from "@/components/CustomCursor";
+
 function AssetCard({ asset, index, selectedMetrics, formatNumber }: any) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const { setCursorState } = useCursor();
 
   const getMetric = (id: string) => {
     switch(id) {
@@ -456,9 +464,15 @@ function AssetCard({ asset, index, selectedMetrics, formatNumber }: any) {
         const rect = cardRef.current.getBoundingClientRect();
         setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
       }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="group relative bg-white/[0.04] backdrop-blur-md border border-white/10 rounded-3xl p-6 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/30 hover:shadow-[0_20px_60px_rgba(16,185,129,0.08)] will-change-transform cursor-crosshair"
+      onMouseEnter={() => {
+        setIsHovered(true);
+        setCursorState(asset.isUp ? 'profit' : 'loss');
+      }}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        setCursorState('default');
+      }}
+      className="group relative bg-zinc-950/90 md:bg-white/[0.04] md:backdrop-blur-md border border-white/10 rounded-3xl p-6 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/30 hover:shadow-[0_20px_60px_rgba(16,185,129,0.08)] will-change-transform"
     >
       {/* Spotlight */}
       <div 

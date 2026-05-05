@@ -72,7 +72,8 @@ export default function HeroParticles() {
       }
     }
 
-    for (let i = 0; i < 80; i++) {
+    const particleCount = window.innerWidth < 768 ? 20 : 80;
+    for (let i = 0; i < particleCount; i++) {
       particles.push(new Particle());
     }
 

@@ -1,5 +1,19 @@
+"use client";
+
 import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
+
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) setMatches(media.matches);
+    const listener = () => setMatches(media.matches);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, [matches, query]);
+  return matches;
+}
 
 const generatePath = (data: number[], width: number, height: number) => {
   const min = Math.min(...data);
@@ -23,6 +37,7 @@ const generateAreaPath = (data: number[], width: number, height: number) => {
 export default function Sparkline({ data, isUp, width = 100, height = 40 }: { data: number[], isUp: boolean, width?: number, height?: number }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "0px" });
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   const color = isUp ? "#10b981" : "#f43f5e"; // emerald-500 or rose-500
   // Handle case where range is 0 or data is missing
@@ -65,7 +80,7 @@ export default function Sparkline({ data, isUp, width = 100, height = 40 }: { da
             strokeWidth="2"
             filter={`url(#${filterId})`}
             className="opacity-40"
-            initial={{ pathLength: 0, opacity: 0 }}
+            initial={{ pathLength: isMobile ? 1 : 0, opacity: 0 }}
             animate={{ pathLength: 1, opacity: 0.4 }}
             transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
           />
@@ -78,7 +93,7 @@ export default function Sparkline({ data, isUp, width = 100, height = 40 }: { da
             fill="none"
             stroke={color}
             strokeWidth="2"
-            initial={{ pathLength: 0 }}
+            initial={{ pathLength: isMobile ? 1 : 0 }}
             animate={{ pathLength: 1 }}
             transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
           />

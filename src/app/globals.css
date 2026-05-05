@@ -13,3 +13,7 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
+
+@media (hover: none) {
+  body { cursor: auto; }
+}
