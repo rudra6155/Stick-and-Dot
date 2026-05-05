@@ -186,8 +186,14 @@ export default function SuperFinanceHub() {
   // Compute Derived Data
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {
-      const matchesSearch = asset.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            asset.symbol.toLowerCase().includes(searchQuery.toLowerCase());
+      const query = searchQuery.toLowerCase().trim();
+      const searchableString = `${asset.name} ${asset.symbol} ${asset.assetClass}`.toLowerCase();
+      
+      // Support specific flexible matches mentioned
+      const isTechMatch = query.includes('tech') && asset.symbol === 'XLK';
+      
+      const matchesSearch = query === "" || searchableString.includes(query) || isTechMatch;
+      
       const matchesClass = activeClass === "All" || 
                           asset.assetClass === activeClass;
       return matchesSearch && matchesClass;

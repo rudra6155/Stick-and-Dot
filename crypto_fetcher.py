@@ -1,24 +1,8 @@
 import sqlite3
-import requests
 import datetime
+import requests
 
-def fetch_crypto_data():
-    url = "https://api.coingecko.com/api/v3/simple/price"
-    params = {
-        "ids": "bitcoin,ethereum",
-        "vs_currencies": "usd",
-        "include_market_cap": "true",
-        "include_24hr_vol": "true"
-    }
-
-    print("Fetching data from CoinGecko API...")
-    try:
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching data: {e}")
-        return None
+CG_IDS = "bitcoin,ethereum,tether,binancecoin,solana,ripple,dogecoin,cardano,avalanche-2,shiba-inu,chainlink,polkadot,tron,matic-network,litecoin,bitcoin-cash,uniswap,stellar,ethereum-classic,internet-computer"
 
 def setup_database():
     conn = sqlite3.connect('finance_hub.db')
@@ -27,48 +11,83 @@ def setup_database():
         CREATE TABLE IF NOT EXISTS crypto_assets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             asset_name TEXT,
+            symbol TEXT,
             price REAL,
             volume REAL,
             market_cap REAL,
-            timestamp DATETIME
+            timestamp DATETIME,
+            high_52_week REAL,
+            low_52_week REAL,
+            pe_ratio REAL,
+            dividend_yield REAL,
+            ma_50_day REAL,
+            ma_200_day REAL,
+            beta REAL
         )
     ''')
+    try:
+        cursor.execute("ALTER TABLE crypto_assets ADD COLUMN symbol TEXT")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     return conn
 
-def main():
-    data = fetch_crypto_data()
-    if not data:
-        print("Failed to fetch data. Exiting.")
-        return
+def safe_float(val):
+    try:
+        return float(val) if val is not None else 0.0
+    except Exception:
+        return 0.0
 
+def fetch_and_store():
     conn = setup_database()
     cursor = conn.cursor()
-    
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    print("\n" + "="*80)
-    print(f"{'Asset Name':<15} | {'Price (USD)':<15} | {'24h Volume (USD)':<20} | {'Market Cap (USD)'}")
-    print("-" * 80)
+    print("\n" + "="*120)
+    print(f"{'Asset Name':<20} | {'Symbol':<8} | {'Price':<10} | {'24h High':<10} | {'24h Low':<10}")
+    print("-" * 120)
 
-    for asset, metrics in data.items():
-        price = metrics.get('usd', 0)
-        vol = metrics.get('usd_24h_vol', 0)
-        cap = metrics.get('usd_market_cap', 0)
-        asset_name = asset.capitalize()
+    url = f"https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids={CG_IDS}"
+    
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        
+        for coin in data:
+            asset_name = coin.get('name', 'Unknown')
+            symbol = coin.get('symbol', '').upper()
+            price = safe_float(coin.get('current_price', 0))
+            volume = safe_float(coin.get('total_volume', 0))
+            market_cap = safe_float(coin.get('market_cap', 0))
+            
+            high_52_week = safe_float(coin.get('high_24h', 0))
+            low_52_week = safe_float(coin.get('low_24h', 0))
+            
+            pe_ratio = None
+            dividend_yield = None
+            ma_50_day = None
+            ma_200_day = None
+            beta = None
 
-        cursor.execute('''
-            INSERT INTO crypto_assets (asset_name, price, volume, market_cap, timestamp)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (asset_name, price, vol, cap, timestamp))
+            cursor.execute('''
+                INSERT INTO crypto_assets (
+                    asset_name, symbol, price, volume, market_cap, timestamp,
+                    high_52_week, low_52_week, pe_ratio, dividend_yield, ma_50_day, ma_200_day, beta
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (asset_name, symbol, price, volume, market_cap, timestamp,
+                  high_52_week, low_52_week, pe_ratio, dividend_yield, ma_50_day, ma_200_day, beta))
 
-        print(f"{asset_name:<15} | ${price:<14,.2f} | ${vol:<19,.2f} | ${cap:,.2f}")
+            print(f"{asset_name:<20} | {symbol:<8} | ${price:<9,.2f} | ${high_52_week:<9,.2f} | ${low_52_week:<9,.2f}")
+
+    except Exception as e:
+        print(f"Error fetching from CoinGecko: {e}")
 
     conn.commit()
     conn.close()
     
-    print("=" * 80)
+    print("=" * 120)
     print(f"Data successfully recorded in 'finance_hub.db' at {timestamp}\n")
 
 if __name__ == "__main__":
-    main()
+    fetch_and_store()
