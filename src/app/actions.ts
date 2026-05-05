@@ -41,49 +41,50 @@ export async function fetchAllAssets(): Promise<Asset[]> {
     }
   });
   
-  const validCryptoRows = Array.from(latestCrypto.values()).filter((row: any) => row.high_52_week !== null);
-  const validTraditionalRows = Array.from(latestTraditional.values()).filter((row: any) => row.high_52_week !== null);
+  const validCryptoRows = Array.from(latestCrypto.values());
+  const validTraditionalRows = Array.from(latestTraditional.values());
   
   const allAssets: Asset[] = [
     ...validCryptoRows.map((row: any) => ({
       id: `crypto_${row.id}`,
       name: row.asset_name,
-      symbol: row.asset_name === 'Bitcoin' ? 'BTC' : row.asset_name === 'Ethereum' ? 'ETH' : row.asset_name,
+      symbol: row.symbol || row.asset_name,
       assetClass: 'Crypto',
-      price: row.price,
-      volume: row.volume,
-      marketCap: row.market_cap,
-      high52Week: row.high_52_week,
-      low52Week: row.low_52_week,
-      peRatio: row.pe_ratio,
-      dividendYield: row.dividend_yield,
-      ma50Day: row.ma_50_day,
-      ma200Day: row.ma_200_day,
-      beta: row.beta,
-      history: Array.from({ length: 7 }, () => row.price * (1 + (Math.random() * 0.1 - 0.05))),
+      price: row.price || 0,
+      volume: row.volume || 0,
+      marketCap: row.market_cap || 0,
+      high52Week: row.high_52_week || 0,
+      low52Week: row.low_52_week || 0,
+      peRatio: row.pe_ratio || 0,
+      dividendYield: row.dividend_yield || 0,
+      ma50Day: row.ma_50_day || 0,
+      ma200Day: row.ma_200_day || 0,
+      beta: row.beta || 0,
+      history: Array.from({ length: 7 }, () => (row.price || 0) * (1 + (Math.random() * 0.1 - 0.05))),
       change: ((Math.random() * 4) - 2).toFixed(1) + "%",
       isUp: Math.random() > 0.5,
     })),
     ...validTraditionalRows.map((row: any) => {
       let assetClass = row.asset_class;
-      if (assetClass === 'Commodity') assetClass = 'Gold';
+      if (assetClass === 'Commodity' && row.ticker === 'GC=F') assetClass = 'Gold';
+      if (assetClass === 'US Tech' || assetClass === 'US Blue Chip') assetClass = 'Stock';
       
       return {
         id: `trad_${row.id}`,
         name: row.ticker,
         symbol: row.ticker,
-        assetClass: assetClass === 'Commodity' ? 'Gold' : assetClass,
-        price: row.price,
-        volume: row.volume,
-        marketCap: row.market_cap,
-        high52Week: row.high_52_week,
-        low52Week: row.low_52_week,
-        peRatio: row.pe_ratio,
-        dividendYield: row.dividend_yield,
-        ma50Day: row.ma_50_day,
-        ma200Day: row.ma_200_day,
-        beta: row.beta,
-        history: Array.from({ length: 7 }, () => row.price * (1 + (Math.random() * 0.1 - 0.05))),
+        assetClass: assetClass,
+        price: row.price || 0,
+        volume: row.volume || 0,
+        marketCap: row.market_cap || 0,
+        high52Week: row.high_52_week || 0,
+        low52Week: row.low_52_week || 0,
+        peRatio: row.pe_ratio || 0,
+        dividendYield: row.dividend_yield || 0,
+        ma50Day: row.ma_50_day || 0,
+        ma200Day: row.ma_200_day || 0,
+        beta: row.beta || 0,
+        history: Array.from({ length: 7 }, () => (row.price || 0) * (1 + (Math.random() * 0.1 - 0.05))),
         change: ((Math.random() * 4) - 2).toFixed(1) + "%",
         isUp: Math.random() > 0.5,
       };

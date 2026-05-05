@@ -2,32 +2,44 @@ import yfinance as yf
 import sqlite3
 import datetime
 
-# Assets: Stocks, ETFs, REITs, Commodities, Bonds, Indian Stocks
+# Assets: Expanded traditional categories
 ASSETS = {
-    "Stock": {
-        "tickers": ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "BRK-B", "JPM", "V", "UNH", "XOM", "JNJ", "WMT", "MA", "PG", "HD", "ORCL", "COST", "BAC"],
-        "class": "Stock"
-    },
-    "ETF": {
-        "tickers": ["SPY", "QQQ", "VTI", "VOO", "IWM", "DIA", "GLD", "SLV", "XLK", "XLF", "XLE", "XLV", "ARKK", "XLI"],
-        "class": "ETF"
-    },
-    "REIT": {
-        "tickers": ["VNQ", "SCHH", "O", "AMT", "PLD", "EQIX", "SPG", "PSA", "DLR", "CCI"],
-        "class": "REIT"
-    },
-    "Commodity": {
-        "tickers": ["GC=F", "SI=F", "CL=F", "BZ=F", "NG=F", "HG=F", "ZW=F", "ZC=F", "PL=F", "PA=F"],
-        "class": "Commodity"
-    },
-    "Bond": {
-        "tickers": ["TLT", "IEF", "HYG", "LQD", "BND"],
-        "class": "Bond"
-    },
-    "Indian Stock": {
-        "tickers": ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", "HINDUNILVR.NS", "SBIN.NS", "BAJFINANCE.NS", "ADANIENT.NS", "WIPRO.NS"],
-        "class": "Indian Stock"
-    }
+  "US Tech": {
+    "tickers": ["AAPL","MSFT","NVDA","GOOGL","AMZN","META","TSLA","ORCL","AMD","INTC","CRM","ADBE","NFLX","QCOM","NOW","UBER","SNOW","PLTR","SHOP","NET","RBLX","SPOT","ZM","DOCU","CRWD"],
+    "class": "Stock"
+  },
+  "US Blue Chip": {
+    "tickers": ["BRK-B","JPM","V","MA","UNH","JNJ","WMT","PG","HD","BAC","XOM","CVX","KO","PEP","MCD","DIS","NKE","GS","MS","AXP","LLY","ABT","TMO","DHR","CAT"],
+    "class": "Stock"
+  },
+  "Broad ETF": {
+    "tickers": ["SPY","QQQ","VTI","VOO","IWM","DIA","VEA","VWO","EFA","EEM","IEMG","SCHB","ITOT","SPDW","VT","VXUS","GLD","SLV","IAU","GLDM"],
+    "class": "ETF"
+  },
+  "Sector ETF": {
+    "tickers": ["XLK","XLF","XLE","XLV","XLI","XLB","XLU","XLP","XLRE","XLC","ARKK","ARKG","ARKW","IBB","VGT","SOXX","HACK","BOTZ","FINX","BLOK"],
+    "class": "ETF"
+  },
+  "REIT": {
+    "tickers": ["VNQ","SCHH","O","AMT","PLD","EQIX","SPG","PSA","DLR","CCI","AVB","EQR","WELL","BXP","KIM","REG","NNN","STAG","MPW","WPC","ARE","EXR","LSI","IRM","SBAC"],
+    "class": "REIT"
+  },
+  "Commodity": {
+    "tickers": ["GC=F","SI=F","CL=F","BZ=F","NG=F","HG=F","ZW=F","ZC=F","PL=F","PA=F","ZS=F","KC=F","CT=F","LB=F","OJ=F","RB=F","HO=F","ZO=F","ZR=F","GF=F","LE=F","HE=F","ALI=F","MNQ=F","RTY=F"],
+    "class": "Commodity"
+  },
+  "Bond": {
+    "tickers": ["TLT","IEF","HYG","LQD","BND","SHY","VGIT","VCIT","VCLT","AGG","MUB","TIP","STIP","VTIP","BNDX","USHY","ANGL","EMHY","FALN","SPSB"],
+    "class": "Bond"
+  },
+  "Indian Stock": {
+    "tickers": ["RELIANCE.NS","TCS.NS","HDFCBANK.NS","INFY.NS","ICICIBANK.NS","HINDUNILVR.NS","SBIN.NS","BAJFINANCE.NS","ADANIENT.NS","WIPRO.NS","KOTAKBANK.NS","LT.NS","AXISBANK.NS","ASIANPAINT.NS","MARUTI.NS","TITAN.NS","SUNPHARMA.NS","ULTRACEMCO.NS","NESTLEIND.NS","POWERGRID.NS","NTPC.NS","ONGC.NS","TATAMOTORS.NS","TATASTEEL.NS","TECHM.NS"],
+    "class": "Indian Stock"
+  },
+  "International": {
+    "tickers": ["TSM","BABA","ASML","TM","SONY","SAP","BHP","SHOP","NVO","RDS-A","TD","RY","SNE","BIDU","JD","PDD","SE","GRAB","TCEHY","BYDDF","NTE","UL","BP","HSBC","AZN"],
+    "class": "International"
+  }
 }
 
 def setup_database():

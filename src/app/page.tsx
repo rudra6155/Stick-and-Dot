@@ -1,131 +1,140 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { RefreshCw, TrendingUp, TrendingDown, DollarSign, Search, ChevronDown, Activity, Filter, Settings2, Check } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
+import { Search, ChevronDown, Activity, Filter, Settings2, Check, ArrowDown } from "lucide-react";
 import MagneticElement from "@/components/MagneticElement";
 import { fetchAllAssets, type Asset } from "./actions";
+import dynamic from 'next/dynamic';
+import { useCountUp } from "@/hooks/useCountUp";
+import Sparkline from "@/components/Sparkline";
 
-// Generate sparkline path
-const generatePath = (data: number[], width: number, height: number) => {
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-  const padding = height * 0.15;
-  const usableHeight = height - padding * 2;
-  
-  return data.map((val, i) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = padding + usableHeight - ((val - min) / range) * usableHeight;
-    return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-  }).join(' ');
+const DollarParticles = dynamic(() => import('@/components/DollarParticles'), { ssr: false });
+const HeroParticles = dynamic(() => import('@/components/HeroParticles'), { ssr: false });
+const StatsSection = dynamic(() => import('@/components/StatsSection'), { ssr: false });
+
+const classIcons: Record<string, string> = {
+  Crypto: "◈",
+  Stock: "▸",
+  ETF: "◎",
+  REIT: "▣",
+  Commodity: "◆",
+  Bond: "≡",
+  "Indian Stock": "₹",
+  International: "⊕"
 };
 
-const Sparkline = ({ data, isUp, width = 100, height = 40 }: { data: number[], isUp: boolean, width?: number, height?: number }) => {
-  const color = isUp ? "#10b981" : "#f43f5e"; // emerald-500 or rose-500
-  const path = generatePath(data, width, height);
-  const filterId = `glow-${isUp ? 'up' : 'down'}`;
-
-  return (
-    <div style={{ width, height }} className="relative opacity-70 group-hover:opacity-100 transition-opacity duration-500">
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
-        <defs>
-          <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-        </defs>
-        
-        {/* Glow effect path */}
-        <motion.path
-          d={path}
-          fill="none"
-          stroke={color}
-          strokeWidth="2"
-          filter={`url(#${filterId})`}
-          className="opacity-40"
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 0.4 }}
-          transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
-        />
-        
-        {/* Main sharp path */}
-        <motion.path
-          d={path}
-          fill="none"
-          stroke={color}
-          strokeWidth="2"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
-        />
-      </svg>
-    </div>
-  );
+const classColors: Record<string, string> = {
+  Crypto: "bg-violet-500/10 text-violet-400 border-violet-500/20",
+  Stock: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+  ETF: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  REIT: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  Commodity: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+  Bond: "bg-slate-500/10 text-slate-400 border-slate-500/20",
+  "Indian Stock": "bg-orange-500/10 text-orange-400 border-orange-500/20",
+  International: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  Gold: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
 };
 
 const AVAILABLE_METRICS = [
   { id: "volume", label: "24h Volume" },
   { id: "marketCap", label: "Market Cap" },
-  { id: "high52Week", label: "52w High" },
-  { id: "low52Week", label: "52w Low" },
   { id: "peRatio", label: "P/E Ratio" },
-  { id: "dividendYield", label: "Div Yield" },
-  { id: "ma50Day", label: "50-day MA" },
-  { id: "ma200Day", label: "200-day MA" },
-  { id: "beta", label: "Beta" }
+  { id: "dividendYield", label: "Div Yield" }
 ];
 
-const SkeletonCard = () => (
-  <div className="relative bg-white/5 backdrop-blur-md border border-white/10 rounded-[32px] p-6 overflow-hidden animate-pulse">
-    <div className="flex justify-between items-start mb-8">
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-white/10"></div>
-        <div>
-          <div className="h-6 w-24 bg-white/10 rounded mb-2"></div>
-          <div className="flex items-center gap-2">
-            <div className="h-4 w-12 bg-white/10 rounded"></div>
-            <div className="h-4 w-16 bg-white/10 rounded"></div>
+const AnimatedText = ({ text, delayOffset = 0 }: { text: string, delayOffset?: number }) => {
+  return (
+    <div className="flex">
+      {text.split('').map((char, i) => (
+        <motion.span
+          key={i}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: delayOffset + i * 0.03 }}
+        >
+          {char === ' ' ? '\u00A0' : char}
+        </motion.span>
+      ))}
+    </div>
+  );
+};
+
+const AnimatedPrice = ({ price }: { price: number }) => {
+  const displayPrice = useCountUp(price, 800);
+  return <>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(displayPrice)}</>;
+};
+
+const AnimatedStat = ({ value, label, suffix = "" }: { value: number, label: string, suffix?: string }) => {
+  const displayValue = useCountUp(value, 1500);
+  return (
+    <div className="flex flex-col items-center">
+      <div className="text-4xl md:text-5xl font-mono text-emerald-400 font-bold tracking-tighter">
+        {Math.floor(displayValue)}{suffix}
+      </div>
+      <div className="text-zinc-500 font-mono text-xs uppercase tracking-widest mt-2">{label}</div>
+    </div>
+  );
+};
+
+const TickerTape = ({ assets }: { assets: Asset[] }) => {
+  const tapeAssets = assets.slice(0, 30);
+  if (tapeAssets.length === 0) return null;
+  return (
+    <div className="w-full overflow-hidden bg-black/40 border-b border-white/5 py-2 relative z-50 backdrop-blur-md">
+      <div className="animate-ticker whitespace-nowrap flex items-center font-mono text-xs tracking-wider text-zinc-400">
+        {tapeAssets.map((asset, i) => (
+          <div key={i} className="inline-flex items-center gap-2 mx-6">
+            <span className="text-white font-bold">{asset.symbol}</span>
+            <span>${asset.price?.toFixed(2) || '0.00'}</span>
+            <span className={asset.isUp ? "text-emerald-500" : "text-rose-500"}>
+              {asset.isUp ? '▲' : '▼'}{asset.change.replace('-','')}
+            </span>
+            <span className="text-zinc-700 mx-2">·</span>
           </div>
-        </div>
-      </div>
-      <div className="w-16 h-6 bg-white/10 rounded-full"></div>
-    </div>
-    <div>
-      <div className="flex justify-between items-end mb-6">
-        <div className="flex flex-col gap-2">
-          <div className="h-10 w-32 bg-white/10 rounded"></div>
-          <div className="h-5 w-16 bg-white/10 rounded"></div>
-        </div>
-        <div className="w-[120px] h-[40px] bg-white/5 rounded"></div>
-      </div>
-      <div className="grid grid-cols-2 gap-4 pt-5 border-t border-white/5">
-        <div>
-          <div className="h-3 w-20 bg-white/10 rounded mb-2"></div>
-          <div className="h-4 w-24 bg-white/10 rounded"></div>
-        </div>
-        <div>
-          <div className="h-3 w-20 bg-white/10 rounded mb-2"></div>
-          <div className="h-4 w-24 bg-white/10 rounded"></div>
-        </div>
+        ))}
+        {tapeAssets.map((asset, i) => (
+          <div key={`dup-${i}`} className="inline-flex items-center gap-2 mx-6">
+            <span className="text-white font-bold">{asset.symbol}</span>
+            <span>${asset.price?.toFixed(2) || '0.00'}</span>
+            <span className={asset.isUp ? "text-emerald-500" : "text-rose-500"}>
+              {asset.isUp ? '▲' : '▼'}{asset.change.replace('-','')}
+            </span>
+            <span className="text-zinc-700 mx-2">·</span>
+          </div>
+        ))}
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default function SuperFinanceHub() {
   const [isRefreshing, setIsRefreshing] = useState(true);
   const [assets, setAssets] = useState<Asset[]>([]);
   
-  // Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [activeClass, setActiveClass] = useState("All");
   const [sortBy, setSortBy] = useState("Price");
   const [isSortOpen, setIsSortOpen] = useState(false);
-  
-  // Metrics Toggle State
   const [isMetricsOpen, setIsMetricsOpen] = useState(false);
-  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(["volume", "marketCap", "peRatio"]);
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(["volume", "marketCap"]);
+
+  const [scanlineText, setScanlineText] = useState("");
+  const placeholder = "Search tickers, assets...";
+
+  const { scrollY } = useScroll();
+  const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
+  const heroScale = useTransform(scrollY, [0, 400], [1, 0.95]);
+
+  useEffect(() => {
+    let i = 0;
+    const timer = setInterval(() => {
+      setScanlineText(placeholder.substring(0, i));
+      i++;
+      if (i > placeholder.length) clearInterval(timer);
+    }, 50);
+    return () => clearInterval(timer);
+  }, []);
 
   const loadData = async () => {
     setIsRefreshing(true);
@@ -144,37 +153,17 @@ export default function SuperFinanceHub() {
   }, []);
 
   const formatNumber = (num: number | undefined) => {
-    if (num === undefined || num === 0) return "-";
-    if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
-    if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
-    if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
-    if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
-    return num.toFixed(2);
-  };
-
-  const formatPrice = (num: number | undefined) => {
-    if (num === undefined || num === 0) return "-";
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+    if (num === undefined || num === 0) return "—";
+    if (num >= 1e12) return "$" + (num / 1e12).toFixed(2) + "T";
+    if (num >= 1e9) return "$" + (num / 1e9).toFixed(2) + "B";
+    if (num >= 1e6) return "$" + (num / 1e6).toFixed(2) + "M";
+    if (num >= 1e3) return "$" + (num / 1e3).toFixed(2) + "K";
+    return "$" + num.toFixed(2);
   };
   
   const formatPercentage = (num: number | undefined) => {
-    if (num === undefined || num === 0) return "-";
+    if (num === undefined || num === 0) return "—";
     return (num * 100).toFixed(2) + "%";
-  }
-  
-  const formatMetric = (id: string, asset: Asset) => {
-    switch(id) {
-      case "volume": return formatNumber(asset.volume);
-      case "marketCap": return formatNumber(asset.marketCap);
-      case "high52Week": return formatPrice(asset.high52Week);
-      case "low52Week": return formatPrice(asset.low52Week);
-      case "peRatio": return asset.peRatio ? asset.peRatio.toFixed(2) : "-";
-      case "dividendYield": return formatPercentage(asset.dividendYield);
-      case "ma50Day": return formatPrice(asset.ma50Day);
-      case "ma200Day": return formatPrice(asset.ma200Day);
-      case "beta": return asset.beta ? asset.beta.toFixed(2) : "-";
-      default: return "-";
-    }
   }
 
   const toggleMetric = (id: string) => {
@@ -183,19 +172,15 @@ export default function SuperFinanceHub() {
     );
   }
 
-  // Compute Derived Data
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {
       const query = searchQuery.toLowerCase().trim();
       const searchableString = `${asset.name} ${asset.symbol} ${asset.assetClass}`.toLowerCase();
       
-      // Support specific flexible matches mentioned
       const isTechMatch = query.includes('tech') && asset.symbol === 'XLK';
-      
       const matchesSearch = query === "" || searchableString.includes(query) || isTechMatch;
       
-      const matchesClass = activeClass === "All" || 
-                          asset.assetClass === activeClass;
+      const matchesClass = activeClass === "All" || asset.assetClass === activeClass;
       return matchesSearch && matchesClass;
     }).sort((a, b) => {
       if (sortBy === "Price") return (b.price || 0) - (a.price || 0);
@@ -203,274 +188,340 @@ export default function SuperFinanceHub() {
       if (sortBy === "Volume") return (b.volume || 0) - (a.volume || 0);
       if (sortBy === "P/E") return (b.peRatio || 0) - (a.peRatio || 0);
       if (sortBy === "Dividend Yield") return (b.dividendYield || 0) - (a.dividendYield || 0);
-      // Default
       return a.name.localeCompare(b.name);
     });
   }, [assets, searchQuery, activeClass, sortBy]);
 
-  const assetClasses = ["All", "Crypto", "Gold", "ETF", "REIT"];
+  const assetClasses = ["All", "Crypto", "Stock", "ETF", "REIT", "Commodity", "Gold", "Bond", "Indian Stock", "International"];
   const sortOptions = ["Price", "Market Cap", "Volume", "P/E", "Dividend Yield"];
 
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden font-sans selection:bg-emerald-500/30">
+    <div className="relative min-h-screen bg-black text-white font-sans selection:bg-emerald-500/30 overflow-x-hidden">
+      
+      {/* Global Backgrounds */}
+      <div className="fixed inset-0 pointer-events-none z-0 bg-gradient-to-b from-[#000000] to-[#050508]" />
+      <DollarParticles />
 
-      {/* Floating Money/Data Particles */}
-      <div className="absolute inset-0 z-0 overflow-hidden opacity-20 pointer-events-none fixed">
-        {[...Array(15)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute text-emerald-500/20"
-            initial={{ y: "100vh", x: Math.random() * 100 + "vw", scale: Math.random() * 0.5 + 0.5 }}
-            animate={{ y: "-10vh" }}
-            transition={{ duration: Math.random() * 10 + 10, repeat: Infinity, ease: "linear" }}
-          >
-            <DollarSign size={48} />
-          </motion.div>
-        ))}
+      {/* Ticker Tape */}
+      <div className="fixed top-0 left-0 w-full z-50">
+        <TickerTape assets={assets} />
       </div>
 
-      {/* Main Dashboard Layout */}
-      <div className="relative z-10 max-w-7xl mx-auto p-4 md:p-8 pt-12 md:pt-24 pb-32">
-        
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 md:mb-12 gap-6">
-          <div>
-            <motion.h1 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-4xl md:text-5xl font-bold tracking-tighter bg-gradient-to-br from-white to-white/40 bg-clip-text text-transparent"
-            >
-              Super Finance Hub
-            </motion.h1>
-            <p className="text-zinc-500 mt-2 font-mono text-sm tracking-widest uppercase flex items-center gap-2">
-              <Activity size={14} className="text-emerald-500" /> Aggregated Market Terminal
-            </p>
+      {/* Hero Section */}
+      <motion.div 
+        style={{ opacity: heroOpacity, scale: heroScale }}
+        className="relative w-full h-screen flex flex-col items-center justify-center pt-20 z-10"
+      >
+        <HeroParticles />
+        <div className="relative z-10 flex flex-col items-center pointer-events-none">
+          <h1 className="text-[12vw] md:text-8xl lg:text-9xl font-black tracking-tighter leading-none bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent text-center mb-6">
+            <AnimatedText text="THE MARKET." />
+            <AnimatedText text="UNFILTERED." delayOffset={0.3} />
+          </h1>
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1, duration: 1 }}
+            className="text-zinc-400 font-mono text-sm md:text-base tracking-widest uppercase mb-20 text-center px-4"
+          >
+            You're in the driver's seat. 250 assets. Zero opinions.
+          </motion.p>
+
+          <div className="flex gap-12 md:gap-24 opacity-80">
+            <AnimatedStat value={250} label="Assets" suffix="+" />
+            <AnimatedStat value={10} label="Asset Classes" />
+            <AnimatedStat value={100} label="Live Data" suffix="%" />
           </div>
-          
-          <MagneticElement>
-            <button 
-              onClick={loadData}
-              className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full backdrop-blur-md transition-all active:scale-95 cursor-none group"
-            >
-              <RefreshCw className={`w-4 h-4 text-zinc-400 group-hover:text-white transition-colors ${isRefreshing ? "animate-spin text-emerald-400" : ""}`} />
-              <span className="text-sm font-medium">Sync Data</span>
-            </button>
-          </MagneticElement>
         </div>
 
-        {/* Control Panel (The Driver's Seat) */}
-        <div className="sticky top-4 z-50 mb-12 flex flex-col lg:flex-row gap-4 p-4 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 2, duration: 1 }}
+          className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 text-zinc-500 pointer-events-none"
+        >
+          <span className="font-mono text-[10px] tracking-widest uppercase">Scroll to explore</span>
+          <div className="w-[1px] h-12 bg-white/10 relative overflow-hidden">
+            <motion.div 
+              initial={{ y: "-100%" }}
+              animate={{ y: "100%" }}
+              transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+              className="absolute inset-0 bg-emerald-500"
+            />
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Stats Scroll Section */}
+      <StatsSection />
+
+      {/* Dashboard Section */}
+      <div className="relative z-20 max-w-[1600px] mx-auto px-4 md:px-8 py-24 min-h-screen bg-black/50 backdrop-blur-3xl border-t border-white/5">
+        
+        {/* Sticky Control Bar */}
+        <div className="sticky top-16 z-50 mb-12 flex flex-col lg:flex-row gap-4 p-4 bg-[#0a0a0c]/80 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
           
-          {/* Search Bar */}
           <div className="relative flex-1 group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-emerald-400 transition-colors" />
             <input 
               type="text" 
-              placeholder="Search tickers, assets..." 
+              placeholder={scanlineText}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-black/40 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono text-sm"
+              className="w-full bg-white/5 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 focus:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all font-mono text-sm"
             />
           </div>
 
-          {/* Asset Class Toggles */}
-          <div className="flex gap-2 overflow-x-auto hide-scrollbar items-center pb-1 lg:pb-0">
+          <div className="flex gap-2 overflow-x-auto hide-scrollbar items-center pb-1 lg:pb-0 relative">
             {assetClasses.map(cls => (
               <button
                 key={cls}
                 onClick={() => setActiveClass(cls)}
-                className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${activeClass === cls ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]" : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white border border-white/5"}`}
+                className={`relative px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all group ${activeClass === cls ? "text-black" : "text-zinc-400 hover:scale-105"}`}
               >
-                {cls}
+                {activeClass === cls && (
+                  <motion.div 
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-white rounded-full shadow-[0_0_30px_rgba(255,255,255,0.25)]"
+                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  />
+                )}
+                <span className="relative z-10">{cls}</span>
+                {activeClass !== cls && <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-[2px] bg-emerald-500/50 group-hover:w-1/2 transition-all duration-300 rounded-full" />}
               </button>
             ))}
           </div>
 
-          {/* Display Metrics Dropdown */}
-          <div className="relative min-w-[180px]">
-            <button 
-              onClick={() => { setIsMetricsOpen(!isMetricsOpen); setIsSortOpen(false); }}
-              className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-black/40 border border-white/5 hover:border-white/20 rounded-2xl transition-all"
-            >
-              <div className="flex items-center gap-2">
-                <Settings2 className="w-4 h-4 text-zinc-400" />
-                <span className="text-sm font-medium text-zinc-300">Metrics: <span className="text-white">{selectedMetrics.length}</span></span>
-              </div>
-              <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${isMetricsOpen ? "rotate-180" : ""}`} />
-            </button>
+          <div className="flex gap-2">
+            <div className="relative min-w-[140px]">
+              <button 
+                onClick={() => { setIsMetricsOpen(!isMetricsOpen); setIsSortOpen(false); }}
+                className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white/5 border border-white/5 hover:border-white/20 rounded-2xl transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  <Settings2 className="w-4 h-4 text-zinc-400" />
+                  <span className="text-sm font-medium text-zinc-300">Metrics</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${isMetricsOpen ? "rotate-180" : ""}`} />
+              </button>
 
-            <AnimatePresence>
-              {isMetricsOpen && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute top-full mt-2 right-0 w-64 bg-[#111] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 p-2 grid grid-cols-2 gap-1"
-                >
-                  {AVAILABLE_METRICS.map(metric => {
-                    const isSelected = selectedMetrics.includes(metric.id);
-                    return (
+              <AnimatePresence>
+                {isMetricsOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-full mt-2 right-0 w-64 bg-[#111] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 p-2 grid grid-cols-2 gap-1"
+                  >
+                    {AVAILABLE_METRICS.map(metric => {
+                      const isSelected = selectedMetrics.includes(metric.id);
+                      return (
+                        <button
+                          key={metric.id}
+                          onClick={() => toggleMetric(metric.id)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${isSelected ? "bg-emerald-500/10 text-emerald-400" : "hover:bg-white/5 text-zinc-400"}`}
+                        >
+                          <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors ${isSelected ? "border-emerald-500 bg-emerald-500/20" : "border-zinc-700"}`}>
+                            {isSelected && <Check size={10} className="text-emerald-400" />}
+                          </div>
+                          {metric.label}
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="relative min-w-[140px]">
+              <button 
+                onClick={() => { setIsSortOpen(!isSortOpen); setIsMetricsOpen(false); }}
+                className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white/5 border border-white/5 hover:border-white/20 rounded-2xl transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-zinc-400" />
+                  <span className="text-sm font-medium text-zinc-300">{sortBy}</span>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${isSortOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              <AnimatePresence>
+                {isSortOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-full mt-2 right-0 w-48 bg-[#111] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50"
+                  >
+                    {sortOptions.map(opt => (
                       <button
-                        key={metric.id}
-                        onClick={() => toggleMetric(metric.id)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${isSelected ? "bg-emerald-500/10 text-emerald-400" : "hover:bg-white/5 text-zinc-400"}`}
+                        key={opt}
+                        onClick={() => { setSortBy(opt); setIsSortOpen(false); }}
+                        className={`w-full text-left px-4 py-3 text-sm transition-colors ${sortBy === opt ? "bg-white/10 text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"}`}
                       >
-                        <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors ${isSelected ? "border-emerald-500 bg-emerald-500/20" : "border-zinc-700"}`}>
-                          {isSelected && <Check size={10} className="text-emerald-400" />}
-                        </div>
-                        {metric.label}
+                        {opt}
                       </button>
-                    );
-                  })}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Sort Dropdown */}
-          <div className="relative min-w-[180px]">
-            <button 
-              onClick={() => { setIsSortOpen(!isSortOpen); setIsMetricsOpen(false); }}
-              className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-black/40 border border-white/5 hover:border-white/20 rounded-2xl transition-all"
-            >
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-zinc-400" />
-                <span className="text-sm font-medium text-zinc-300">Sort: <span className="text-white">{sortBy}</span></span>
-              </div>
-              <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${isSortOpen ? "rotate-180" : ""}`} />
-            </button>
-
-            <AnimatePresence>
-              {isSortOpen && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute top-full mt-2 w-full bg-[#111] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50"
-                >
-                  {sortOptions.map(opt => (
-                    <button
-                      key={opt}
-                      onClick={() => { setSortBy(opt); setIsSortOpen(false); }}
-                      className={`w-full text-left px-4 py-3 text-sm transition-colors ${sortBy === opt ? "bg-white/10 text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"}`}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
 
         {/* Asset Cards Grid */}
         <motion.div 
           layout
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 relative z-10"
         >
           {assets.length === 0 && isRefreshing ? (
-            <>
-              {[1, 2, 3, 4, 5, 6].map((i) => <SkeletonCard key={i} />)}
-            </>
+             <div className="col-span-full py-20 flex flex-col items-center justify-center text-center">
+              <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4" />
+              <p className="font-mono text-zinc-500 uppercase tracking-widest text-sm">Loading Market Data...</p>
+             </div>
           ) : (
             <AnimatePresence mode="popLayout">
               {filteredAssets.map((asset, index) => (
-                <motion.div
-                  layout
-                  key={asset.id}
-                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                  transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
-                  className="group relative bg-gradient-to-b from-white/[0.08] to-transparent backdrop-blur-3xl border border-white/10 rounded-[32px] p-6 overflow-hidden hover:border-white/30 hover:shadow-[0_0_40px_rgba(16,185,129,0.1)] transition-all duration-500 cursor-none"
-                >
-                  {/* Asset Header */}
-                  <div className="flex justify-between items-start mb-8">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full border border-white/20 bg-black/50 shadow-inner flex items-center justify-center font-bold text-xl text-white group-hover:scale-110 transition-transform duration-500">
-                        {asset.symbol[0]}
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold tracking-tight text-white/90 group-hover:text-white transition-colors">{asset.name}</h2>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-mono text-zinc-400 uppercase tracking-wider">{asset.assetClass}</span>
-                          <p className="text-zinc-500 text-xs font-mono">{asset.symbol}/USD</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Live Pulse Indicator */}
-                    <div className="flex items-center gap-2 px-2.5 py-1 bg-black/40 rounded-full border border-white/5">
-                      <div className={`w-1.5 h-1.5 rounded-full ${asset.isUp ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"} animate-pulse`} />
-                      <span className="text-[10px] font-mono text-zinc-400">LIVE</span>
-                    </div>
-                  </div>
-
-                  {/* Price & Metrics */}
-                  <div>
-                    <div className="flex justify-between items-end mb-6 relative">
-                      <div className="flex flex-col gap-1 z-10">
-                        <span className="text-4xl font-light font-mono tracking-tighter">{formatPrice(asset.price)}</span>
-                        <span className={`flex items-center gap-1 font-mono text-sm font-medium ${asset.isUp ? "text-emerald-400" : "text-rose-400"}`}>
-                          {asset.isUp ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-                          {asset.change}
-                        </span>
-                      </div>
-                      
-                      {/* 7-Day Sparkline Chart */}
-                      <div className="absolute right-0 bottom-0 opacity-80 group-hover:opacity-100 transition-opacity">
-                        <Sparkline data={asset.history} isUp={asset.isUp} width={120} height={40} />
-                      </div>
-                    </div>
-                    
-                    {/* Sub-data grid (Dynamic) */}
-                    {selectedMetrics.length > 0 && (
-                      <motion.div layout className="grid grid-cols-2 gap-4 pt-5 border-t border-white/10">
-                        <AnimatePresence>
-                          {AVAILABLE_METRICS.filter(m => selectedMetrics.includes(m.id)).map(metric => (
-                            <motion.div 
-                              layout
-                              key={metric.id}
-                              initial={{ opacity: 0, scale: 0.8 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.8 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <p className="text-zinc-500 text-[10px] font-mono uppercase tracking-widest mb-1">{metric.label}</p>
-                              <p className="font-mono text-sm text-zinc-300">{formatMetric(metric.id, asset)}</p>
-                            </motion.div>
-                          ))}
-                        </AnimatePresence>
-                      </motion.div>
-                    )}
-                  </div>
-                </motion.div>
+                <AssetCard key={asset.id} asset={asset} index={index} selectedMetrics={selectedMetrics} formatNumber={formatNumber} />
               ))}
             </AnimatePresence>
           )}
 
-          {/* Empty State */}
           {filteredAssets.length === 0 && !isRefreshing && (
-            <div className="col-span-full py-20 flex flex-col items-center justify-center text-center opacity-50">
-              <Search className="w-12 h-12 text-zinc-500 mb-4" />
-              <p className="text-xl font-medium text-white">No assets found</p>
-              <p className="text-zinc-400 mt-2">Try adjusting your search or filters.</p>
+            <div className="col-span-full py-32 flex flex-col items-center justify-center text-center opacity-50">
+              <Search className="w-16 h-16 text-zinc-600 mb-6" />
+              <p className="text-2xl font-light text-white tracking-tight">No assets found</p>
+              <p className="text-zinc-500 mt-2 font-mono text-sm">Try adjusting your filters.</p>
             </div>
           )}
         </motion.div>
       </div>
 
-      {/* CSS for hide-scrollbar */}
+      {/* Footer */}
+      <footer className="relative z-20 bg-[#020202] border-t border-white/10 pt-1 pb-8 px-8">
+        <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent mb-8" />
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-mono text-zinc-600 uppercase tracking-widest">
+          <div className="font-bold text-white/50">Super Finance Hub</div>
+          <div>Sources: CoinGecko · Yahoo Finance · NSE</div>
+          <LiveClock />
+        </div>
+      </footer>
+
       <style dangerouslySetInnerHTML={{__html: `
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .animate-ticker { animation: ticker 40s linear infinite; }
       `}} />
     </div>
   );
 }
 
+function LiveClock() {
+  const [time, setTime] = useState("");
+  useEffect(() => {
+    const update = () => setTime(new Date().toLocaleTimeString('en-US', { hour12: false }));
+    update();
+    const int = setInterval(update, 1000);
+    return () => clearInterval(int);
+  }, []);
+  return <div>{time} UTC</div>;
+}
+
+function AssetCard({ asset, index, selectedMetrics, formatNumber }: any) {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const getMetric = (id: string) => {
+    switch(id) {
+      case "volume": return formatNumber(asset.volume);
+      case "marketCap": return formatNumber(asset.marketCap);
+      case "peRatio": return asset.peRatio ? asset.peRatio.toFixed(2) : "—";
+      case "dividendYield": return asset.dividendYield ? (asset.dividendYield * 100).toFixed(2) + "%" : "—";
+      default: return "—";
+    }
+  };
+
+  return (
+    <motion.div
+      ref={cardRef}
+      layout
+      initial={{ y: 40, opacity: 0, scale: 0.95 }}
+      animate={{ y: 0, opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ type: "spring", stiffness: 300, damping: 25, delay: Math.min(index * 0.06, 0.5) }}
+      onMouseMove={(e) => {
+        if (!cardRef.current) return;
+        const rect = cardRef.current.getBoundingClientRect();
+        setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="group relative bg-white/[0.04] backdrop-blur-md border border-white/10 rounded-3xl p-6 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/30 hover:shadow-[0_20px_60px_rgba(16,185,129,0.08)] will-change-transform cursor-crosshair"
+    >
+      {/* Spotlight */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        style={{
+          background: `radial-gradient(circle 200px at ${mousePosition.x}px ${mousePosition.y}px, rgba(16, 185, 129, 0.08), transparent)`
+        }}
+      />
+
+      {/* Header */}
+      <div className="flex justify-between items-start mb-6 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-black/50 border border-white/10 flex items-center justify-center text-lg text-white group-hover:scale-110 transition-transform duration-500">
+            {classIcons[asset.assetClass] || "◈"}
+          </div>
+          <div>
+            <h2 className="text-lg font-bold tracking-tight text-white/90 truncate max-w-[140px]">{asset.name}</h2>
+            <div className="text-zinc-500 text-xs font-mono">{asset.symbol}/USD</div>
+          </div>
+        </div>
+        
+        <div className="flex flex-col items-end gap-2">
+          <span className={`px-2 py-0.5 rounded-md text-[9px] font-mono uppercase tracking-wider ${classColors[asset.assetClass] || classColors["Stock"]}`}>
+            {asset.assetClass}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <div className={`w-1.5 h-1.5 rounded-full ${asset.isUp ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"} animate-pulse`} />
+            <span className="text-[9px] font-mono text-zinc-500 uppercase">Live</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Price & Sparkline */}
+      <div className="flex justify-between items-end mb-6 relative z-10">
+        <div className="flex flex-col gap-1">
+          <span className="text-3xl font-light font-mono tracking-tighter text-white">
+            <AnimatedPrice price={asset.price} />
+          </span>
+          <span className={`flex items-center gap-1 font-mono text-xs font-bold ${asset.isUp ? "text-emerald-400" : "text-rose-400"}`}>
+            {asset.isUp ? '▲' : '▼'} {asset.change.replace('-','')}
+          </span>
+        </div>
+        
+        <div className="absolute right-0 bottom-2 pointer-events-none transition-opacity duration-300 opacity-60 group-hover:opacity-100">
+          <Sparkline data={asset.history} isUp={asset.isUp} width={100} height={35} />
+        </div>
+      </div>
+
+      {/* Dynamic Metrics Grid */}
+      {selectedMetrics.length > 0 && (
+        <div className={`grid grid-cols-2 gap-y-4 gap-x-2 pt-4 border-t border-white/5 relative z-10`}>
+          {selectedMetrics.map(metricId => {
+            const metric = AVAILABLE_METRICS.find(m => m.id === metricId);
+            if (!metric) return null;
+            return (
+              <div key={metricId} className="flex flex-col">
+                <p className="text-zinc-600 text-[9px] font-mono uppercase tracking-widest mb-1">{metric.label}</p>
+                <p className="font-mono text-xs text-zinc-300 font-medium">{getMetric(metricId)}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
+  );
+}

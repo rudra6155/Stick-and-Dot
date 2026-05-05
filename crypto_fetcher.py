@@ -2,7 +2,7 @@ import sqlite3
 import datetime
 import requests
 
-CG_IDS = "bitcoin,ethereum,tether,binancecoin,solana,ripple,dogecoin,cardano,avalanche-2,shiba-inu,chainlink,polkadot,tron,matic-network,litecoin,bitcoin-cash,uniswap,stellar,ethereum-classic,internet-computer"
+CG_IDS = "bitcoin,ethereum,tether,binancecoin,solana,ripple,dogecoin,cardano,avalanche-2,shiba-inu,chainlink,polkadot,tron,matic-network,litecoin,bitcoin-cash,uniswap,stellar,ethereum-classic,internet-computer,pepe,near,aptos,arbitrum,optimism"
 
 def setup_database():
     conn = sqlite3.connect('finance_hub.db')
