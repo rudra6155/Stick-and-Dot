@@ -8,6 +8,8 @@ import { fetchAllAssets, type Asset } from "./actions";
 import dynamic from 'next/dynamic';
 import { useCountUp } from "@/hooks/useCountUp";
 import Sparkline from "@/components/Sparkline";
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { AssetCard } from "@/components/AssetCard";
 
 const DollarParticles = dynamic(() => import('@/components/DollarParticles'), { ssr: false });
 const HeroParticles = dynamic(() => import('@/components/HeroParticles'), { ssr: false });
@@ -114,6 +116,7 @@ export default function SuperFinanceHub() {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [activeClass, setActiveClass] = useState("All");
+  const [activeSector, setActiveSector] = useState("All Sectors");
   const [sortBy, setSortBy] = useState("Price");
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isMetricsOpen, setIsMetricsOpen] = useState(false);
@@ -181,7 +184,8 @@ export default function SuperFinanceHub() {
       const matchesSearch = query === "" || searchableString.includes(query) || isTechMatch;
       
       const matchesClass = activeClass === "All" || asset.assetClass === activeClass;
-      return matchesSearch && matchesClass;
+      const matchesSector = activeSector === "All Sectors" || asset.sector === activeSector;
+      return matchesSearch && matchesClass && (activeClass === "Stock" ? matchesSector : true);
     }).sort((a, b) => {
       if (sortBy === "Price") return (b.price || 0) - (a.price || 0);
       if (sortBy === "Market Cap") return (b.marketCap || 0) - (a.marketCap || 0);
@@ -190,10 +194,42 @@ export default function SuperFinanceHub() {
       if (sortBy === "Dividend Yield") return (b.dividendYield || 0) - (a.dividendYield || 0);
       return a.name.localeCompare(b.name);
     });
-  }, [assets, searchQuery, activeClass, sortBy]);
+  }, [assets, searchQuery, activeClass, activeSector, sortBy]);
 
-  const assetClasses = ["All", "Crypto", "Stock", "ETF", "REIT", "Commodity", "Gold", "Bond", "Indian Stock", "International"];
+  const assetClasses = ["All", "Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International"];
   const sortOptions = ["Price", "Market Cap", "Volume", "P/E", "Dividend Yield"];
+
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  // Calculate columns based on viewport
+  const [columns, setColumns] = useState(3);
+  useEffect(() => {
+    const update = () => {
+      if (window.innerWidth < 768) setColumns(1);
+      else if (window.innerWidth < 1024) setColumns(2);
+      else if (window.innerWidth < 1280) setColumns(3);
+      else setColumns(4);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  // Group assets into rows
+  const rows = useMemo(() => {
+    const result = [];
+    for (let i = 0; i < filteredAssets.length; i += columns) {
+      result.push(filteredAssets.slice(i, i + columns));
+    }
+    return result;
+  }, [filteredAssets, columns]);
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 320, // estimated card height in px
+    overscan: 3, // render 3 extra rows above/below viewport
+  });
 
   return (
     <div className="relative min-h-screen bg-black text-white font-sans selection:bg-emerald-500/30">
@@ -261,7 +297,8 @@ export default function SuperFinanceHub() {
       <div className="relative z-20 max-w-[1600px] mx-auto px-4 md:px-8 py-24 min-h-screen bg-black/50 backdrop-blur-3xl border-t border-white/5">
         
         {/* Sticky Control Bar */}
-        <div className="sticky top-16 z-50 mb-12 flex flex-col lg:flex-row gap-4 p-4 bg-[#0a0a0c]/80 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+        <div className="sticky top-16 z-50 mb-12 flex flex-col gap-4 p-4 bg-[#0a0a0c]/80 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+          <div className="flex flex-col lg:flex-row gap-4">
           
           <div className="relative flex-1 group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-emerald-400 transition-colors" />
@@ -369,12 +406,32 @@ export default function SuperFinanceHub() {
               </AnimatePresence>
             </div>
           </div>
+          
+          </div>
+          {activeClass === "Stock" && (
+            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2">
+              {["All Sectors","Technology","Healthcare","Financial Services","Consumer Cyclical","Energy","Industrials","Real Estate","Utilities","Basic Materials","Communication Services","Consumer Defensive"].map(sector => (
+                <button
+                  key={sector}
+                  onClick={() => setActiveSector(sector)}
+                  className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors ${
+                    activeSector === sector 
+                      ? "bg-white text-black font-medium" 
+                      : "bg-white/5 text-zinc-400 hover:bg-white/10"
+                  }`}
+                >
+                  {sector}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Asset Cards Grid */}
-        <motion.div 
-          layout
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 relative z-10"
+        <div 
+          ref={parentRef}
+          className="relative z-10 w-full overflow-y-auto overflow-x-hidden hide-scrollbar"
+          style={{ height: 'calc(100vh - 200px)' }}
         >
           {assets.length === 0 && isRefreshing ? (
              <div className="col-span-full py-20 flex flex-col items-center justify-center text-center">
@@ -382,21 +439,36 @@ export default function SuperFinanceHub() {
               <p className="font-mono text-zinc-500 uppercase tracking-widest text-sm">Loading Market Data...</p>
              </div>
           ) : (
-            <AnimatePresence mode="popLayout">
-              {filteredAssets.map((asset, index) => (
-                <AssetCard key={asset.id} asset={asset} index={index} selectedMetrics={selectedMetrics} formatNumber={formatNumber} />
+            <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+              {virtualizer.getVirtualItems().map(virtualRow => (
+                <div
+                  key={virtualRow.index}
+                  style={{
+                    position: 'absolute',
+                    top: virtualRow.start,
+                    width: '100%',
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                    gap: '1.5rem',
+                    padding: '0 0 1.5rem 0'
+                  }}
+                >
+                  {rows[virtualRow.index].map(asset => (
+                    <AssetCard key={asset.id} asset={asset} index={virtualRow.index} selectedMetrics={selectedMetrics} formatNumber={formatNumber} />
+                  ))}
+                </div>
               ))}
-            </AnimatePresence>
+            </div>
           )}
 
           {filteredAssets.length === 0 && !isRefreshing && (
-            <div className="col-span-full py-32 flex flex-col items-center justify-center text-center opacity-50">
+            <div className="py-32 flex flex-col items-center justify-center text-center opacity-50 w-full">
               <Search className="w-16 h-16 text-zinc-600 mb-6" />
               <p className="text-2xl font-light text-white tracking-tight">No assets found</p>
               <p className="text-zinc-500 mt-2 font-mono text-sm">Try adjusting your filters.</p>
             </div>
           )}
-        </motion.div>
+        </div>
       </div>
 
       {/* Footer */}
@@ -433,109 +505,4 @@ function LiveClock() {
   return <div>{time} UTC</div>;
 }
 
-import { useCursor } from "@/components/CustomCursor";
 
-function AssetCard({ asset, index, selectedMetrics, formatNumber }: any) {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [isHovered, setIsHovered] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const { setCursorState } = useCursor();
-
-  const getMetric = (id: string) => {
-    switch(id) {
-      case "volume": return formatNumber(asset.volume);
-      case "marketCap": return formatNumber(asset.marketCap);
-      case "peRatio": return asset.peRatio ? asset.peRatio.toFixed(2) : "—";
-      case "dividendYield": return asset.dividendYield ? (asset.dividendYield * 100).toFixed(2) + "%" : "—";
-      default: return "—";
-    }
-  };
-
-  return (
-    <motion.div
-      ref={cardRef}
-      layout
-      initial={{ y: 40, opacity: 0, scale: 0.95 }}
-      animate={{ y: 0, opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ type: "spring", stiffness: 300, damping: 25, delay: Math.min(index * 0.06, 0.5) }}
-      onMouseMove={(e) => {
-        if (!cardRef.current) return;
-        const rect = cardRef.current.getBoundingClientRect();
-        setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-      }}
-      onMouseEnter={() => {
-        setIsHovered(true);
-        setCursorState(asset.isUp ? 'profit' : 'loss');
-      }}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        setCursorState('default');
-      }}
-      className="group relative bg-zinc-950/90 md:bg-white/[0.04] md:backdrop-blur-md border border-white/10 rounded-3xl p-6 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/30 hover:shadow-[0_20px_60px_rgba(16,185,129,0.08)] will-change-transform"
-    >
-      {/* Spotlight */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-        style={{
-          background: `radial-gradient(circle 200px at ${mousePosition.x}px ${mousePosition.y}px, rgba(16, 185, 129, 0.08), transparent)`
-        }}
-      />
-
-      {/* Header */}
-      <div className="flex justify-between items-start mb-6 relative z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-black/50 border border-white/10 flex items-center justify-center text-lg text-white group-hover:scale-110 transition-transform duration-500">
-            {classIcons[asset.assetClass] || "◈"}
-          </div>
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-white/90 truncate max-w-[140px]">{asset.name}</h2>
-            <div className="text-zinc-500 text-xs font-mono">{asset.symbol}/USD</div>
-          </div>
-        </div>
-        
-        <div className="flex flex-col items-end gap-2">
-          <span className={`px-2 py-0.5 rounded-md text-[9px] font-mono uppercase tracking-wider ${classColors[asset.assetClass] || classColors["Stock"]}`}>
-            {asset.assetClass}
-          </span>
-          <div className="flex items-center gap-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${asset.isUp ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"} animate-pulse`} />
-            <span className="text-[9px] font-mono text-zinc-500 uppercase">Live</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Price & Sparkline */}
-      <div className="flex justify-between items-end mb-6 relative z-10">
-        <div className="flex flex-col gap-1">
-          <span className="text-3xl font-light font-mono tracking-tighter text-white">
-            <AnimatedPrice price={asset.price} />
-          </span>
-          <span className={`flex items-center gap-1 font-mono text-xs font-bold ${asset.isUp ? "text-emerald-400" : "text-rose-400"}`}>
-            {asset.isUp ? '▲' : '▼'} {asset.change.replace('-','')}
-          </span>
-        </div>
-        
-        <div className="absolute right-0 bottom-2 pointer-events-none transition-opacity duration-300 opacity-60 group-hover:opacity-100">
-          <Sparkline data={asset.history} isUp={asset.isUp} width={100} height={35} />
-        </div>
-      </div>
-
-      {/* Dynamic Metrics Grid */}
-      {selectedMetrics.length > 0 && (
-        <div className={`grid grid-cols-2 gap-y-4 gap-x-2 pt-4 border-t border-white/5 relative z-10`}>
-          {selectedMetrics.map(metricId => {
-            const metric = AVAILABLE_METRICS.find(m => m.id === metricId);
-            if (!metric) return null;
-            return (
-              <div key={metricId} className="flex flex-col">
-                <p className="text-zinc-600 text-[9px] font-mono uppercase tracking-widest mb-1">{metric.label}</p>
-                <p className="font-mono text-xs text-zinc-300 font-medium">{getMetric(metricId)}</p>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </motion.div>
-  );
-}

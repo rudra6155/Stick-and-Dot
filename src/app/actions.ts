@@ -20,6 +20,8 @@ export type Asset = {
   history: number[];
   change: string;
   isUp: boolean;
+  sector: string;
+  industry: string;
 };
 
 export async function fetchAllAssets(): Promise<Asset[]> {
@@ -63,6 +65,8 @@ export async function fetchAllAssets(): Promise<Asset[]> {
       history: Array.from({ length: 7 }, () => (row.price || 0) * (1 + (Math.random() * 0.1 - 0.05))),
       change: ((Math.random() * 4) - 2).toFixed(1) + "%",
       isUp: Math.random() > 0.5,
+      sector: row.sector || '',
+      industry: row.industry || '',
     })),
     ...validTraditionalRows.map((row: any) => {
       let assetClass = row.asset_class;
@@ -87,6 +91,8 @@ export async function fetchAllAssets(): Promise<Asset[]> {
         history: Array.from({ length: 7 }, () => (row.price || 0) * (1 + (Math.random() * 0.1 - 0.05))),
         change: ((Math.random() * 4) - 2).toFixed(1) + "%",
         isUp: Math.random() > 0.5,
+        sector: row.sector || '',
+        industry: row.industry || '',
       };
     })
   ];

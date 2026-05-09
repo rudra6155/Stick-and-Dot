@@ -49,6 +49,9 @@ def export_to_json():
         json.dump(data, f, indent=2)
         
     print(f"Successfully exported deduplicated data to {output_path}")
+    print(f"OK Exported {len(data['crypto_assets'])} crypto assets")
+    print(f"OK Exported {len(data['traditional_assets'])} traditional assets")
+    print(f"OK Total: {len(data['crypto_assets']) + len(data['traditional_assets'])} assets")
 
 if __name__ == "__main__":
     export_to_json()
