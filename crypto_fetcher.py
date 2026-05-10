@@ -11,9 +11,8 @@ SLEEP_BETWEEN_BATCHES = 1.5  # seconds
 def setup_database():
     conn = sqlite3.connect('finance_hub.db')
     cursor = conn.cursor()
-    cursor.execute('DROP TABLE IF EXISTS crypto_assets')
     cursor.execute('''
-        CREATE TABLE crypto_assets (
+        CREATE TABLE IF NOT EXISTS crypto_assets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             asset_name TEXT,
             symbol TEXT,

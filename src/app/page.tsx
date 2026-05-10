@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { Search, ChevronDown, Activity, Filter, Settings2, Check, ArrowDown } from "lucide-react";
 import MagneticElement from "@/components/MagneticElement";
@@ -8,7 +8,7 @@ import { fetchAllAssets, type Asset } from "./actions";
 import dynamic from 'next/dynamic';
 import { useCountUp } from "@/hooks/useCountUp";
 import Sparkline from "@/components/Sparkline";
-import { useVirtualizer } from '@tanstack/react-virtual';
+
 import { AssetCard } from "@/components/AssetCard";
 
 const DollarParticles = dynamic(() => import('@/components/DollarParticles'), { ssr: false });
@@ -199,37 +199,7 @@ export default function SuperFinanceHub() {
   const assetClasses = ["All", "Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International"];
   const sortOptions = ["Price", "Market Cap", "Volume", "P/E", "Dividend Yield"];
 
-  const parentRef = useRef<HTMLDivElement>(null);
 
-  // Calculate columns based on viewport
-  const [columns, setColumns] = useState(3);
-  useEffect(() => {
-    const update = () => {
-      if (window.innerWidth < 768) setColumns(1);
-      else if (window.innerWidth < 1024) setColumns(2);
-      else if (window.innerWidth < 1280) setColumns(3);
-      else setColumns(4);
-    };
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
-
-  // Group assets into rows
-  const rows = useMemo(() => {
-    const result = [];
-    for (let i = 0; i < filteredAssets.length; i += columns) {
-      result.push(filteredAssets.slice(i, i + columns));
-    }
-    return result;
-  }, [filteredAssets, columns]);
-
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 320, // estimated card height in px
-    overscan: 3, // render 3 extra rows above/below viewport
-  });
 
   return (
     <div className="relative min-h-screen bg-black text-white font-sans selection:bg-emerald-500/30">
@@ -428,41 +398,28 @@ export default function SuperFinanceHub() {
         </div>
 
         {/* Asset Cards Grid */}
-        <div 
-          ref={parentRef}
-          className="relative z-10 w-full overflow-y-auto overflow-x-hidden hide-scrollbar"
-          style={{ height: 'calc(100vh - 200px)' }}
-        >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 relative z-10">
           {assets.length === 0 && isRefreshing ? (
              <div className="col-span-full py-20 flex flex-col items-center justify-center text-center">
               <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4" />
               <p className="font-mono text-zinc-500 uppercase tracking-widest text-sm">Loading Market Data...</p>
              </div>
           ) : (
-            <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
-              {virtualizer.getVirtualItems().map(virtualRow => (
-                <div
-                  key={virtualRow.index}
-                  style={{
-                    position: 'absolute',
-                    top: virtualRow.start,
-                    width: '100%',
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                    gap: '1.5rem',
-                    padding: '0 0 1.5rem 0'
-                  }}
-                >
-                  {rows[virtualRow.index].map(asset => (
-                    <AssetCard key={asset.id} asset={asset} index={virtualRow.index} selectedMetrics={selectedMetrics} formatNumber={formatNumber} />
-                  ))}
-                </div>
+            <AnimatePresence mode="popLayout">
+              {filteredAssets.map((asset, index) => (
+                <AssetCard
+                  key={asset.id}
+                  asset={asset}
+                  index={index}
+                  selectedMetrics={selectedMetrics}
+                  formatNumber={formatNumber}
+                />
               ))}
-            </div>
+            </AnimatePresence>
           )}
 
           {filteredAssets.length === 0 && !isRefreshing && (
-            <div className="py-32 flex flex-col items-center justify-center text-center opacity-50 w-full">
+            <div className="col-span-full py-32 flex flex-col items-center justify-center text-center opacity-50 w-full">
               <Search className="w-16 h-16 text-zinc-600 mb-6" />
               <p className="text-2xl font-light text-white tracking-tight">No assets found</p>
               <p className="text-zinc-500 mt-2 font-mono text-sm">Try adjusting your filters.</p>

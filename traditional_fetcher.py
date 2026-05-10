@@ -17,9 +17,8 @@ ASSET_CLASS_MAP = {
 def setup_database():
     conn = sqlite3.connect('finance_hub.db')
     cursor = conn.cursor()
-    cursor.execute('DROP TABLE IF EXISTS traditional_assets')
     cursor.execute('''
-        CREATE TABLE traditional_assets (
+        CREATE TABLE IF NOT EXISTS traditional_assets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ticker TEXT,
             asset_class TEXT,
