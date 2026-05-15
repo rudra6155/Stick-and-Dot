@@ -51,6 +51,29 @@ const AVAILABLE_METRICS = [
   { id: "dayHigh",       label: "Day High" },
   { id: "dayLow",        label: "Day Low" },
   { id: "sector",        label: "Sector" },
+  { id: "previousClose",           label: "Prev Close" },
+  { id: "enterpriseValue",         label: "Ent Value" },
+  { id: "pegRatio",                label: "PEG Ratio" },
+  { id: "dividendRate",            label: "Div Rate" },
+  { id: "payoutRatio",             label: "Payout Ratio" },
+  { id: "grossMargins",            label: "Gross Margin" },
+  { id: "operatingMargins",        label: "Op Margin" },
+  { id: "returnOnEquity",          label: "ROE" },
+  { id: "returnOnAssets",          label: "ROA" },
+  { id: "totalRevenue",            label: "Revenue" },
+  { id: "ebitda",                  label: "EBITDA" },
+  { id: "totalDebt",               label: "Total Debt" },
+  { id: "freeCashflow",            label: "Free CF" },
+  { id: "allTimeHigh",             label: "All Time High" },
+  { id: "allTimeLow",              label: "All Time Low" },
+  { id: "sharesOutstanding",       label: "Shares Out" },
+  { id: "heldPercentInsiders",     label: "Insider %" },
+  { id: "heldPercentInstitutions", label: "Institution %" },
+  { id: "recommendationMean",      label: "Analyst Score" },
+  { id: "targetMeanPrice",         label: "Price Target" },
+  { id: "trailingEps",             label: "EPS" },
+  { id: "forwardEps",              label: "Fwd EPS" },
+  { id: "currency",                label: "Currency" },
 ];
 
 const AnimatedPrice = ({ price }: { price: number }) => {
@@ -83,9 +106,32 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber }: any
       case "ma50Day": return asset.ma50Day ? "$" + asset.ma50Day.toFixed(2) : "—";
       case "ma200Day": return asset.ma200Day ? "$" + asset.ma200Day.toFixed(2) : "—";
       case "beta": return asset.beta ? asset.beta.toFixed(2) : "—";
-      case "dayHigh": return asset.day_high ? "$" + asset.day_high.toFixed(2) : "—";
-      case "dayLow": return asset.day_low ? "$" + asset.day_low.toFixed(2) : "—";
+      case "dayHigh": return asset.dayHigh ? "$" + asset.dayHigh.toFixed(2) : "—";
+      case "dayLow": return asset.dayLow ? "$" + asset.dayLow.toFixed(2) : "—";
       case "sector": return asset.sector || "—";
+      case "previousClose": return asset.previousClose ? "$" + asset.previousClose.toFixed(2) : "—";
+      case "enterpriseValue": return formatNumber(asset.enterpriseValue);
+      case "pegRatio": return asset.pegRatio ? asset.pegRatio.toFixed(2) : "—";
+      case "dividendRate": return asset.dividendRate ? "$" + asset.dividendRate.toFixed(2) : "—";
+      case "payoutRatio": return asset.payoutRatio ? (asset.payoutRatio * 100).toFixed(2) + "%" : "—";
+      case "grossMargins": return asset.grossMargins ? (asset.grossMargins * 100).toFixed(2) + "%" : "—";
+      case "operatingMargins": return asset.operatingMargins ? (asset.operatingMargins * 100).toFixed(2) + "%" : "—";
+      case "returnOnEquity": return asset.returnOnEquity ? (asset.returnOnEquity * 100).toFixed(2) + "%" : "—";
+      case "returnOnAssets": return asset.returnOnAssets ? (asset.returnOnAssets * 100).toFixed(2) + "%" : "—";
+      case "totalRevenue": return formatNumber(asset.totalRevenue);
+      case "ebitda": return formatNumber(asset.ebitda);
+      case "totalDebt": return formatNumber(asset.totalDebt);
+      case "freeCashflow": return formatNumber(asset.freeCashflow);
+      case "allTimeHigh": return asset.allTimeHigh ? "$" + asset.allTimeHigh.toFixed(2) : "—";
+      case "allTimeLow": return asset.allTimeLow ? "$" + asset.allTimeLow.toFixed(2) : "—";
+      case "sharesOutstanding": return formatNumber(asset.sharesOutstanding);
+      case "heldPercentInsiders": return asset.heldPercentInsiders ? (asset.heldPercentInsiders * 100).toFixed(2) + "%" : "—";
+      case "heldPercentInstitutions": return asset.heldPercentInstitutions ? (asset.heldPercentInstitutions * 100).toFixed(2) + "%" : "—";
+      case "recommendationMean": return asset.recommendationMean ? asset.recommendationMean.toFixed(2) : "—";
+      case "targetMeanPrice": return asset.targetMeanPrice ? "$" + asset.targetMeanPrice.toFixed(2) : "—";
+      case "trailingEps": return asset.trailingEps ? "$" + asset.trailingEps.toFixed(2) : "—";
+      case "forwardEps": return asset.forwardEps ? "$" + asset.forwardEps.toFixed(2) : "—";
+      case "currency": return asset.currency || "—";
       default: return "—";
     }
   };

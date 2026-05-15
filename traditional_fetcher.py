@@ -1,12 +1,15 @@
 import yfinance as yf
 import sqlite3
-import datetime
 import time
-import pandas as pd
-from ticker_lists import SP500_TICKERS, ETF_TICKERS, REIT_TICKERS, COMMODITY_TICKERS, BOND_TICKERS, INDIAN_TICKERS, INTERNATIONAL_TICKERS
+from ticker_lists import (
+    SP500_TICKERS, ETF_TICKERS, REIT_TICKERS,
+    COMMODITY_TICKERS, BOND_TICKERS, INDIAN_TICKERS,
+    INTERNATIONAL_TICKERS, GROWTH_TICKERS,
+    MIDCAP_TICKERS, INDIAN_EXTENDED_TICKERS
+)
 
-BATCH_SIZE = 25
-SLEEP_BETWEEN_BATCHES = 4  # seconds — raised to avoid Yahoo rate limits
+BATCH_SIZE = 20
+SLEEP_BETWEEN_BATCHES = 4
 
 ASSET_CLASS_MAP = {
     "SP500": "Stock",
@@ -15,7 +18,10 @@ ASSET_CLASS_MAP = {
     "Commodity": "Commodity",
     "Bond": "Bond",
     "Indian Stock": "Indian Stock",
-    "International": "International"
+    "International": "International",
+    "Growth": "Stock",
+    "MidCap": "Stock",
+    "Indian Extended": "Indian Stock",
 }
 
 def setup_database():
@@ -25,32 +31,63 @@ def setup_database():
         CREATE TABLE IF NOT EXISTS traditional_assets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ticker TEXT,
+            short_name TEXT,
+            long_name TEXT,
             asset_class TEXT,
             price REAL,
+            previous_close REAL,
             open REAL,
             day_high REAL,
             day_low REAL,
             volume REAL,
             avg_volume REAL,
             market_cap REAL,
+            enterprise_value REAL,
             pe_ratio REAL,
             forward_pe REAL,
+            peg_ratio REAL,
             price_to_book REAL,
             price_to_sales REAL,
             ev_to_ebitda REAL,
+            dividend_rate REAL,
             dividend_yield REAL,
+            payout_ratio REAL,
+            five_year_avg_dividend_yield REAL,
             earnings_growth REAL,
             revenue_growth REAL,
             profit_margins REAL,
+            gross_margins REAL,
+            operating_margins REAL,
+            return_on_equity REAL,
+            return_on_assets REAL,
+            total_revenue REAL,
+            ebitda REAL,
+            total_debt REAL,
+            free_cashflow REAL,
             high_52_week REAL,
             low_52_week REAL,
+            all_time_high REAL,
+            all_time_low REAL,
             ma_50_day REAL,
             ma_200_day REAL,
             beta REAL,
+            shares_outstanding REAL,
+            float_shares REAL,
+            shares_short REAL,
+            held_percent_insiders REAL,
+            held_percent_institutions REAL,
+            recommendation_mean REAL,
+            target_mean_price REAL,
+            target_high_price REAL,
+            trailing_eps REAL,
+            forward_eps REAL,
             sector TEXT,
             industry TEXT,
             country TEXT,
             exchange TEXT,
+            currency TEXT,
+            website TEXT,
+            long_business_summary TEXT,
             timestamp DATETIME
         )
     ''')
@@ -59,120 +96,148 @@ def setup_database():
 
 def safe_float(val):
     try:
-        if pd.isna(val):
-            return 0.0
-        return float(val) if val is not None else 0.0
-    except Exception:
-        return 0.0
+        return float(val) if val is not None else None
+    except:
+        return None
 
 def safe_str(val):
-    return str(val) if val is not None else ""
+    try:
+        return str(val) if val is not None else None
+    except:
+        return None
 
 def fetch_and_store():
     conn = setup_database()
     cursor = conn.cursor()
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    all_assets = [
-        (SP500_TICKERS, "SP500"),
-        (ETF_TICKERS, "ETF"),
-        (REIT_TICKERS, "REIT"),
-        (COMMODITY_TICKERS, "Commodity"),
-        (BOND_TICKERS, "Bond"),
-        (INDIAN_TICKERS, "Indian Stock"),
-        (INTERNATIONAL_TICKERS, "International"),
-    ]
-    
-    total_tickers = []
-    for tickers_list, category in all_assets:
-        for ticker in tickers_list:
-            total_tickers.append((ticker, category))
-    
-    failed_tickers = []
-    
-    for i in range(0, len(total_tickers), BATCH_SIZE):
-        batch = total_tickers[i:i + BATCH_SIZE]
-        batch_tickers_str = " ".join([t[0] for t in batch])
-        
-        hist_data = yf.download(batch_tickers_str, period="1d", group_by="ticker", threads=True, progress=False)
-        
-        for j, (ticker, category) in enumerate(batch):
-            asset_class = ASSET_CLASS_MAP.get(category, "Stock")
-            idx = i + j + 1
-            try:
-                if len(batch) == 1:
-                    hist = hist_data
-                else:
-                    if ticker in hist_data.columns.get_level_values(0):
-                        hist = hist_data[ticker]
-                    else:
-                        hist = None
-                
-                if hist is None or hist.empty:
-                    failed_tickers.append(ticker)
-                    print(f"[{idx}/{len(total_tickers)}] Fetching {ticker}... Failed (No history)")
+    categories = {
+        "SP500": SP500_TICKERS,
+        "ETF": ETF_TICKERS,
+        "REIT": REIT_TICKERS,
+        "Commodity": COMMODITY_TICKERS,
+        "Bond": BOND_TICKERS,
+        "Indian Stock": INDIAN_TICKERS,
+        "International": INTERNATIONAL_TICKERS,
+        "Growth": GROWTH_TICKERS,
+        "MidCap": MIDCAP_TICKERS,
+        "Indian Extended": INDIAN_EXTENDED_TICKERS,
+    }
+
+    total_done = 0
+    total_tickers = sum(len(v) for v in categories.values())
+
+    for category, tickers in categories.items():
+        asset_class = ASSET_CLASS_MAP[category]
+        batches = [tickers[i:i+BATCH_SIZE] for i in range(0, len(tickers), BATCH_SIZE)]
+
+        for batch_num, batch in enumerate(batches):
+            for ticker in batch:
+                total_done += 1
+                print(f"[{total_done}/{total_tickers}] Fetching {ticker}...", end=" ")
+                try:
+                    info = yf.Ticker(ticker).info
+                    price = safe_float(info.get('currentPrice') or info.get('regularMarketPrice') or info.get('previousClose'))
+                    if not price:
+                        print("Failed (No price)")
+                        continue
+
+                    cursor.execute('''
+                        INSERT INTO traditional_assets (
+                            ticker, short_name, long_name, asset_class,
+                            price, previous_close, open, day_high, day_low,
+                            volume, avg_volume, market_cap, enterprise_value,
+                            pe_ratio, forward_pe, peg_ratio, price_to_book, price_to_sales, ev_to_ebitda,
+                            dividend_rate, dividend_yield, payout_ratio, five_year_avg_dividend_yield,
+                            earnings_growth, revenue_growth, profit_margins, gross_margins,
+                            operating_margins, return_on_equity, return_on_assets,
+                            total_revenue, ebitda, total_debt, free_cashflow,
+                            high_52_week, low_52_week, all_time_high, all_time_low,
+                            ma_50_day, ma_200_day, beta,
+                            shares_outstanding, float_shares, shares_short,
+                            held_percent_insiders, held_percent_institutions,
+                            recommendation_mean, target_mean_price, target_high_price,
+                            trailing_eps, forward_eps,
+                            sector, industry, country, exchange, currency,
+                            website, long_business_summary, timestamp
+                        ) VALUES (
+                            ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+                        )
+                    ''', (
+                        ticker,
+                        safe_str(info.get('shortName')),
+                        safe_str(info.get('longName')),
+                        asset_class,
+                        price,
+                        safe_float(info.get('previousClose')),
+                        safe_float(info.get('open')),
+                        safe_float(info.get('dayHigh')),
+                        safe_float(info.get('dayLow')),
+                        safe_float(info.get('volume')),
+                        safe_float(info.get('averageVolume')),
+                        safe_float(info.get('marketCap')),
+                        safe_float(info.get('enterpriseValue')),
+                        safe_float(info.get('trailingPE')),
+                        safe_float(info.get('forwardPE')),
+                        safe_float(info.get('pegRatio')),
+                        safe_float(info.get('priceToBook')),
+                        safe_float(info.get('priceToSalesTrailing12Months')),
+                        safe_float(info.get('enterpriseToEbitda')),
+                        safe_float(info.get('dividendRate')),
+                        safe_float(info.get('dividendYield')),
+                        safe_float(info.get('payoutRatio')),
+                        safe_float(info.get('fiveYearAvgDividendYield')),
+                        safe_float(info.get('earningsGrowth')),
+                        safe_float(info.get('revenueGrowth')),
+                        safe_float(info.get('profitMargins')),
+                        safe_float(info.get('grossMargins')),
+                        safe_float(info.get('operatingMargins')),
+                        safe_float(info.get('returnOnEquity')),
+                        safe_float(info.get('returnOnAssets')),
+                        safe_float(info.get('totalRevenue')),
+                        safe_float(info.get('ebitda')),
+                        safe_float(info.get('totalDebt')),
+                        safe_float(info.get('freeCashflow')),
+                        safe_float(info.get('fiftyTwoWeekHigh')),
+                        safe_float(info.get('fiftyTwoWeekLow')),
+                        safe_float(info.get('allTimeHigh')),
+                        safe_float(info.get('allTimeLow')),
+                        safe_float(info.get('fiftyDayAverage')),
+                        safe_float(info.get('twoHundredDayAverage')),
+                        safe_float(info.get('beta')),
+                        safe_float(info.get('sharesOutstanding')),
+                        safe_float(info.get('floatShares')),
+                        safe_float(info.get('sharesShort')),
+                        safe_float(info.get('heldPercentInsiders')),
+                        safe_float(info.get('heldPercentInstitutions')),
+                        safe_float(info.get('recommendationMean')),
+                        safe_float(info.get('targetMeanPrice')),
+                        safe_float(info.get('targetHighPrice')),
+                        safe_float(info.get('trailingEps')),
+                        safe_float(info.get('forwardEps')),
+                        safe_str(info.get('sector')),
+                        safe_str(info.get('industry')),
+                        safe_str(info.get('country')),
+                        safe_str(info.get('exchange')),
+                        safe_str(info.get('currency')),
+                        safe_str(info.get('website')),
+                        safe_str(info.get('longBusinessSummary')),
+                        __import__('datetime').datetime.now()
+                    ))
+                    conn.commit()
+                    print(f"OK ${price:.2f}")
+
+                except Exception as e:
+                    print(f"Failed ({e})")
                     continue
-                
-                price = safe_float(hist['Close'].iloc[-1])
-                open_val = safe_float(hist['Open'].iloc[-1])
-                day_high = safe_float(hist['High'].iloc[-1])
-                day_low = safe_float(hist['Low'].iloc[-1])
-                volume = safe_float(hist['Volume'].iloc[-1])
-                
-                ticker_obj = yf.Ticker(ticker)
-                info = ticker_obj.info or {}
-                
-                market_cap = safe_float(info.get('marketCap', 0))
-                pe_ratio = safe_float(info.get('trailingPE', 0))
-                forward_pe = safe_float(info.get('forwardPE', 0))
-                price_to_book = safe_float(info.get('priceToBook', 0))
-                price_to_sales = safe_float(info.get('priceToSalesTrailing12Months', 0))
-                ev_to_ebitda = safe_float(info.get('enterpriseToEbitda', 0))
-                dividend_yield = safe_float(info.get('dividendYield', 0))
-                earnings_growth = safe_float(info.get('earningsGrowth', 0))
-                revenue_growth = safe_float(info.get('revenueGrowth', 0))
-                profit_margins = safe_float(info.get('profitMargins', 0))
-                high_52_week = safe_float(info.get('fiftyTwoWeekHigh', 0))
-                low_52_week = safe_float(info.get('fiftyTwoWeekLow', 0))
-                ma_50_day = safe_float(info.get('fiftyDayAverage', 0))
-                ma_200_day = safe_float(info.get('twoHundredDayAverage', 0))
-                beta = safe_float(info.get('beta', 0))
-                avg_volume = safe_float(info.get('averageVolume', 0))
-                
-                sector = safe_str(info.get('sector', ''))
-                industry = safe_str(info.get('industry', ''))
-                country = safe_str(info.get('country', ''))
-                exchange = safe_str(info.get('exchange', ''))
 
-                cursor.execute('''
-                    INSERT INTO traditional_assets (
-                        ticker, asset_class, price, open, day_high, day_low, volume, avg_volume,
-                        market_cap, pe_ratio, forward_pe, price_to_book, price_to_sales, ev_to_ebitda,
-                        dividend_yield, earnings_growth, revenue_growth, profit_margins,
-                        high_52_week, low_52_week, ma_50_day, ma_200_day, beta,
-                        sector, industry, country, exchange, timestamp
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (ticker, asset_class, price, open_val, day_high, day_low, volume, avg_volume,
-                      market_cap, pe_ratio, forward_pe, price_to_book, price_to_sales, ev_to_ebitda,
-                      dividend_yield, earnings_growth, revenue_growth, profit_margins,
-                      high_52_week, low_52_week, ma_50_day, ma_200_day, beta,
-                      sector, industry, country, exchange, timestamp))
-
-                print(f"[{idx}/{len(total_tickers)}] Fetching {ticker}... OK ${price:.2f}")
-            except Exception as e:
-                failed_tickers.append(ticker)
-                print(f"[{idx}/{len(total_tickers)}] Error processing {ticker}: {e}")
-        
-        conn.commit()
-        time.sleep(SLEEP_BETWEEN_BATCHES)
+            if (batch_num + 1) % 5 == 0:
+                print(f"  -- Cooldown after batch {batch_num+1} --")
+                time.sleep(15)
+            else:
+                time.sleep(SLEEP_BETWEEN_BATCHES)
 
     conn.close()
-    
-    if failed_tickers:
-        print("\nFailed Tickers:")
-        print(", ".join(failed_tickers))
-    
-    print("\nData successfully recorded in 'finance_hub.db'")
+    print("\nDone. Data saved to finance_hub.db")
 
 if __name__ == "__main__":
     fetch_and_store()

@@ -34,6 +34,37 @@ export type Asset = {
   industry: string;
   country: string;
   exchange: string;
+  shortName: string;
+  longName: string;
+  previousClose: number;
+  enterpriseValue: number;
+  pegRatio: number;
+  dividendRate: number;
+  payoutRatio: number;
+  fiveYearAvgDividendYield: number;
+  grossMargins: number;
+  operatingMargins: number;
+  returnOnEquity: number;
+  returnOnAssets: number;
+  totalRevenue: number;
+  ebitda: number;
+  totalDebt: number;
+  freeCashflow: number;
+  allTimeHigh: number;
+  allTimeLow: number;
+  sharesOutstanding: number;
+  floatShares: number;
+  sharesShort: number;
+  heldPercentInsiders: number;
+  heldPercentInstitutions: number;
+  recommendationMean: number;
+  targetMeanPrice: number;
+  targetHighPrice: number;
+  trailingEps: number;
+  forwardEps: number;
+  currency: string;
+  website: string;
+  longBusinessSummary: string;
 };
 
 const normalizeClass = (raw: string | undefined): string => {
@@ -106,6 +137,37 @@ export async function fetchAllAssets(): Promise<Asset[]> {
       industry: row.industry || '',
       country: row.country || '',
       exchange: row.exchange || '',
+      shortName: row.short_name || '',
+      longName: row.long_name || '',
+      previousClose: row.previous_close || 0,
+      enterpriseValue: row.enterprise_value || 0,
+      pegRatio: row.peg_ratio || 0,
+      dividendRate: row.dividend_rate || 0,
+      payoutRatio: row.payout_ratio || 0,
+      fiveYearAvgDividendYield: row.five_year_avg_dividend_yield || 0,
+      grossMargins: row.gross_margins || 0,
+      operatingMargins: row.operating_margins || 0,
+      returnOnEquity: row.return_on_equity || 0,
+      returnOnAssets: row.return_on_assets || 0,
+      totalRevenue: row.total_revenue || 0,
+      ebitda: row.ebitda || 0,
+      totalDebt: row.total_debt || 0,
+      freeCashflow: row.free_cashflow || 0,
+      allTimeHigh: row.all_time_high || 0,
+      allTimeLow: row.all_time_low || 0,
+      sharesOutstanding: row.shares_outstanding || 0,
+      floatShares: row.float_shares || 0,
+      sharesShort: row.shares_short || 0,
+      heldPercentInsiders: row.held_percent_insiders || 0,
+      heldPercentInstitutions: row.held_percent_institutions || 0,
+      recommendationMean: row.recommendation_mean || 0,
+      targetMeanPrice: row.target_mean_price || 0,
+      targetHighPrice: row.target_high_price || 0,
+      trailingEps: row.trailing_eps || 0,
+      forwardEps: row.forward_eps || 0,
+      currency: row.currency || '',
+      website: row.website || '',
+      longBusinessSummary: row.long_business_summary || '',
     })),
     ...validTraditionalRows.map((row: any) => ({
       id: `trad_${row.id}`,
@@ -140,6 +202,37 @@ export async function fetchAllAssets(): Promise<Asset[]> {
       industry: row.industry || '',
       country: row.country || '',
       exchange: row.exchange || '',
+      shortName: row.short_name || '',
+      longName: row.long_name || '',
+      previousClose: row.previous_close || 0,
+      enterpriseValue: row.enterprise_value || 0,
+      pegRatio: row.peg_ratio || 0,
+      dividendRate: row.dividend_rate || 0,
+      payoutRatio: row.payout_ratio || 0,
+      fiveYearAvgDividendYield: row.five_year_avg_dividend_yield || 0,
+      grossMargins: row.gross_margins || 0,
+      operatingMargins: row.operating_margins || 0,
+      returnOnEquity: row.return_on_equity || 0,
+      returnOnAssets: row.return_on_assets || 0,
+      totalRevenue: row.total_revenue || 0,
+      ebitda: row.ebitda || 0,
+      totalDebt: row.total_debt || 0,
+      freeCashflow: row.free_cashflow || 0,
+      allTimeHigh: row.all_time_high || 0,
+      allTimeLow: row.all_time_low || 0,
+      sharesOutstanding: row.shares_outstanding || 0,
+      floatShares: row.float_shares || 0,
+      sharesShort: row.shares_short || 0,
+      heldPercentInsiders: row.held_percent_insiders || 0,
+      heldPercentInstitutions: row.held_percent_institutions || 0,
+      recommendationMean: row.recommendation_mean || 0,
+      targetMeanPrice: row.target_mean_price || 0,
+      targetHighPrice: row.target_high_price || 0,
+      trailingEps: row.trailing_eps || 0,
+      forwardEps: row.forward_eps || 0,
+      currency: row.currency || '',
+      website: row.website || '',
+      longBusinessSummary: row.long_business_summary || '',
     }))
   ];
 

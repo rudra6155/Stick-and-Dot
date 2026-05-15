@@ -1,148 +1,89 @@
 "use client";
-import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
-
-const breakdownData = [
-  { class: "Stock", count: 50, color: "#10b981" },
-  { class: "ETF", count: 40, color: "#3b82f6" },
-  { class: "REIT", count: 25, color: "#f59e0b" },
-  { class: "Commodity", count: 25, color: "#eab308" },
-  { class: "Bond", count: 20, color: "#64748b" },
-  { class: "Indian Stock", count: 25, color: "#f97316" },
-  { class: "International", count: 25, color: "#a855f7" },
-  { class: "Crypto", count: 25, color: "#8b5cf6" },
-];
+import React from 'react';
+import { motion } from 'framer-motion';
 
 export default function StatsSection() {
-  const scrollRef = useRef(null);
-
-  // Simple sticky horizontal scroll implementation
   return (
-    <div className="relative h-[300vh] bg-black">
-      <div className="sticky top-0 h-screen flex items-center overflow-hidden">
-        <div className="flex w-[300vw] h-full relative" id="stats-horizontal-scroll">
-          
-          {/* Panel 1: The Vision */}
-          <PanelOne />
+    <section className="relative z-10 py-32 px-4 md:px-8 max-w-7xl mx-auto">
+      {/* Panel 1 */}
+      <div className="mb-24 flex flex-col items-center text-center">
+        <motion.p
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="text-3xl md:text-5xl font-light text-white/80 max-w-3xl leading-relaxed"
+        >
+          Most platforms filter your view.{" "}
+          <span className="text-emerald-400 font-bold">We give you everything.</span>
+        </motion.p>
+        <motion.div
+          initial={{ scaleX: 0 }}
+          whileInView={{ scaleX: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1, delay: 0.3 }}
+          className="w-32 h-[1px] bg-emerald-500/50 mt-8 origin-left"
+        />
+      </div>
 
-          {/* Panel 2: Asset Class Breakdown */}
-          <PanelTwo />
-
-          {/* Panel 3: The Architecture */}
-          <PanelThree />
-
+      {/* Panel 2 — Asset Class Bar Chart */}
+      <div className="mb-24">
+        <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest mb-8 text-center">Asset Breakdown</p>
+        <div className="flex flex-col gap-3 max-w-2xl mx-auto">
+          {[
+            { label: "Stocks", count: 45, color: "bg-cyan-500" },
+            { label: "Crypto", count: 25, color: "bg-violet-500" },
+            { label: "ETFs", count: 34, color: "bg-blue-500" },
+            { label: "REITs", count: 25, color: "bg-amber-500" },
+            { label: "Commodities", count: 25, color: "bg-yellow-500" },
+            { label: "Bonds", count: 15, color: "bg-slate-400" },
+            { label: "Indian Stocks", count: 25, color: "bg-orange-500" },
+            { label: "International", count: 25, color: "bg-purple-500" },
+          ].map((item, i) => (
+            <div key={item.label} className="flex items-center gap-4">
+              <span className="font-mono text-xs text-zinc-500 w-24 text-right shrink-0">{item.label}</span>
+              <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  whileInView={{ width: `${(item.count / 45) * 100}%` }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.8, delay: i * 0.1 }}
+                  className={`h-full rounded-full ${item.color}`}
+                />
+              </div>
+              <span className="font-mono text-xs text-zinc-400 w-8 shrink-0">{item.count}</span>
+            </div>
+          ))}
         </div>
       </div>
-    </div>
-  );
-}
 
-function PanelOne() {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { margin: "-20%" });
-
-  return (
-    <div ref={ref} className="w-[100vw] h-full flex flex-col justify-center items-center px-10 border-r border-white/5 relative">
-      <div className="max-w-4xl text-center z-10">
-        <motion.h2 
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-6xl md:text-8xl font-black tracking-tighter text-white mb-8"
-        >
-          Most platforms filter your view.
-        </motion.h2>
-        <motion.h2 
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-          transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-          className="text-6xl md:text-8xl font-black tracking-tighter text-emerald-500"
-        >
-          We give you everything.
-        </motion.h2>
-      </div>
-      
-      <motion.div 
-        initial={{ scaleX: 0 }}
-        animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
-        transition={{ duration: 1.5, ease: "circOut", delay: 0.4 }}
-        className="absolute top-1/2 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent origin-left -z-1"
-      />
-    </div>
-  );
-}
-
-function PanelTwo() {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { margin: "-20%" });
-
-  return (
-    <div ref={ref} className="w-[100vw] h-full flex flex-col justify-center items-start px-10 md:px-32 border-r border-white/5 relative">
-      <h3 className="text-3xl font-bold tracking-tight text-white/50 mb-12 font-mono uppercase">Asset Class Breakdown</h3>
-      <div className="w-full max-w-2xl flex flex-col gap-4">
-        {breakdownData.map((item, i) => (
-          <div key={item.class} className="flex items-center gap-4">
-            <div className="w-32 text-right font-mono text-sm text-white/70 uppercase">{item.class}</div>
-            <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
-              <motion.div 
-                initial={{ scaleX: 0 }}
-                animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
-                transition={{ duration: 1, ease: "easeOut", delay: 0.1 * i }}
-                className="h-full origin-left"
-                style={{ backgroundColor: item.color, width: `${(item.count / 50) * 100}%` }}
-              />
-            </div>
-            <div className="w-8 font-mono text-xs text-white/50">{item.count}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function PanelThree() {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { margin: "-20%" });
-
-  const nodes = [
-    { label: "Python Fetchers", desc: "yfinance & CoinGecko" },
-    { label: "SQLite DB", desc: "Local Persistent Storage" },
-    { label: "JSON Build", desc: "export_to_json.py" },
-    { label: "Next.js 15", desc: "App Router & Server Actions" },
-    { label: "You", desc: "The Driver's Seat" }
-  ];
-
-  return (
-    <div ref={ref} className="w-[100vw] h-full flex flex-col justify-center items-center px-10 relative">
-      <h3 className="text-3xl font-bold tracking-tight text-white/50 mb-20 font-mono uppercase">The Architecture</h3>
-      
-      <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 w-full max-w-5xl">
-        {nodes.map((node, i) => (
-          <div key={node.label} className="flex flex-col md:flex-row items-center relative z-10 group">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.5, delay: i * 0.2 }}
-              className="w-40 h-24 bg-white/5 border border-white/10 rounded-2xl flex flex-col items-center justify-center p-4 backdrop-blur-md group-hover:bg-white/10 transition-colors"
+      {/* Panel 3 — Architecture */}
+      <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-2">
+        {["Python Fetchers", "SQLite DB", "JSON Export", "Next.js", "You"].map((node, i, arr) => (
+          <React.Fragment key={node}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.15 }}
+              className="px-4 py-2 border border-white/10 rounded-xl font-mono text-xs text-zinc-400 bg-white/5"
             >
-              <div className="font-bold text-white text-sm text-center mb-1">{node.label}</div>
-              <div className="text-[10px] text-zinc-500 font-mono text-center">{node.desc}</div>
+              {node}
             </motion.div>
-            
-            {i < nodes.length - 1 && (
-              <div className="h-8 w-[1px] md:w-8 md:h-[1px] my-2 md:my-0 relative overflow-hidden">
-                <motion.div 
-                  initial={{ x: "-100%" }}
-                  animate={isInView ? { x: "100%" } : { x: "-100%" }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear", delay: i * 0.2 }}
-                  className="absolute inset-0 bg-gradient-to-r md:bg-gradient-to-b from-transparent via-emerald-500 to-transparent"
-                />
-                <div className="absolute inset-0 border-l border-t md:border-l-0 md:border-t border-dashed border-white/20" />
-              </div>
+            {i < arr.length - 1 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15 + 0.1 }}
+                className="text-zinc-600 font-mono text-lg hidden md:block"
+              >
+                →
+              </motion.div>
             )}
-          </div>
+          </React.Fragment>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
