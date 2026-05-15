@@ -90,3 +90,36 @@ REIT_TICKERS = [
     "NSA","IRM","QTS","SLG","VNO","HPP","DEI","KRC","OFC","CLI",
     "RHP","HST","DRH","PEB","APLE","MPW","OHI","PEAK","HR","JBGS"
 ]
+
+# Commodities (via ETF/futures proxies on yfinance)
+COMMODITY_TICKERS = [
+    "GC=F", "SI=F", "CL=F", "BZ=F", "NG=F", "HG=F", "PL=F", "PA=F",
+    "ZW=F", "ZC=F", "ZS=F", "KC=F", "CT=F", "CC=F", "SB=F", "OJ=F",
+    "LE=F", "GF=F", "HE=F", "LBS=F"
+]
+
+# Bonds (via ETF proxies on yfinance)
+BOND_TICKERS = [
+    "TLT", "IEF", "SHY", "BND", "AGG", "LQD", "HYG", "JNK",
+    "TIP", "VTIP", "BNDX", "EMB", "MUB", "SHV", "GOVT",
+    "VGSH", "VGIT", "VGLT", "BSV", "BIV"
+]
+
+# Indian Stocks (NSE via yfinance .NS suffix)
+INDIAN_TICKERS = [
+    "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS",
+    "HINDUNILVR.NS", "SBIN.NS", "BHARTIARTL.NS", "ITC.NS", "KOTAKBANK.NS",
+    "LT.NS", "AXISBANK.NS", "ASIANPAINT.NS", "MARUTI.NS", "SUNPHARMA.NS",
+    "TITAN.NS", "ULTRACEMCO.NS", "WIPRO.NS", "HCLTECH.NS", "BAJFINANCE.NS",
+    "NESTLEIND.NS", "POWERGRID.NS", "NTPC.NS", "ONGC.NS", "JSWSTEEL.NS",
+    "TATAMOTORS.NS", "TECHM.NS", "ADANIENT.NS", "ADANIPORTS.NS", "COALINDIA.NS"
+]
+
+# International Stocks (major global companies on yfinance)
+INTERNATIONAL_TICKERS = [
+    "ASML", "TSM", "BABA", "NVO", "SAP", "TM", "SHOP",
+    "SONY", "HSBC", "RY", "TD", "BP", "SHEL", "UL",
+    "DEO", "BTI", "NVS", "RHHBY", "AZN", "GSK",
+    "SNY", "SAN", "BBVA", "ING", "PHG",
+    "SIEGY", "BAYZF", "VLKAF", "BMWYY", "MBGYY"
+]

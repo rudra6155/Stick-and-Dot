@@ -3,15 +3,19 @@ import sqlite3
 import datetime
 import time
 import pandas as pd
-from ticker_lists import SP500_TICKERS, ETF_TICKERS, REIT_TICKERS
+from ticker_lists import SP500_TICKERS, ETF_TICKERS, REIT_TICKERS, COMMODITY_TICKERS, BOND_TICKERS, INDIAN_TICKERS, INTERNATIONAL_TICKERS
 
 BATCH_SIZE = 25
-SLEEP_BETWEEN_BATCHES = 1.5  # seconds
+SLEEP_BETWEEN_BATCHES = 4  # seconds — raised to avoid Yahoo rate limits
 
 ASSET_CLASS_MAP = {
     "SP500": "Stock",
     "ETF": "ETF",
-    "REIT": "REIT"
+    "REIT": "REIT",
+    "Commodity": "Commodity",
+    "Bond": "Bond",
+    "Indian Stock": "Indian Stock",
+    "International": "International"
 }
 
 def setup_database():
@@ -72,7 +76,11 @@ def fetch_and_store():
     all_assets = [
         (SP500_TICKERS, "SP500"),
         (ETF_TICKERS, "ETF"),
-        (REIT_TICKERS, "REIT")
+        (REIT_TICKERS, "REIT"),
+        (COMMODITY_TICKERS, "Commodity"),
+        (BOND_TICKERS, "Bond"),
+        (INDIAN_TICKERS, "Indian Stock"),
+        (INTERNATIONAL_TICKERS, "International"),
     ]
     
     total_tickers = []
