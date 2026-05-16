@@ -1,6 +1,18 @@
 import sqlite3
 import json
+import math
 import os
+
+def sanitize_record(record: dict) -> dict:
+    """Replace Infinity / -Infinity / NaN float values with None so the
+    output is valid JSON (those tokens are illegal in JSON spec)."""
+    cleaned = {}
+    for k, v in record.items():
+        if isinstance(v, float) and (math.isinf(v) or math.isnan(v)):
+            cleaned[k] = None
+        else:
+            cleaned[k] = v
+    return cleaned
 
 def export_to_json():
     conn = sqlite3.connect('finance_hub.db')
@@ -22,7 +34,7 @@ def export_to_json():
         ''')
         crypto_rows = cursor.fetchall()
         for row in crypto_rows:
-            data["crypto_assets"].append(dict(row))
+            data["crypto_assets"].append(sanitize_record(dict(row)))
     except sqlite3.OperationalError as e:
         print(f"Error fetching crypto_assets: {e}")
 
@@ -36,7 +48,7 @@ def export_to_json():
         ''')
         traditional_rows = cursor.fetchall()
         for row in traditional_rows:
-            data["traditional_assets"].append(dict(row))
+            data["traditional_assets"].append(sanitize_record(dict(row)))
     except sqlite3.OperationalError as e:
         print(f"Error fetching traditional_assets: {e}")
 
@@ -46,7 +58,7 @@ def export_to_json():
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     
     with open(output_path, 'w') as f:
-        json.dump(data, f, indent=2)
+        json.dump(data, f, indent=2, allow_nan=False)
         
     print(f"Successfully exported deduplicated data to {output_path}")
     print(f"OK Exported {len(data['crypto_assets'])} crypto assets")
