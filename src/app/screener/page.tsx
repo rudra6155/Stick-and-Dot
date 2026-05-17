@@ -75,7 +75,7 @@ export default function ScreenerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-8 font-sans mt-24">
+    <div className="min-h-screen bg-black text-white p-8 pt-24 font-sans mt-24">
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Header */}

@@ -224,7 +224,7 @@ export default function SuperFinanceHub() {
       {/* Hero */}
       <motion.div
         style={{ opacity: heroOpacity, scale: heroScale }}
-        className="relative w-full h-screen flex flex-col items-center justify-center pt-20 z-10"
+        className="relative w-full h-screen flex flex-col items-center justify-center pt-32 z-10"
       >
         <HeroParticles />
         <div className="relative z-10 flex flex-col items-center pointer-events-none">
@@ -238,10 +238,10 @@ export default function SuperFinanceHub() {
             transition={{ delay: 1, duration: 1 }}
             className="text-zinc-400 font-mono text-sm tracking-widest uppercase mb-12 md:mb-20 text-center px-4"
           >
-            You&apos;re in the driver&apos;s seat. 650+ assets. Zero opinions.
+            You&apos;re in the driver&apos;s seat. 1000+ assets. Zero opinions.
           </motion.p>
           <div className="flex flex-col md:flex-row gap-8 md:gap-24 opacity-80">
-            <AnimatedStat value={674} label="Assets" />
+            <AnimatedStat value={1074} label="Assets" />
             <AnimatedStat value={9} label="Asset Classes" />
             <AnimatedStat value={20} label="Data Points" suffix="+" />
           </div>

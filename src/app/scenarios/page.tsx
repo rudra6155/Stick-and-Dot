@@ -36,7 +36,7 @@ export default function ScenariosPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-8 font-sans mt-24">
+    <div className="min-h-screen bg-black text-white p-8 pt-24 font-sans mt-24">
       <div className="max-w-5xl mx-auto space-y-12">
         
         {/* Header */}
