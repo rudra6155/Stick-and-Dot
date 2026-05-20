@@ -204,6 +204,16 @@ export default function SuperFinanceHub() {
       });
   }, [assets, searchQuery, activeClass, activeSector, sortBy]);
 
+  const [visibleCount, setVisibleCount] = useState(40);
+
+  const visibleAssets = useMemo(() => {
+    return filteredAssets.slice(0, visibleCount);
+  }, [filteredAssets, visibleCount]);
+
+  useEffect(() => {
+    setVisibleCount(40);
+  }, [activeClass, activeSector, sortBy, searchQuery]);
+
   const assetClasses = ["All", "Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International"];
   const sortOptions = ["Market Cap", "Price", "Volume", "P/E", "Div Yield", "52W High", "Beta"];
 
@@ -213,7 +223,7 @@ export default function SuperFinanceHub() {
       {/* Global Backgrounds */}
       <div className="fixed inset-0 pointer-events-none z-0 bg-gradient-to-b from-[#000000] to-[#050508]" />
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <DollarParticles />
+        {typeof window !== 'undefined' && window.innerWidth > 768 && <DollarParticles />}
       </div>
 
       {/* Ticker Tape */}
@@ -424,8 +434,8 @@ export default function SuperFinanceHub() {
               <p className="font-mono text-zinc-500 uppercase tracking-widest text-sm">Loading Market Data...</p>
             </div>
           ) : (
-            <AnimatePresence mode="popLayout">
-              {filteredAssets.map((asset, index) => (
+            <>
+              {visibleAssets.map((asset, index) => (
                 <AssetCard
                   key={asset.id}
                   asset={asset}
@@ -434,7 +444,17 @@ export default function SuperFinanceHub() {
                   formatNumber={formatNumber}
                 />
               ))}
-            </AnimatePresence>
+              {visibleCount < filteredAssets.length && (
+                <div className="col-span-full flex justify-center pt-8">
+                  <button
+                    onClick={() => setVisibleCount(prev => prev + 40)}
+                    className="px-8 py-3 bg-white/5 border border-white/10 rounded-2xl font-mono text-sm text-zinc-400 hover:border-emerald-500/50 hover:text-emerald-400 transition-all"
+                  >
+                    Load more — showing {visibleCount} of {filteredAssets.length}
+                  </button>
+                </div>
+              )}
+            </>
           )}
           {filteredAssets.length === 0 && !isRefreshing && (
             <div className="col-span-full py-32 flex flex-col items-center justify-center text-center opacity-50">
