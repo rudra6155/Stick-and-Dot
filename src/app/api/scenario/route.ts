@@ -8,45 +8,68 @@ const supabase = createClient(
 
 const SCENARIOS: Record<string, {
   description: string;
-  filters: Record<string, any>;
-  sort_by: string;
   logic: string;
+  queries: Array<{
+    label: string;
+    filters: Record<string, any>;
+    sort_by: string;
+    sort_dir?: string;
+    limit: number;
+  }>;
 }> = {
-  "us_china_tension": {
+  us_china_tension: {
     description: "US-China tensions rising — rotate to domestic US, gold, defense",
-    filters: { asset_class: "Stock", sector: "Industrials" },
-    sort_by: "revenue_growth",
-    logic: "Favor defense, domestic manufacturing, and gold ETFs"
+    logic: "In US-China tension scenarios, defense contractors and domestic manufacturers outperform. Gold acts as a safe haven. Avoid tech with heavy China exposure.",
+    queries: [
+      { label: "Defense & Industrials", filters: { asset_class: "Stock", sector: "Industrials" }, sort_by: "revenue_growth", limit: 5 },
+      { label: "Safe Haven ETFs", filters: { asset_class: "ETF" }, sort_by: "dividend_yield", limit: 5 },
+      { label: "Commodities", filters: { asset_class: "Commodity" }, sort_by: "price", limit: 5 },
+    ]
   },
-  "inflation_high": {
+  inflation_high: {
     description: "High inflation — commodities, REITs, dividend stocks outperform",
-    filters: { asset_class: "Commodity" },
-    sort_by: "price",
-    logic: "Commodities and inflation-protected assets"
+    logic: "High inflation erodes cash. Hard assets like commodities and real estate historically preserve value. Dividend stocks provide income above inflation.",
+    queries: [
+      { label: "Commodities", filters: { asset_class: "Commodity" }, sort_by: "price", limit: 5 },
+      { label: "REITs", filters: { asset_class: "REIT" }, sort_by: "dividend_yield", limit: 5 },
+      { label: "High Dividend Stocks", filters: { asset_class: "Stock" }, sort_by: "dividend_yield", limit: 5 },
+    ]
   },
-  "rate_hike": {
+  rate_hike: {
     description: "Rate hike cycle — financials gain, growth stocks drop",
-    filters: { asset_class: "Stock", sector: "Financial Services" },
-    sort_by: "pe_ratio",
-    logic: "Banks and financials benefit from higher rates"
+    logic: "Rising rates boost bank margins. Avoid high-PE growth stocks — their future earnings are worth less. Short-duration bonds outperform long-duration.",
+    queries: [
+      { label: "Financial Services", filters: { asset_class: "Stock", sector: "Financial Services" }, sort_by: "return_on_equity", limit: 5 },
+      { label: "Short Duration Bonds", filters: { asset_class: "Bond" }, sort_by: "dividend_yield", limit: 5 },
+      { label: "Value Stocks", filters: { asset_class: "Stock" }, sort_by: "pe_ratio", sort_dir: "asc", limit: 5 },
+    ]
   },
-  "recession_fear": {
+  recession_fear: {
     description: "Recession fears — defensive sectors, bonds, gold",
-    filters: { asset_class: "Bond" },
-    sort_by: "dividend_yield",
-    logic: "Safe havens: bonds, utilities, consumer staples"
+    logic: "Recessions hit cyclical stocks hard. Consumer staples, utilities, and healthcare hold up because demand is inelastic. Bonds and gold act as flight-to-safety assets.",
+    queries: [
+      { label: "Defensive Stocks", filters: { asset_class: "Stock", sector: "Consumer Defensive" }, sort_by: "dividend_yield", limit: 5 },
+      { label: "Bonds", filters: { asset_class: "Bond" }, sort_by: "dividend_yield", limit: 5 },
+      { label: "Healthcare", filters: { asset_class: "Stock", sector: "Healthcare" }, sort_by: "profit_margins", limit: 5 },
+    ]
   },
-  "ai_boom": {
+  ai_boom: {
     description: "AI boom — semiconductors, cloud, data infrastructure",
-    filters: { asset_class: "Stock", sector: "Technology" },
-    sort_by: "revenue_growth",
-    logic: "AI infrastructure plays: semis, cloud, data centers"
+    logic: "AI capex is flowing into chips, cloud compute, and data centers. Companies enabling AI infrastructure are growing revenues faster than end-use AI apps.",
+    queries: [
+      { label: "Technology Leaders", filters: { asset_class: "Stock", sector: "Technology" }, sort_by: "revenue_growth", limit: 5 },
+      { label: "Tech ETFs", filters: { asset_class: "ETF" }, sort_by: "market_cap", limit: 5 },
+      { label: "International Tech", filters: { asset_class: "International" }, sort_by: "revenue_growth", limit: 5 },
+    ]
   },
-  "india_growth": {
+  india_growth: {
     description: "India growth story — Indian equities, infrastructure, banking",
-    filters: { asset_class: "Indian Stock" },
-    sort_by: "revenue_growth",
-    logic: "Indian domestic consumption and infrastructure boom"
+    logic: "India is the fastest growing major economy. Demographics, digital adoption, and infrastructure spending are secular tailwinds. Banking and consumption are key beneficiaries.",
+    queries: [
+      { label: "Indian Stocks", filters: { asset_class: "Indian Stock" }, sort_by: "revenue_growth", limit: 8 },
+      { label: "Indian Banking", filters: { asset_class: "Indian Stock", sector: "Financial Services" }, sort_by: "return_on_equity", limit: 4 },
+      { label: "Emerging Market ETFs", filters: { asset_class: "ETF" }, sort_by: "market_cap", limit: 3 },
+    ]
   },
 };
 
@@ -55,23 +78,26 @@ export async function POST(req: NextRequest) {
   const scenario = SCENARIOS[scenario_key];
   if (!scenario) return NextResponse.json({ error: 'Unknown scenario' }, { status: 400 });
 
-  let query = supabase
-    .from('asset_snapshots')
-    .select('*')
-    .order(scenario.sort_by, { ascending: false })
-    .limit(15);
+  const groupedResults: Array<{ label: string; assets: any[] }> = [];
 
-  const f = scenario.filters;
-  if (f.asset_class) query = query.eq('asset_class', f.asset_class);
-  if (f.sector) query = query.eq('sector', f.sector);
+  for (const q of scenario.queries) {
+    let query = supabase
+      .from('asset_snapshots')
+      .select('*')
+      .order(q.sort_by, { ascending: q.sort_dir === 'asc' })
+      .limit(q.limit);
 
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error }, { status: 500 });
+    if (q.filters.asset_class) query = query.eq('asset_class', q.filters.asset_class);
+    if (q.filters.sector) query = query.eq('sector', q.filters.sector);
+
+    const { data } = await query;
+    groupedResults.push({ label: q.label, assets: data || [] });
+  }
 
   return NextResponse.json({
     scenario: scenario_key,
     description: scenario.description,
     logic: scenario.logic,
-    results: data,
+    groups: groupedResults,
   });
 }
