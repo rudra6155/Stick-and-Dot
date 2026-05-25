@@ -30,10 +30,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col cursor-none">
+      <body className="cursor-none">
         <SmoothScroll>
           <CursorProvider>
-            <nav className="fixed top-8 left-0 right-0 z-40 bg-black/80 backdrop-blur-md border-b border-zinc-900/50">
+            <nav className="fixed top-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-md border-b border-zinc-900/50" style={{top: '32px'}}>
               <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center gap-6 h-16">
                   <Link href="/" className="text-zinc-400 hover:text-emerald-400 transition-colors text-sm font-medium uppercase tracking-wider">Terminal</Link>
