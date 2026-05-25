@@ -126,7 +126,8 @@ export default function ScreenerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans pt-24">
+    <div className="bg-black text-white font-sans overflow-x-hidden">
+      <div className="pt-24">
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 space-y-10">
 
         {/* Header */}
@@ -316,6 +317,7 @@ export default function ScreenerPage() {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
     </div>
   );
