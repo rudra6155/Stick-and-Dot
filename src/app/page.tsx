@@ -214,6 +214,10 @@ export default function SuperFinanceHub() {
     setVisibleCount(40);
   }, [activeClass, activeSector, sortBy, searchQuery]);
 
+  useEffect(() => {
+    window.dispatchEvent(new Event('resize'));
+  }, [visibleCount]);
+
   const assetClasses = ["All", "Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International"];
   const sortOptions = ["Market Cap", "Price", "Volume", "P/E", "Div Yield", "52W High", "Beta"];
 

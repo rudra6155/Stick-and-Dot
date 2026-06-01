@@ -44,7 +44,7 @@ export default function ScenariosPage() {
   };
 
   return (
-    <div className="bg-black text-white font-sans overflow-x-hidden">
+    <div className="bg-black text-white font-sans">
       <div className="pt-24 max-w-6xl mx-auto px-4 md:px-8 py-12 space-y-12">
 
         {/* Header */}
