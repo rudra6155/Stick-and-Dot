@@ -45,6 +45,8 @@ export default function RootLayout({
                   <Link href="/backtest" className="text-zinc-400 hover:text-emerald-400 transition-colors text-sm font-medium uppercase tracking-wider">Backtest</Link>
                   <span className="text-zinc-800">|</span>
                   <Link href="/news" className="text-zinc-400 hover:text-emerald-400 transition-colors text-sm font-medium uppercase tracking-wider">News</Link>
+                  <span className="text-zinc-800">|</span>
+                  <Link href="/risk-score" className="text-zinc-400 hover:text-emerald-400 transition-colors text-sm font-medium uppercase tracking-wider">Risk Score</Link>
                 </div>
               </div>
             </nav>
