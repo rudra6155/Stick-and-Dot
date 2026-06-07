@@ -5,7 +5,12 @@ from ticker_lists import (
     SP500_TICKERS, ETF_TICKERS, REIT_TICKERS,
     COMMODITY_TICKERS, BOND_TICKERS, INDIAN_TICKERS,
     INTERNATIONAL_TICKERS, GROWTH_TICKERS,
-    MIDCAP_TICKERS, INDIAN_EXTENDED_TICKERS
+    MIDCAP_TICKERS, INDIAN_EXTENDED_TICKERS,
+    RUSSELL_TICKERS, ADR_TICKERS, INDIAN_LARGE_TICKERS,
+    THEMATIC_ETF_TICKERS, SMALLCAP_TICKERS,
+    LSE_TICKERS, TSX_TICKERS, ASX_TICKERS,
+    FSE_TICKERS, HKEX_TICKERS, TSE_TICKERS,
+    SGX_TICKERS, EURONEXT_TICKERS
 )
 
 BATCH_SIZE = 20
@@ -22,6 +27,19 @@ ASSET_CLASS_MAP = {
     "Growth": "Stock",
     "MidCap": "Stock",
     "Indian Extended": "Indian Stock",
+    "Russell": "Stock",
+    "International ADR": "International",
+    "Indian Stock Large": "Indian Stock",
+    "Thematic ETF": "ETF",
+    "SmallCap Growth": "Stock",
+    "LSE": "International",
+    "TSX": "International",
+    "ASX": "International",
+    "FSE": "International",
+    "HKEX": "International",
+    "TSE": "International",
+    "SGX": "International",
+    "Euronext": "International",
 }
 
 def setup_database():
@@ -121,6 +139,19 @@ def fetch_and_store():
         "Growth": GROWTH_TICKERS,
         "MidCap": MIDCAP_TICKERS,
         "Indian Extended": INDIAN_EXTENDED_TICKERS,
+        "Russell": RUSSELL_TICKERS,
+        "International ADR": ADR_TICKERS,
+        "Indian Stock Large": INDIAN_LARGE_TICKERS,
+        "Thematic ETF": THEMATIC_ETF_TICKERS,
+        "SmallCap Growth": SMALLCAP_TICKERS,
+        "LSE": LSE_TICKERS,
+        "TSX": TSX_TICKERS,
+        "ASX": ASX_TICKERS,
+        "FSE": FSE_TICKERS,
+        "HKEX": HKEX_TICKERS,
+        "TSE": TSE_TICKERS,
+        "SGX": SGX_TICKERS,
+        "Euronext": EURONEXT_TICKERS,
     }
 
     total_done = 0
