@@ -65,6 +65,42 @@ export type Asset = {
   currency: string;
   website: string;
   longBusinessSummary: string;
+
+  // FMP additional fields
+  netIncome: number;
+  operatingCashflow: number;
+  capex: number;
+  bookValuePerShare: number;
+  revenuePerShare: number;
+  debtToEquity: number;
+  currentRatio: number;
+  quickRatio: number;
+  cashAndEquivalents: number;
+  targetLowPrice: number;
+  analystCount: number;
+
+  // CoinGecko crypto fields
+  marketCapRank: number;
+  priceChange24h: number;
+  priceChangePct24h: number;
+  priceChange7d: number;
+  priceChange30d: number;
+  priceChange1y: number;
+  high24h: number;
+  low24h: number;
+  ath: number;
+  atl: number;
+  circulatingSupply: number;
+  totalSupply: number;
+  maxSupply: number;
+  fullyDilutedValuation: number;
+  developerScore: number;
+  communityScore: number;
+  liquidityScore: number;
+  sentimentVotesUpPct: number;
+  sentimentVotesDownPct: number;
+  communityTwitterFollowers: number;
+  communityRedditSubscribers: number;
 };
 
 const normalizeClass = (raw: string | undefined): string => {
@@ -168,6 +204,38 @@ export async function fetchAllAssets(): Promise<Asset[]> {
       currency: row.currency || '',
       website: row.website || '',
       longBusinessSummary: row.long_business_summary || '',
+      netIncome: row.net_income || 0,
+      operatingCashflow: row.operating_cashflow || 0,
+      capex: row.capex || 0,
+      bookValuePerShare: row.book_value_per_share || 0,
+      revenuePerShare: row.revenue_per_share || 0,
+      debtToEquity: row.debt_to_equity || 0,
+      currentRatio: row.current_ratio || 0,
+      quickRatio: row.quick_ratio || 0,
+      cashAndEquivalents: row.cash_and_equivalents || 0,
+      targetLowPrice: row.target_low_price || 0,
+      analystCount: row.analyst_count || 0,
+      marketCapRank: row.market_cap_rank || 0,
+      priceChange24h: row.price_change_24h || 0,
+      priceChangePct24h: row.price_change_pct_24h || 0,
+      priceChange7d: row.price_change_7d || 0,
+      priceChange30d: row.price_change_30d || 0,
+      priceChange1y: row.price_change_1y || 0,
+      high24h: row.high_24h || 0,
+      low24h: row.low_24h || 0,
+      ath: row.ath || 0,
+      atl: row.atl || 0,
+      circulatingSupply: row.circulating_supply || 0,
+      totalSupply: row.total_supply || 0,
+      maxSupply: row.max_supply || 0,
+      fullyDilutedValuation: row.fully_diluted_valuation || 0,
+      developerScore: row.developer_score || 0,
+      communityScore: row.community_score || 0,
+      liquidityScore: row.liquidity_score || 0,
+      sentimentVotesUpPct: row.sentiment_votes_up_pct || 0,
+      sentimentVotesDownPct: row.sentiment_votes_down_pct || 0,
+      communityTwitterFollowers: row.community_twitter_followers || 0,
+      communityRedditSubscribers: row.community_reddit_subscribers || 0,
     })),
     ...validTraditionalRows.map((row: any) => ({
       id: `trad_${row.id}`,
@@ -233,6 +301,38 @@ export async function fetchAllAssets(): Promise<Asset[]> {
       currency: row.currency || '',
       website: row.website || '',
       longBusinessSummary: row.long_business_summary || '',
+      netIncome: row.net_income || 0,
+      operatingCashflow: row.operating_cashflow || 0,
+      capex: row.capex || 0,
+      bookValuePerShare: row.book_value_per_share || 0,
+      revenuePerShare: row.revenue_per_share || 0,
+      debtToEquity: row.debt_to_equity || 0,
+      currentRatio: row.current_ratio || 0,
+      quickRatio: row.quick_ratio || 0,
+      cashAndEquivalents: row.cash_and_equivalents || 0,
+      targetLowPrice: row.target_low_price || 0,
+      analystCount: row.analyst_count || 0,
+      marketCapRank: row.market_cap_rank || 0,
+      priceChange24h: row.price_change_24h || 0,
+      priceChangePct24h: row.price_change_pct_24h || 0,
+      priceChange7d: row.price_change_7d || 0,
+      priceChange30d: row.price_change_30d || 0,
+      priceChange1y: row.price_change_1y || 0,
+      high24h: row.high_24h || 0,
+      low24h: row.low_24h || 0,
+      ath: row.ath || 0,
+      atl: row.atl || 0,
+      circulatingSupply: row.circulating_supply || 0,
+      totalSupply: row.total_supply || 0,
+      maxSupply: row.max_supply || 0,
+      fullyDilutedValuation: row.fully_diluted_valuation || 0,
+      developerScore: row.developer_score || 0,
+      communityScore: row.community_score || 0,
+      liquidityScore: row.liquidity_score || 0,
+      sentimentVotesUpPct: row.sentiment_votes_up_pct || 0,
+      sentimentVotesDownPct: row.sentiment_votes_down_pct || 0,
+      communityTwitterFollowers: row.community_twitter_followers || 0,
+      communityRedditSubscribers: row.community_reddit_subscribers || 0,
     }))
   ];
 
