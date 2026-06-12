@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Super Finance Hub — Aggregated Market Terminal",
-  description: "1000+ assets. 10 asset classes. Zero opinions. The unfiltered financial data terminal.",
+  description: "8500+ assets. 10 asset classes. Zero opinions. The unfiltered financial data terminal.",
 };
 
 export default function RootLayout({
