@@ -123,21 +123,8 @@ export async function fetchAllAssets(): Promise<Asset[]> {
   const cryptoRows = (marketData as any).crypto_assets || [];
   const traditionalRows = (marketData as any).traditional_assets || [];
 
-  const latestCrypto = new Map();
-  cryptoRows.forEach((row: any) => {
-    if (!latestCrypto.has(row.asset_name) || latestCrypto.get(row.asset_name).id < row.id) {
-      latestCrypto.set(row.asset_name, row);
-    }
-  });
-  const latestTraditional = new Map();
-  traditionalRows.forEach((row: any) => {
-    if (!latestTraditional.has(row.ticker) || latestTraditional.get(row.ticker).id < row.id) {
-      latestTraditional.set(row.ticker, row);
-    }
-  });
-
-  const validCryptoRows = Array.from(latestCrypto.values());
-  const validTraditionalRows = Array.from(latestTraditional.values());
+  const validCryptoRows = cryptoRows;
+  const validTraditionalRows = traditionalRows;
 
   const allAssets: Asset[] = [
     ...validCryptoRows.map((row: any) => ({
