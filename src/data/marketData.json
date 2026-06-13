@@ -41375,7 +41375,7 @@
       "avg_volume": 2281684.0,
       "market_cap": 3582494464.0,
       "enterprise_value": 3295003392.0,
-      "pe_ratio": Infinity,
+      "pe_ratio": null,
       "forward_pe": 10.768913,
       "peg_ratio": 0.36,
       "price_to_book": 0.94194365,
