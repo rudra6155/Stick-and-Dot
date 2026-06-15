@@ -218,7 +218,7 @@ export default function SuperFinanceHub() {
     window.dispatchEvent(new Event('resize'));
   }, [visibleCount]);
 
-  const assetClasses = ["All", "Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International"];
+  const assetClasses = ["All", "Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
   const sortOptions = ["Market Cap", "Price", "Volume", "P/E", "Div Yield", "52W High", "Beta"];
 
   return (
@@ -252,10 +252,10 @@ export default function SuperFinanceHub() {
             transition={{ delay: 1, duration: 1 }}
             className="text-zinc-400 font-mono text-sm tracking-widest uppercase mb-12 md:mb-20 text-center px-4"
           >
-            You&apos;re in the driver&apos;s seat. 8500+ assets. Zero opinions.
+            You&apos;re in the driver&apos;s seat. 20,000+ assets. Zero opinions.
           </motion.p>
           <div className="flex flex-col md:flex-row gap-8 md:gap-24 opacity-80">
-            <AnimatedStat value={8500} label="Assets" suffix="+" />
+            <AnimatedStat value={19528} label="Assets" />
             <AnimatedStat value={9} label="Asset Classes" />
             <AnimatedStat value={20} label="Data Points" suffix="+" />
           </div>
