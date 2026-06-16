@@ -31,21 +31,21 @@ export default function StatsSection() {
         <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest mb-8 text-center">Asset Breakdown</p>
         <div className="flex flex-col gap-3 max-w-2xl mx-auto">
           {[
-            { label: "Stocks", count: 523, color: "bg-cyan-500" },
-            { label: "Crypto", count: 201, color: "bg-violet-500" },
-            { label: "ETFs", count: 100, color: "bg-blue-500" },
-            { label: "REITs", count: 50, color: "bg-amber-500" },
-            { label: "Commodities", count: 30, color: "bg-yellow-500" },
+            { label: "Stocks", count: 19310, color: "bg-cyan-500" },
+            { label: "Crypto", count: 10017, color: "bg-violet-500" },
+            { label: "Intl", count: 312, color: "bg-purple-500" },
+            { label: "ETFs", count: 136, color: "bg-blue-500" },
             { label: "Bonds", count: 30, color: "bg-slate-400" },
-            { label: "Indian Stocks", count: 80, color: "bg-orange-500" },
-            { label: "International", count: 60, color: "bg-purple-500" },
+            { label: "Forex", count: 10, color: "bg-rose-500" },
+            { label: "Commodities", count: 2, color: "bg-yellow-500" },
+            { label: "Indices", count: 1, color: "bg-orange-500" },
           ].map((item, i) => (
             <div key={item.label} className="flex items-center gap-4">
               <span className="font-mono text-xs text-zinc-500 w-24 text-right shrink-0">{item.label}</span>
               <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  whileInView={{ width: `${(item.count / 523) * 100}%` }}
+                  whileInView={{ width: `${Math.max((item.count / 19310) * 100, 1.5)}%` }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.8, delay: i * 0.1 }}
                   className={`h-full rounded-full ${item.color}`}
