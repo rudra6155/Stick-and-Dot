@@ -1,0 +1,8 @@
+Data merged and exported to src/data/marketData.json
+--- Source Counts ---
+Traditional (unique): 20273
+Crypto (unique): 10119
+--- Output Counts ---
+Total Unique Assets: 30392
+Crypto fields with data: 24
+Traditional fields with data: 62

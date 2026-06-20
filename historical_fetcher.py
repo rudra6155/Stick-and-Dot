@@ -199,5 +199,9 @@ def push_historical_data():
     print("\nDone.")
 
 if __name__ == "__main__":
-    setup_supabase_tables()
+    import sys
+    if "--skip-setup" in sys.argv:
+        print("Skipping Supabase table setup as --skip-setup was specified.")
+    else:
+        setup_supabase_tables()
     push_historical_data()

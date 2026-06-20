@@ -31,14 +31,16 @@ export default function StatsSection() {
         <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest mb-8 text-center">Asset Breakdown</p>
         <div className="flex flex-col gap-3 max-w-2xl mx-auto">
           {[
-            { label: "Intl Stocks", count: 10651, color: "bg-purple-500" },
-            { label: "Crypto", count: 10017, color: "bg-violet-500" },
-            { label: "US Stocks", count: 6361, color: "bg-cyan-500" },
-            { label: "India", count: 2392, color: "bg-orange-500" },
-            { label: "ETFs", count: 610, color: "bg-blue-500" },
+            { label: "Intl Stocks", count: 10632, color: "bg-purple-500" },
+            { label: "Crypto", count: 10119, color: "bg-violet-500" },
+            { label: "US Stocks", count: 7135, color: "bg-cyan-500" },
+            { label: "India", count: 1652, color: "bg-orange-500" },
+            { label: "ETFs", count: 611, color: "bg-blue-500" },
             { label: "Forex", count: 74, color: "bg-rose-500" },
             { label: "Commodities", count: 57, color: "bg-yellow-500" },
             { label: "Indices", count: 55, color: "bg-indigo-500" },
+            { label: "REITs", count: 30, color: "bg-pink-500" },
+            { label: "Bonds", count: 27, color: "bg-emerald-500" },
           ].map((item, i) => (
             <div key={item.label} className="flex items-center gap-4">
               <span className="font-mono text-xs text-zinc-500 w-24 text-right shrink-0">{item.label}</span>

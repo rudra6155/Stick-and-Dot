@@ -1,6 +1,7 @@
 import yfinance as yf
 import sqlite3
 import time
+import concurrent.futures
 from ticker_lists import (
     SP500_TICKERS, ETF_TICKERS, REIT_TICKERS,
     COMMODITY_TICKERS, BOND_TICKERS, INDIAN_TICKERS,
@@ -10,11 +11,19 @@ from ticker_lists import (
     THEMATIC_ETF_TICKERS, SMALLCAP_TICKERS,
     LSE_TICKERS, TSX_TICKERS, ASX_TICKERS,
     FSE_TICKERS, HKEX_TICKERS, TSE_TICKERS,
-    SGX_TICKERS, EURONEXT_TICKERS
+    SGX_TICKERS, EURONEXT_TICKERS, FOREX_TICKERS, INDICES_TICKERS
 )
 
-BATCH_SIZE = 20
-SLEEP_BETWEEN_BATCHES = 4
+# Load downloaded tickers from CSV scrape
+def load_downloaded_tickers():
+    try:
+        with open('downloaded_tickers.txt', 'r') as f:
+            tickers = [line.strip() for line in f if line.strip()]
+        print(f"Loaded {len(tickers)} tickers from downloaded_tickers.txt")
+        return tickers
+    except:
+        print("downloaded_tickers.txt not found, skipping")
+        return []
 
 ASSET_CLASS_MAP = {
     "SP500": "Stock",
@@ -40,6 +49,9 @@ ASSET_CLASS_MAP = {
     "TSE": "International",
     "SGX": "International",
     "Euronext": "International",
+    "Forex": "Forex",
+    "Index": "Index",
+    "Downloaded": "Stock",
 }
 
 def setup_database():
@@ -124,6 +136,77 @@ def safe_str(val):
     except:
         return None
 
+def fetch_ticker_data(ticker, asset_class):
+    try:
+        info = yf.Ticker(ticker).info
+        price = safe_float(info.get('currentPrice') or info.get('regularMarketPrice') or info.get('previousClose'))
+        if not price:
+            return None
+
+        return (
+            ticker,
+            safe_str(info.get('shortName')),
+            safe_str(info.get('longName')),
+            asset_class,
+            price,
+            safe_float(info.get('previousClose')),
+            safe_float(info.get('open')),
+            safe_float(info.get('dayHigh')),
+            safe_float(info.get('dayLow')),
+            safe_float(info.get('volume')),
+            safe_float(info.get('averageVolume')),
+            safe_float(info.get('marketCap')),
+            safe_float(info.get('enterpriseValue')),
+            safe_float(info.get('trailingPE')),
+            safe_float(info.get('forwardPE')),
+            safe_float(info.get('pegRatio')),
+            safe_float(info.get('priceToBook')),
+            safe_float(info.get('priceToSalesTrailing12Months')),
+            safe_float(info.get('enterpriseToEbitda')),
+            safe_float(info.get('dividendRate')),
+            safe_float(info.get('dividendYield')),
+            safe_float(info.get('payoutRatio')),
+            safe_float(info.get('fiveYearAvgDividendYield')),
+            safe_float(info.get('earningsGrowth')),
+            safe_float(info.get('revenueGrowth')),
+            safe_float(info.get('profitMargins')),
+            safe_float(info.get('grossMargins')),
+            safe_float(info.get('operatingMargins')),
+            safe_float(info.get('returnOnEquity')),
+            safe_float(info.get('returnOnAssets')),
+            safe_float(info.get('totalRevenue')),
+            safe_float(info.get('ebitda')),
+            safe_float(info.get('totalDebt')),
+            safe_float(info.get('freeCashflow')),
+            safe_float(info.get('fiftyTwoWeekHigh')),
+            safe_float(info.get('fiftyTwoWeekLow')),
+            safe_float(info.get('allTimeHigh')),
+            safe_float(info.get('allTimeLow')),
+            safe_float(info.get('fiftyDayAverage')),
+            safe_float(info.get('twoHundredDayAverage')),
+            safe_float(info.get('beta')),
+            safe_float(info.get('sharesOutstanding')),
+            safe_float(info.get('floatShares')),
+            safe_float(info.get('sharesShort')),
+            safe_float(info.get('heldPercentInsiders')),
+            safe_float(info.get('heldPercentInstitutions')),
+            safe_float(info.get('recommendationMean')),
+            safe_float(info.get('targetMeanPrice')),
+            safe_float(info.get('targetHighPrice')),
+            safe_float(info.get('trailingEps')),
+            safe_float(info.get('forwardEps')),
+            safe_str(info.get('sector')),
+            safe_str(info.get('industry')),
+            safe_str(info.get('country')),
+            safe_str(info.get('exchange')),
+            safe_str(info.get('currency')),
+            safe_str(info.get('website')),
+            safe_str(info.get('longBusinessSummary')),
+            __import__('datetime').datetime.now()
+        )
+    except Exception as e:
+        return None
+
 def fetch_and_store():
     conn = setup_database()
     cursor = conn.cursor()
@@ -152,26 +235,54 @@ def fetch_and_store():
         "TSE": TSE_TICKERS,
         "SGX": SGX_TICKERS,
         "Euronext": EURONEXT_TICKERS,
+        "Forex": FOREX_TICKERS,
+        "Index": INDICES_TICKERS,
+        "Downloaded": load_downloaded_tickers(),
     }
 
-    total_done = 0
-    total_tickers = sum(len(v) for v in categories.values())
-
+    # Deduplicate tickers across categories and assign classes
+    ticker_to_class = {}
     for category, tickers in categories.items():
         asset_class = ASSET_CLASS_MAP[category]
-        batches = [tickers[i:i+BATCH_SIZE] for i in range(0, len(tickers), BATCH_SIZE)]
+        for t in tickers:
+            if t:
+                t_clean = t.strip()
+                # Prioritize specific asset classes over general 'Stock' / 'Downloaded'
+                if t_clean not in ticker_to_class or ticker_to_class[t_clean] in ['Stock']:
+                    ticker_to_class[t_clean] = asset_class
 
-        for batch_num, batch in enumerate(batches):
-            for ticker in batch:
-                total_done += 1
-                print(f"[{total_done}/{total_tickers}] Fetching {ticker}...", end=" ")
-                try:
-                    info = yf.Ticker(ticker).info
-                    price = safe_float(info.get('currentPrice') or info.get('regularMarketPrice') or info.get('previousClose'))
-                    if not price:
-                        print("Failed (No price)")
-                        continue
+    # Get already fetched tickers from database
+    cursor.execute("SELECT DISTINCT ticker FROM traditional_assets WHERE price IS NOT NULL AND price > 0")
+    existing_tickers = set(row[0] for row in cursor.fetchall())
 
+    # Filter tickers to fetch
+    tickers_to_fetch = [(t, asset_class) for t, asset_class in ticker_to_class.items() if t not in existing_tickers]
+    total_to_fetch = len(tickers_to_fetch)
+
+    print(f"Deduplicated total tickers: {len(ticker_to_class)}")
+    print(f"Skipping {len(existing_tickers)} already successfully fetched tickers.")
+    print(f"Need to fetch {total_to_fetch} remaining tickers.")
+
+    if total_to_fetch == 0:
+        print("No new tickers to fetch.")
+        conn.close()
+        return
+
+    # Use ThreadPoolExecutor to fetch concurrently
+    done = 0
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        # Submit tasks
+        future_to_ticker = {
+            executor.submit(fetch_ticker_data, ticker, asset_class): ticker 
+            for ticker, asset_class in tickers_to_fetch
+        }
+
+        for future in concurrent.futures.as_completed(future_to_ticker):
+            ticker = future_to_ticker[future]
+            done += 1
+            try:
+                data = future.result()
+                if data:
                     cursor.execute('''
                         INSERT INTO traditional_assets (
                             ticker, short_name, long_name, asset_class,
@@ -191,82 +302,21 @@ def fetch_and_store():
                             sector, industry, country, exchange, currency,
                             website, long_business_summary, timestamp
                         ) VALUES (
-                            ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+                            ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
                         )
-                    ''', (
-                        ticker,
-                        safe_str(info.get('shortName')),
-                        safe_str(info.get('longName')),
-                        asset_class,
-                        price,
-                        safe_float(info.get('previousClose')),
-                        safe_float(info.get('open')),
-                        safe_float(info.get('dayHigh')),
-                        safe_float(info.get('dayLow')),
-                        safe_float(info.get('volume')),
-                        safe_float(info.get('averageVolume')),
-                        safe_float(info.get('marketCap')),
-                        safe_float(info.get('enterpriseValue')),
-                        safe_float(info.get('trailingPE')),
-                        safe_float(info.get('forwardPE')),
-                        safe_float(info.get('pegRatio')),
-                        safe_float(info.get('priceToBook')),
-                        safe_float(info.get('priceToSalesTrailing12Months')),
-                        safe_float(info.get('enterpriseToEbitda')),
-                        safe_float(info.get('dividendRate')),
-                        safe_float(info.get('dividendYield')),
-                        safe_float(info.get('payoutRatio')),
-                        safe_float(info.get('fiveYearAvgDividendYield')),
-                        safe_float(info.get('earningsGrowth')),
-                        safe_float(info.get('revenueGrowth')),
-                        safe_float(info.get('profitMargins')),
-                        safe_float(info.get('grossMargins')),
-                        safe_float(info.get('operatingMargins')),
-                        safe_float(info.get('returnOnEquity')),
-                        safe_float(info.get('returnOnAssets')),
-                        safe_float(info.get('totalRevenue')),
-                        safe_float(info.get('ebitda')),
-                        safe_float(info.get('totalDebt')),
-                        safe_float(info.get('freeCashflow')),
-                        safe_float(info.get('fiftyTwoWeekHigh')),
-                        safe_float(info.get('fiftyTwoWeekLow')),
-                        safe_float(info.get('allTimeHigh')),
-                        safe_float(info.get('allTimeLow')),
-                        safe_float(info.get('fiftyDayAverage')),
-                        safe_float(info.get('twoHundredDayAverage')),
-                        safe_float(info.get('beta')),
-                        safe_float(info.get('sharesOutstanding')),
-                        safe_float(info.get('floatShares')),
-                        safe_float(info.get('sharesShort')),
-                        safe_float(info.get('heldPercentInsiders')),
-                        safe_float(info.get('heldPercentInstitutions')),
-                        safe_float(info.get('recommendationMean')),
-                        safe_float(info.get('targetMeanPrice')),
-                        safe_float(info.get('targetHighPrice')),
-                        safe_float(info.get('trailingEps')),
-                        safe_float(info.get('forwardEps')),
-                        safe_str(info.get('sector')),
-                        safe_str(info.get('industry')),
-                        safe_str(info.get('country')),
-                        safe_str(info.get('exchange')),
-                        safe_str(info.get('currency')),
-                        safe_str(info.get('website')),
-                        safe_str(info.get('longBusinessSummary')),
-                        __import__('datetime').datetime.now()
-                    ))
-                    conn.commit()
-                    print(f"OK ${price:.2f}")
+                    ''', data)
+                    if done % 10 == 0:
+                        conn.commit()
+                    print(f"[{done}/{total_to_fetch}] {ticker} - OK ${data[4]:.2f}")
+                else:
+                    print(f"[{done}/{total_to_fetch}] {ticker} - Failed (No price / invalid data)")
+            except Exception as e:
+                print(f"[{done}/{total_to_fetch}] {ticker} - Exception: {e}")
+            
+            # Brief delay to respect yfinance rate limiting
+            time.sleep(0.1)
 
-                except Exception as e:
-                    print(f"Failed ({e})")
-                    continue
-
-            if (batch_num + 1) % 5 == 0:
-                print(f"  -- Cooldown after batch {batch_num+1} --")
-                time.sleep(15)
-            else:
-                time.sleep(SLEEP_BETWEEN_BATCHES)
-
+    conn.commit()
     conn.close()
     print("\nDone. Data saved to finance_hub.db")
 

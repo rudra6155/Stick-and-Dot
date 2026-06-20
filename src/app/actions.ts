@@ -115,6 +115,8 @@ const normalizeClass = (raw: string | undefined): string => {
     'bond': 'Bond', 'bonds': 'Bond',
     'indian stock': 'Indian Stock', 'indian stocks': 'Indian Stock',
     'international': 'International',
+    'forex': 'Forex',
+    'index': 'Index', 'indices': 'Index',
   };
   return map[raw.toLowerCase()] ?? raw;
 };

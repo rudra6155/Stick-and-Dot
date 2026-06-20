@@ -1,0 +1,272 @@
+Fetching page 1/100... got 100 coins (total: 100)
+Fetching page 2/100... got 100 coins (total: 200)
+Fetching page 3/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 4/100... got 100 coins (total: 300)
+Fetching page 5/100... got 100 coins (total: 400)
+Fetching page 6/100... got 100 coins (total: 500)
+Fetching page 7/100... got 100 coins (total: 600)
+Fetching page 8/100... got 100 coins (total: 700)
+Fetching page 9/100... got 100 coins (total: 800)
+Fetching page 10/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 11/100... got 100 coins (total: 900)
+Fetching page 12/100... got 100 coins (total: 1000)
+Fetching page 13/100... got 100 coins (total: 1100)
+Fetching page 14/100... got 100 coins (total: 1200)
+Fetching page 15/100... got 100 coins (total: 1300)
+Fetching page 16/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 17/100... got 100 coins (total: 1400)
+Fetching page 18/100... got 100 coins (total: 1500)
+Fetching page 19/100... got 100 coins (total: 1600)
+Fetching page 20/100... got 100 coins (total: 1700)
+Fetching page 21/100... got 100 coins (total: 1800)
+Fetching page 22/100... got 100 coins (total: 1900)
+Fetching page 23/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 24/100... got 100 coins (total: 2000)
+Fetching page 25/100... got 100 coins (total: 2100)
+Fetching page 26/100... got 100 coins (total: 2200)
+Fetching page 27/100... got 100 coins (total: 2300)
+Fetching page 28/100... got 100 coins (total: 2400)
+Fetching page 29/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 30/100... got 100 coins (total: 2500)
+Fetching page 31/100... got 100 coins (total: 2600)
+Fetching page 32/100... got 100 coins (total: 2700)
+Fetching page 33/100... got 100 coins (total: 2800)
+Fetching page 34/100... got 100 coins (total: 2900)
+Fetching page 35/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 36/100... got 100 coins (total: 3000)
+Fetching page 37/100... got 100 coins (total: 3100)
+Fetching page 38/100... got 100 coins (total: 3200)
+Fetching page 39/100... got 100 coins (total: 3300)
+Fetching page 40/100... got 100 coins (total: 3400)
+Fetching page 41/100... got 100 coins (total: 3500)
+Fetching page 42/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 43/100... got 100 coins (total: 3600)
+Fetching page 44/100... got 100 coins (total: 3700)
+Fetching page 45/100... got 100 coins (total: 3800)
+Fetching page 46/100... got 100 coins (total: 3900)
+Fetching page 47/100... got 100 coins (total: 4000)
+Fetching page 48/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 49/100... got 100 coins (total: 4100)
+Fetching page 50/100... got 100 coins (total: 4200)
+Fetching page 51/100... got 100 coins (total: 4300)
+Fetching page 52/100... got 100 coins (total: 4400)
+Fetching page 53/100... got 100 coins (total: 4500)
+Fetching page 54/100... got 100 coins (total: 4600)
+Fetching page 55/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 56/100... got 100 coins (total: 4700)
+Fetching page 57/100... got 100 coins (total: 4800)
+Fetching page 58/100... got 100 coins (total: 4900)
+Fetching page 59/100... got 100 coins (total: 5000)
+Fetching page 60/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 61/100... got 100 coins (total: 5100)
+Fetching page 62/100... got 100 coins (total: 5200)
+Fetching page 63/100... got 100 coins (total: 5300)
+Fetching page 64/100... got 100 coins (total: 5400)
+Fetching page 65/100... got 100 coins (total: 5500)
+Fetching page 66/100... got 100 coins (total: 5600)
+Fetching page 67/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 68/100... got 100 coins (total: 5700)
+Fetching page 69/100... got 100 coins (total: 5800)
+Fetching page 70/100... got 100 coins (total: 5900)
+Fetching page 71/100... got 100 coins (total: 6000)
+Fetching page 72/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 73/100... got 100 coins (total: 6100)
+Fetching page 74/100... got 100 coins (total: 6200)
+Fetching page 75/100... got 100 coins (total: 6300)
+Fetching page 76/100... got 100 coins (total: 6400)
+Fetching page 77/100... got 100 coins (total: 6500)
+Fetching page 78/100... got 100 coins (total: 6600)
+Fetching page 79/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 80/100... got 100 coins (total: 6700)
+Fetching page 81/100... got 100 coins (total: 6800)
+Fetching page 82/100... got 100 coins (total: 6900)
+Fetching page 83/100... got 100 coins (total: 7000)
+Fetching page 84/100... got 100 coins (total: 7100)
+Fetching page 85/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 86/100... got 100 coins (total: 7200)
+Fetching page 87/100... got 100 coins (total: 7300)
+Fetching page 88/100... got 100 coins (total: 7400)
+Fetching page 89/100... got 100 coins (total: 7500)
+Fetching page 90/100... got 100 coins (total: 7600)
+Fetching page 91/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 92/100... got 100 coins (total: 7700)
+Fetching page 93/100... got 100 coins (total: 7800)
+Fetching page 94/100... got 100 coins (total: 7900)
+Fetching page 95/100... got 100 coins (total: 8000)
+Fetching page 96/100... got 100 coins (total: 8100)
+Fetching page 97/100... Failed: Expecting value: line 1 column 1 (char 0)
+Fetching page 98/100... Bad response: {'status': {'error_code': 429, 'error_message': "You've exceeded the Rate Limit. Please visit https://www.coingecko.com/en/api/pricing to subscribe to our API plans for higher rate limits."}}
+Fetching page 99/100... got 100 coins (total: 8200)
+Fetching page 100/100... got 100 coins (total: 8300)
+
+Total coins: 8300
+C:\Users\Rudra Singh\OneDrive\Desktop\Stick and Dot\coingecko_fetcher.py:107: DeprecationWarning: The default datetime adapter is deprecated as of Python 3.12; see the sqlite3 documentation for suggested replacement recipes
+  cursor.execute('''
+[1/8300] saved BTC-USD
+[51/8300] saved RLUSD-USD
+[101/8300] saved INJ-USD
+[151/8300] saved FRAX-USD
+[201/8300] saved SNX-USD
+[251/8300] saved TEMPLE-USD
+[301/8300] saved DEGEN-USD
+[351/8300] saved NVDAON-USD
+[401/8300] saved OCT-USD
+[451/8300] saved PC0000089-USD
+[501/8300] saved ESP-USD
+[551/8300] saved SWFTC-USD
+[601/8300] saved PRDT-USD
+[651/8300] saved PUMPCADE-USD
+[701/8300] saved OCEAN-USD
+[751/8300] saved EARNUSD-USD
+[801/8300] saved GNS-USD
+[851/8300] saved WALLET-USD
+[901/8300] saved EVER-USD
+[951/8300] saved FUSD-USD
+[1001/8300] saved MOOLAH-USD
+[1051/8300] saved BTCUSD-USD
+[1101/8300] saved SN107-USD
+[1151/8300] saved AQT-USD
+[1201/8300] saved MNSRY-USD
+[1251/8300] saved SN15-USD
+[1301/8300] saved LFI-USD
+[1351/8300] saved GOBLIN-USD
+[1401/8300] saved BOSON-USD
+[1451/8300] saved ALU-USD
+[1501/8300] saved NATIX-USD
+[1551/8300] saved ESIM-USD
+[1601/8300] saved SN125-USD
+[1651/8300] saved A0T-USD
+[1701/8300] saved GPST-USD
+[1751/8300] saved LIMUSD-USD
+[1801/8300] saved HODL-USD
+[1851/8300] saved PEPON-USD
+[1901/8300] saved LIME-USD
+[1951/8300] saved RISE-USD
+[2001/8300] saved HAWK-USD
+[2051/8300] saved RETARDIO-USD
+[2101/8300] saved KAREN-USD
+[2151/8300] saved SON-USD
+[2201/8300] saved GIZA-USD
+[2251/8300] saved DOGEUS-USD
+[2301/8300] saved MIND-USD
+[2351/8300] saved MONKEYS-USD
+[2401/8300] saved WGBERA-USD
+[2451/8300] saved VITA-FAST-USD
+[2501/8300] saved SCAM-USD
+[2551/8300] saved LEO-USD
+[2601/8300] saved MUTE-USD
+[2651/8300] saved TINYWORLD-USD
+[2701/8300] saved BENFICA-USD
+[2751/8300] saved PANDA-USD
+[2801/8300] saved PLAZZY-USD
+[2851/8300] saved ETHOS-USD
+[2901/8300] saved BUNANA-USD
+[2951/8300] saved EVERETH-USD
+[3001/8300] saved MENGO-USD
+[3051/8300] saved T6900-USD
+[3101/8300] saved PROS-USD
+[3151/8300] saved JMONEY-USD
+[3201/8300] saved SEXY-USD
+[3251/8300] saved BMB-USD
+[3301/8300] saved FIO-USD
+[3351/8300] saved SHAPE-USD
+[3401/8300] saved LTX-USD
+[3451/8300] saved MASQ-USD
+[3501/8300] saved SAID-USD
+[3551/8300] saved PKF-USD
+[3601/8300] saved BYTE-USD
+[3651/8300] saved VIVA-USD
+[3701/8300] saved MKUSD-USD
+[3751/8300] saved BRLM-USD
+[3801/8300] saved ALT-USD
+[3851/8300] saved SPORE-USD
+[3901/8300] saved NOOT-USD
+[3951/8300] saved STRONG-USD
+[4001/8300] saved DELUSIONAL-USD
+[4051/8300] saved $ROCKY-USD
+[4101/8300] saved MXC-USD
+[4151/8300] saved PAL-USD
+[4201/8300] saved MEEGSTR-USD
+[4251/8300] saved LYP-USD
+[4301/8300] saved LESTER-USD
+[4351/8300] saved RFUEL-USD
+[4401/8300] saved FSTR-USD
+[4451/8300] saved TJRM-USD
+[4501/8300] saved DMOON-USD
+[4551/8300] saved TURTLE-USD
+[4601/8300] saved PMON-USD
+[4651/8300] saved PERKOS-USD
+[4701/8300] saved BAZED-USD
+[4751/8300] saved CAG-USD
+[4801/8300] saved BARSIK-USD
+[4851/8300] saved BLUECHIP-USD
+[4901/8300] saved COINS-USD
+[4951/8300] saved ROBOT-USD
+[5001/8300] saved PLY-USD
+[5051/8300] saved ATSCOIN-USD
+[5101/8300] saved FUKU-USD
+[5151/8300] saved PLAY-USD
+[5201/8300] saved RSTK-USD
+[5251/8300] saved BLIPS-USD
+[5301/8300] saved SHORT-USD
+[5351/8300] saved BENDOG-USD
+[5401/8300] saved JESUS-USD
+[5451/8300] saved WAVE-USD
+[5501/8300] saved CREATE-USD
+[5551/8300] saved WOOF-USD
+[5601/8300] saved CRAWJU-USD
+[5651/8300] saved SHANG-USD
+[5701/8300] saved YONA-USD
+[5751/8300] saved MAX-USD
+[5801/8300] saved ANALOS-USD
+[5851/8300] saved CLU-USD
+[5901/8300] saved MOE-USD
+[5951/8300] saved MEMES-USD
+[6001/8300] saved MYRA-USD
+[6051/8300] saved $GIGA-USD
+[6101/8300] saved MOLLARS-USD
+[6151/8300] saved ORAIX-USD
+[6201/8300] saved BOS-USD
+[6251/8300] saved CANELCORN-USD
+[6301/8300] saved O3-USD
+[6351/8300] saved ARCONA-USD
+[6401/8300] saved TUX-USD
+[6451/8300] saved DOG-USD
+[6501/8300] saved TBAG-USD
+[6551/8300] saved TIAN-USD
+[6601/8300] saved WORTH-USD
+[6651/8300] saved CROW-USD
+[6701/8300] saved BUBBLE-USD
+[6751/8300] saved SHILL-USD
+[6801/8300] saved SMIDGE-USD
+[6851/8300] saved LEGEND-USD
+[6901/8300] saved SOUNON-USD
+[6951/8300] saved RASMR-USD
+[7001/8300] saved TTG-USD
+[7051/8300] saved GER-USD
+Row error: 'charmap' codec can't encode characters in position 18-21: character maps to <undefined>
+[7151/8300] saved REFI-USD
+[7201/8300] saved SOLBISCUIT-USD
+[7251/8300] saved DREAM-USD
+[7301/8300] saved EIDMUBARAK-USD
+[7351/8300] saved SONNY-USD
+[7401/8300] saved OOO-USD
+[7451/8300] saved RECORD-USD
+[7501/8300] saved RIN-USD
+[7551/8300] saved SEED-USD
+[7601/8300] saved HOTTIE-USD
+[7651/8300] saved LAPUPU-USD
+[7701/8300] saved MVRS-USD
+[7751/8300] saved HOPPY-USD
+[7801/8300] saved Z-USD
+[7851/8300] saved ME-USD
+[7901/8300] saved MEMESTOCK-USD
+[7951/8300] saved AKIRA-USD
+[8001/8300] saved EYE-USD
+[8051/8300] saved PNL-USD
+[8101/8300] saved DESS-USD
+[8151/8300] saved BABYASTER-USD
+[8201/8300] saved ECHON-USD
+[8251/8300] saved VFI-USD
+
+Done. Total crypto in DB: 10123
