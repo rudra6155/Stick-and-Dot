@@ -103,12 +103,17 @@ def setup_supabase_tables():
     input("Press Enter after running the SQL in Supabase dashboard...")
 
 def push_historical_data():
-    total = sum(len(v) for v in ALL_CATEGORIES.values())
+    import sqlite3
+    conn = sqlite3.connect('finance_hub.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT ticker, asset_class FROM traditional_assets WHERE price IS NOT NULL")
+    rows = cursor.fetchall()
+    conn.close()
+
+    total = len(rows)
     done = 0
 
-    for category, tickers in ALL_CATEGORIES.items():
-        asset_class = ASSET_CLASS_MAP[category]
-        for ticker in tickers:
+    for ticker, asset_class in rows:
             done += 1
             print(f"[{done}/{total}] {ticker}...", end=" ")
             try:

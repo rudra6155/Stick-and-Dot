@@ -218,6 +218,15 @@ export default function SuperFinanceHub() {
     window.dispatchEvent(new Event('resize'));
   }, [visibleCount]);
 
+  const assetClassCounts = useMemo(() => {
+    const counts: Record<string, number> = { All: assets.length };
+    assets.forEach(a => {
+      const cls = a.assetClass || 'Unknown';
+      counts[cls] = (counts[cls] || 0) + 1;
+    });
+    return counts;
+  }, [assets]);
+
   const assetClasses = ["All", "Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
   const sortOptions = ["Market Cap", "Price", "Volume", "P/E", "Div Yield", "52W High", "Beta"];
 
@@ -252,10 +261,10 @@ export default function SuperFinanceHub() {
             transition={{ delay: 1, duration: 1 }}
             className="text-zinc-400 font-mono text-sm tracking-widest uppercase mb-12 md:mb-20 text-center px-4"
           >
-            You&apos;re in the driver&apos;s seat. 30,000+ assets. Zero opinions.
+            You&apos;re in the driver&apos;s seat. 51,000+ assets. Zero opinions.
           </motion.p>
           <div className="flex flex-col md:flex-row gap-8 md:gap-24 opacity-80">
-            <AnimatedStat value={30289} label="Assets" />
+            <AnimatedStat value={51861} label="Assets" />
             <AnimatedStat value={9} label="Asset Classes" />
             <AnimatedStat value={20} label="Data Points" suffix="+" />
           </div>
@@ -315,7 +324,7 @@ export default function SuperFinanceHub() {
                       transition={{ type: "spring", stiffness: 300, damping: 25 }}
                     />
                   )}
-                  <span className="relative z-10">{cls}</span>
+                  <span className="relative z-10">{cls} {assetClassCounts[cls] ? `(${assetClassCounts[cls].toLocaleString()})` : ''}</span>
                 </button>
               ))}
             </div>

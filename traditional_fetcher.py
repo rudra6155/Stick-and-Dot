@@ -1,7 +1,8 @@
 import yfinance as yf
 import sqlite3
 import time
-import concurrent.futures
+from yahooquery import Ticker as YQTicker
+
 from ticker_lists import (
     SP500_TICKERS, ETF_TICKERS, REIT_TICKERS,
     COMMODITY_TICKERS, BOND_TICKERS, INDIAN_TICKERS,
@@ -11,24 +12,32 @@ from ticker_lists import (
     THEMATIC_ETF_TICKERS, SMALLCAP_TICKERS,
     LSE_TICKERS, TSX_TICKERS, ASX_TICKERS,
     FSE_TICKERS, HKEX_TICKERS, TSE_TICKERS,
-    SGX_TICKERS, EURONEXT_TICKERS, FOREX_TICKERS, INDICES_TICKERS
+    SGX_TICKERS, EURONEXT_TICKERS, FOREX_TICKERS, INDICES_TICKERS,
+    REIT_EXPANDED_TICKERS, BOND_EXPANDED_TICKERS,
+    LSE_EXPANDED_TICKERS, TSX_EXPANDED_TICKERS,
+    REIT_GLOBAL_TICKERS, EURONEXT_FULL_TICKERS, XETRA_FULL_TICKERS
 )
 
 # Load downloaded tickers from CSV scrape
 def load_downloaded_tickers():
-    try:
-        with open('downloaded_tickers.txt', 'r') as f:
-            tickers = [line.strip() for line in f if line.strip()]
-        print(f"Loaded {len(tickers)} tickers from downloaded_tickers.txt")
-        return tickers
-    except:
-        print("downloaded_tickers.txt not found, skipping")
-        return []
+    all_tickers = []
+    for filename in ['downloaded_tickers.txt', 'downloaded_tickers_v3.txt', 'downloaded_etfs.txt', 'downloaded_china_real.txt', 'downloaded_korea_clean.txt', 'downloaded_otc.txt', 'downloaded_bse_only.txt', 'downloaded_more_exchanges.txt', 'downloaded_final_push.txt', 'downloaded_final_squeeze.txt']:
+        try:
+            with open(filename, 'r') as f:
+                tickers = [line.strip() for line in f if line.strip()]
+            print(f"Loaded {len(tickers)} tickers from {filename}")
+            all_tickers.extend(tickers)
+        except:
+            print(f"{filename} not found, skipping")
+    unique = list(set(all_tickers))
+    print(f"Total unique downloaded tickers: {len(unique)}")
+    return unique
 
 ASSET_CLASS_MAP = {
     "SP500": "Stock",
     "ETF": "ETF",
     "REIT": "REIT",
+    "REIT_Global": "REIT",
     "Commodity": "Commodity",
     "Bond": "Bond",
     "Indian Stock": "Indian Stock",
@@ -49,6 +58,7 @@ ASSET_CLASS_MAP = {
     "TSE": "International",
     "SGX": "International",
     "Euronext": "International",
+    "Xetra": "International",
     "Forex": "Forex",
     "Index": "Index",
     "Downloaded": "Stock",
@@ -214,9 +224,10 @@ def fetch_and_store():
     categories = {
         "SP500": SP500_TICKERS,
         "ETF": ETF_TICKERS,
-        "REIT": REIT_TICKERS,
+        "REIT": REIT_EXPANDED_TICKERS,
+        "REIT_Global": REIT_GLOBAL_TICKERS,
         "Commodity": COMMODITY_TICKERS,
-        "Bond": BOND_TICKERS,
+        "Bond": BOND_EXPANDED_TICKERS,
         "Indian Stock": INDIAN_TICKERS,
         "International": INTERNATIONAL_TICKERS,
         "Growth": GROWTH_TICKERS,
@@ -227,14 +238,15 @@ def fetch_and_store():
         "Indian Stock Large": INDIAN_LARGE_TICKERS,
         "Thematic ETF": THEMATIC_ETF_TICKERS,
         "SmallCap Growth": SMALLCAP_TICKERS,
-        "LSE": LSE_TICKERS,
-        "TSX": TSX_TICKERS,
+        "LSE": LSE_EXPANDED_TICKERS,
+        "TSX": TSX_EXPANDED_TICKERS,
         "ASX": ASX_TICKERS,
         "FSE": FSE_TICKERS,
         "HKEX": HKEX_TICKERS,
         "TSE": TSE_TICKERS,
         "SGX": SGX_TICKERS,
-        "Euronext": EURONEXT_TICKERS,
+        "Euronext": EURONEXT_FULL_TICKERS,
+        "Xetra": XETRA_FULL_TICKERS,
         "Forex": FOREX_TICKERS,
         "Index": INDICES_TICKERS,
         "Downloaded": load_downloaded_tickers(),
@@ -243,10 +255,23 @@ def fetch_and_store():
     # Deduplicate tickers across categories and assign classes
     ticker_to_class = {}
     for category, tickers in categories.items():
-        asset_class = ASSET_CLASS_MAP[category]
+        base_asset_class = ASSET_CLASS_MAP[category]
         for t in tickers:
             if t:
                 t_clean = t.strip()
+                asset_class = base_asset_class
+                
+                if t_clean.endswith('.T'):
+                    asset_class = "International"
+                elif t_clean.endswith('.KS'):
+                    asset_class = "International"
+                elif t_clean.endswith('.TW'):
+                    asset_class = "International"
+                elif t_clean.endswith('.SS') or t_clean.endswith('.SZ'):
+                    asset_class = "International"
+                elif t_clean.endswith('.BO'):
+                    asset_class = "Indian Stock"
+
                 # Prioritize specific asset classes over general 'Stock' / 'Downloaded'
                 if t_clean not in ticker_to_class or ticker_to_class[t_clean] in ['Stock']:
                     ticker_to_class[t_clean] = asset_class
@@ -268,53 +293,84 @@ def fetch_and_store():
         conn.close()
         return
 
-    # Use ThreadPoolExecutor to fetch concurrently
-    done = 0
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        # Submit tasks
-        future_to_ticker = {
-            executor.submit(fetch_ticker_data, ticker, asset_class): ticker 
-            for ticker, asset_class in tickers_to_fetch
-        }
-
-        for future in concurrent.futures.as_completed(future_to_ticker):
-            ticker = future_to_ticker[future]
-            done += 1
-            try:
-                data = future.result()
-                if data:
-                    cursor.execute('''
-                        INSERT INTO traditional_assets (
-                            ticker, short_name, long_name, asset_class,
-                            price, previous_close, open, day_high, day_low,
-                            volume, avg_volume, market_cap, enterprise_value,
-                            pe_ratio, forward_pe, peg_ratio, price_to_book, price_to_sales, ev_to_ebitda,
-                            dividend_rate, dividend_yield, payout_ratio, five_year_avg_dividend_yield,
-                            earnings_growth, revenue_growth, profit_margins, gross_margins,
-                            operating_margins, return_on_equity, return_on_assets,
-                            total_revenue, ebitda, total_debt, free_cashflow,
-                            high_52_week, low_52_week, all_time_high, all_time_low,
-                            ma_50_day, ma_200_day, beta,
-                            shares_outstanding, float_shares, shares_short,
-                            held_percent_insiders, held_percent_institutions,
-                            recommendation_mean, target_mean_price, target_high_price,
-                            trailing_eps, forward_eps,
-                            sector, industry, country, exchange, currency,
-                            website, long_business_summary, timestamp
-                        ) VALUES (
-                            ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
-                        )
-                    ''', data)
-                    if done % 10 == 0:
-                        conn.commit()
-                    print(f"[{done}/{total_to_fetch}] {ticker} - OK ${data[4]:.2f}")
-                else:
-                    print(f"[{done}/{total_to_fetch}] {ticker} - Failed (No price / invalid data)")
-            except Exception as e:
-                print(f"[{done}/{total_to_fetch}] {ticker} - Exception: {e}")
+    # Fast fetching using yahooquery to pre-filter garbage tickers
+    print(f"Pre-filtering {total_to_fetch} tickers in batches of 500...")
+    
+    # Split into chunks of 500
+    chunk_size = 500
+    valid_tickers_to_fetch = []
+    
+    for i in range(0, total_to_fetch, chunk_size):
+        chunk = tickers_to_fetch[i:i + chunk_size]
+        symbols = [t[0] for t in chunk]
+        print(f"Filtering batch {i//chunk_size + 1}/{(total_to_fetch // chunk_size) + 1} ({len(symbols)} tickers)...", end=" ")
+        
+        try:
+            yq_t = YQTicker(symbols, asynchronous=True)
+            data = yq_t.summary_detail
             
-            # Brief delay to respect yfinance rate limiting
-            time.sleep(0.1)
+            if isinstance(data, dict):
+                valid_symbols = {k for k, v in data.items() if isinstance(v, dict)}
+            else:
+                valid_symbols = set()
+                
+            valid_chunk = [t for t in chunk if t[0] in valid_symbols]
+            valid_tickers_to_fetch.extend(valid_chunk)
+            print(f"Found {len(valid_chunk)} valid.")
+        except Exception as e:
+            print(f"Batch failed: {e}")
+        
+        time.sleep(1) # Small delay between batch queries
+
+    print(f"\nFinished filtering. Found {len(valid_tickers_to_fetch)} potentially valid tickers out of {total_to_fetch}.")
+    
+    if len(valid_tickers_to_fetch) == 0:
+        print("No valid tickers to fetch.")
+        conn.close()
+        return
+
+    # Fetch and store only the valid ones
+    done = 0
+    total_valid = len(valid_tickers_to_fetch)
+    for ticker, asset_class in valid_tickers_to_fetch:
+        done += 1
+        print(f"[{done}/{total_valid}] {ticker}...", end=" ")
+        try:
+            data = fetch_ticker_data(ticker, asset_class)
+            if data:
+                placeholders = ','.join(['?'] * len(data))
+                cursor.execute(f'''
+                    INSERT INTO traditional_assets (
+                        ticker, short_name, long_name, asset_class,
+                        price, previous_close, open, day_high, day_low,
+                        volume, avg_volume, market_cap, enterprise_value,
+                        pe_ratio, forward_pe, peg_ratio, price_to_book, price_to_sales, ev_to_ebitda,
+                        dividend_rate, dividend_yield, payout_ratio, five_year_avg_dividend_yield,
+                        earnings_growth, revenue_growth, profit_margins, gross_margins,
+                        operating_margins, return_on_equity, return_on_assets,
+                        total_revenue, ebitda, total_debt, free_cashflow,
+                        high_52_week, low_52_week, all_time_high, all_time_low,
+                        ma_50_day, ma_200_day, beta,
+                        shares_outstanding, float_shares, shares_short,
+                        held_percent_insiders, held_percent_institutions,
+                        recommendation_mean, target_mean_price, target_high_price,
+                        trailing_eps, forward_eps,
+                        sector, industry, country, exchange, currency,
+                        website, long_business_summary, timestamp
+                    ) VALUES (
+                        {placeholders}
+                    )
+                ''', data)
+                if done % 10 == 0:
+                    conn.commit()
+                print(f"OK ${data[4]:.2f}")
+            else:
+                print(f"Failed (no price)")
+        except Exception as e:
+            print(f"Failed ({e})")
+
+        # Smaller delay since these are known good tickers
+        time.sleep(0.5)
 
     conn.commit()
     conn.close()

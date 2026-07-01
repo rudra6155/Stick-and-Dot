@@ -70,29 +70,33 @@ def fetch_and_store():
     cursor = conn.cursor()
 
     all_coins = []
-    for page in range(1, 101):  # 100 pages x 100 = 10000 coins
-        print(f"Fetching page {page}/100...", end=" ")
+    for page in range(1, 251):  # Fetch 120 pages (approx 12000 coins, max is around 14k)
+        print(f"Fetching page {page}/250...", end=" ")
         try:
             r = requests.get(
                 f"{BASE_URL}/coins/markets",
                 params={
                     'vs_currency': 'usd',
                     'order': 'market_cap_desc',
-                    'per_page': 100,
+                    'per_page': 250,
                     'page': page,
                     'sparkline': False,
-                    'price_change_percentage': '24h,7d,30d'
+                    'price_change_percentage': '24h,7d,30d',
+                    'x_cg_demo_api_key': 'CG-ASLFy22Yk5Apgn1zsde3CiyJ'
                 },
                 timeout=30
             )
             data = r.json()
+            if isinstance(data, list) and len(data) == 0:
+                print(f"Page {page}: empty page, genuinely no more data, stopping")
+                break
             if not isinstance(data, list):
-                print(f"Bad response: {data}")
-                time.sleep(60)
+                print(f"Page {page}: rate limited or error — {str(data)[:150]}, waiting 20s and retrying")
+                time.sleep(20)
                 continue
             all_coins.extend(data)
             print(f"got {len(data)} coins (total: {len(all_coins)})")
-            time.sleep(4)
+            time.sleep(1.5)
         except Exception as e:
             print(f"Failed: {e}")
             time.sleep(10)
