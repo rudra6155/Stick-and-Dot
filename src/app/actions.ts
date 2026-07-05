@@ -142,7 +142,7 @@ export async function fetchAssetsPaginated(params: {
 
   if (params.searchQuery.trim() !== '') {
     const q = params.searchQuery.trim();
-    query = query.or(`ticker.ilike.%${q}%,short_name.ilike.%${q}%,asset_class.ilike.%${q}%`);
+    query = query.or(`ticker.ilike.%${q}%,short_name.ilike.%${q}%`);
   }
 
   const sortMap: Record<string, string> = {
