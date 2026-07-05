@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { Search, ChevronDown, Filter, Settings2, Check } from "lucide-react";
-import { fetchAllAssets, type Asset } from "./actions";
+import { fetchAssetsPaginated, fetchAssetClassCounts, fetchTickerTapeAssets, type Asset } from "./actions";
 import dynamic from 'next/dynamic';
 import { useCountUp } from "@/hooks/useCountUp";
 import { AssetCard } from "@/components/AssetCard";
@@ -120,7 +120,9 @@ function LiveClock() {
 export default function SuperFinanceHub() {
   const [isRefreshing, setIsRefreshing] = useState(true);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [tickerTapeAssets, setTickerTapeAssets] = useState<Asset[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [activeClass, setActiveClass] = useState("All");
   const [activeSector, setActiveSector] = useState("All Sectors");
   const [sortBy, setSortBy] = useState("Market Cap");
@@ -131,6 +133,9 @@ export default function SuperFinanceHub() {
   ]);
   const [scanlineText, setScanlineText] = useState("");
   const placeholder = "Search tickers, assets...";
+  const [offset, setOffset] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [assetClassCounts, setAssetClassCounts] = useState<Record<string, number>>({});
 
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
@@ -148,17 +153,58 @@ export default function SuperFinanceHub() {
 
   useEffect(() => {
     (async () => {
-      setIsRefreshing(true);
       try {
-        const data = await fetchAllAssets();
-        setAssets(data);
+        const tape = await fetchTickerTapeAssets();
+        setTickerTapeAssets(tape);
+        const counts = await fetchAssetClassCounts();
+        setAssetClassCounts(counts);
       } catch (e) {
-        console.error("Failed to load assets", e);
-      } finally {
-        setIsRefreshing(false);
+        console.error("Failed to load metadata", e);
       }
     })();
   }, []);
+
+  const fetchData = async (currentOffset: number, append: boolean) => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetchAssetsPaginated({
+        limit: 40,
+        offset: currentOffset,
+        searchQuery: debouncedSearchQuery,
+        activeClass,
+        activeSector,
+        sortBy
+      });
+      if (append) {
+        setAssets(prev => [...prev, ...res.assets]);
+      } else {
+        setAssets(res.assets);
+      }
+      setTotalCount(res.totalCount);
+    } catch (e) {
+      console.error("Failed to load assets", e);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setOffset(0);
+    fetchData(0, false);
+  }, [debouncedSearchQuery, activeClass, activeSector, sortBy]);
+
+  const handleLoadMore = () => {
+    const nextOffset = offset + 40;
+    setOffset(nextOffset);
+    fetchData(nextOffset, true);
+  };
 
   const formatNumber = (num: number | undefined) => {
     if (!num || num === 0) return "—";
@@ -175,57 +221,13 @@ export default function SuperFinanceHub() {
     );
   };
 
-  const availableSectors = useMemo(() => {
-    const sectors = assets
-      .filter(a => a.assetClass === "Stock" && a.sector)
-      .map(a => a.sector);
-    return ["All Sectors", ...Array.from(new Set(sectors)).sort()];
-  }, [assets]);
+  const availableSectors = ["All Sectors", "Technology", "Healthcare", "Financial Services", "Energy", "Industrials", "Consumer Cyclical", "Consumer Defensive", "Basic Materials", "Real Estate", "Utilities", "Communication Services"];
 
-  const filteredAssets = useMemo(() => {
-    return assets
-      .filter(asset => {
-        const query = searchQuery.toLowerCase().trim();
-        const searchable = `${asset.name} ${asset.symbol} ${asset.assetClass}`.toLowerCase();
-        const matchesSearch = query === "" || searchable.includes(query);
-        const matchesClass = activeClass === "All" || asset.assetClass === activeClass;
-        const matchesSector = activeSector === "All Sectors" || asset.sector === activeSector;
-        return matchesSearch && matchesClass && (activeClass === "Stock" ? matchesSector : true);
-      })
-      .sort((a, b) => {
-        if (sortBy === "Price")        return (b.price || 0) - (a.price || 0);
-        if (sortBy === "Market Cap")   return (b.marketCap || 0) - (a.marketCap || 0);
-        if (sortBy === "Volume")       return (b.volume || 0) - (a.volume || 0);
-        if (sortBy === "P/E")          return (b.peRatio || 0) - (a.peRatio || 0);
-        if (sortBy === "Div Yield")    return (b.dividendYield || 0) - (a.dividendYield || 0);
-        if (sortBy === "52W High")     return (b.high52Week || 0) - (a.high52Week || 0);
-        if (sortBy === "Beta")         return (b.beta || 0) - (a.beta || 0);
-        return a.name.localeCompare(b.name);
-      });
-  }, [assets, searchQuery, activeClass, activeSector, sortBy]);
-
-  const [visibleCount, setVisibleCount] = useState(40);
-
-  const visibleAssets = useMemo(() => {
-    return filteredAssets.slice(0, visibleCount);
-  }, [filteredAssets, visibleCount]);
-
-  useEffect(() => {
-    setVisibleCount(40);
-  }, [activeClass, activeSector, sortBy, searchQuery]);
+  const visibleAssets = assets;
 
   useEffect(() => {
     window.dispatchEvent(new Event('resize'));
-  }, [visibleCount]);
-
-  const assetClassCounts = useMemo(() => {
-    const counts: Record<string, number> = { All: assets.length };
-    assets.forEach(a => {
-      const cls = a.assetClass || 'Unknown';
-      counts[cls] = (counts[cls] || 0) + 1;
-    });
-    return counts;
-  }, [assets]);
+  }, [assets.length]);
 
   const assetClasses = ["All", "Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
   const sortOptions = ["Market Cap", "Price", "Volume", "P/E", "Div Yield", "52W High", "Beta"];
@@ -241,7 +243,7 @@ export default function SuperFinanceHub() {
 
       {/* Ticker Tape */}
       <div className="fixed top-0 left-0 w-full z-50">
-        <TickerTape assets={assets} />
+        <TickerTape assets={tickerTapeAssets} />
       </div>
 
       {/* Hero */}
@@ -430,7 +432,7 @@ export default function SuperFinanceHub() {
         {/* Results count */}
         <div className="mb-6 flex items-center gap-3">
           <span className="font-mono text-xs text-zinc-500 uppercase tracking-widest">
-            {filteredAssets.length} assets
+            {totalCount} assets
           </span>
           {searchQuery && (
             <span className="font-mono text-xs text-emerald-500">
@@ -457,19 +459,19 @@ export default function SuperFinanceHub() {
                   formatNumber={formatNumber}
                 />
               ))}
-              {visibleCount < filteredAssets.length && (
+              {assets.length < totalCount && (
                 <div className="col-span-full flex justify-center pt-8">
                   <button
-                    onClick={() => setVisibleCount(prev => prev + 40)}
+                    onClick={handleLoadMore}
                     className="px-8 py-3 bg-white/5 border border-white/10 rounded-2xl font-mono text-sm text-zinc-400 hover:border-emerald-500/50 hover:text-emerald-400 transition-all"
                   >
-                    Load more — showing {visibleCount} of {filteredAssets.length}
+                    Load more — showing {assets.length} of {totalCount}
                   </button>
                 </div>
               )}
             </>
           )}
-          {filteredAssets.length === 0 && !isRefreshing && (
+          {assets.length === 0 && !isRefreshing && (
             <div className="col-span-full py-32 flex flex-col items-center justify-center text-center opacity-50">
               <Search className="w-16 h-16 text-zinc-600 mb-6" />
               <p className="text-2xl font-light text-white tracking-tight">No assets found</p>

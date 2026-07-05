@@ -1,5 +1,5 @@
 "use server";
-import marketData from '@/data/marketData.json';
+import { supabase } from "@/lib/supabase";
 
 export type Asset = {
   id: string;
@@ -121,209 +121,223 @@ const normalizeClass = (raw: string | undefined): string => {
   return map[raw.toLowerCase()] ?? raw;
 };
 
-export async function fetchAllAssets(): Promise<Asset[]> {
-  const cryptoRows = (marketData as any).crypto_assets || [];
-  const traditionalRows = (marketData as any).traditional_assets || [];
+export async function fetchAssetsPaginated(params: {
+  limit: number;
+  offset: number;
+  searchQuery: string;
+  activeClass: string;
+  activeSector: string;
+  sortBy: string;
+}): Promise<{ assets: Asset[]; totalCount: number }> {
+  let query = supabase
+    .from('asset_snapshots')
+    .select('*', { count: 'exact' });
 
-  const validCryptoRows = cryptoRows;
-  const validTraditionalRows = traditionalRows;
+  if (params.activeClass !== 'All') {
+    query = query.eq('asset_class', params.activeClass);
+  }
+  if (params.activeClass === 'Stock' && params.activeSector !== 'All Sectors') {
+    query = query.eq('sector', params.activeSector);
+  }
 
-  const allAssets: Asset[] = [
-    ...validCryptoRows.map((row: any) => ({
-      id: `crypto_${row.id}`,
-      name: row.asset_name,
-      symbol: row.symbol || row.asset_name,
-      assetClass: 'Crypto',
-      price: row.price || 0,
-      open: row.open || 0,
-      dayHigh: row.day_high || 0,
-      dayLow: row.day_low || 0,
-      volume: row.volume || 0,
-      avgVolume: row.avg_volume || 0,
-      marketCap: row.market_cap || 0,
-      peRatio: row.pe_ratio || 0,
-      forwardPe: row.forward_pe || 0,
-      priceToBook: row.price_to_book || 0,
-      priceToSales: row.price_to_sales || 0,
-      evToEbitda: row.ev_to_ebitda || 0,
-      dividendYield: row.dividend_yield || 0,
-      earningsGrowth: row.earnings_growth || 0,
-      revenueGrowth: row.revenue_growth || 0,
-      profitMargins: row.profit_margins || 0,
-      high52Week: row.high_52_week || 0,
-      low52Week: row.low_52_week || 0,
-      ma50Day: row.ma_50_day || 0,
-      ma200Day: row.ma_200_day || 0,
-      beta: row.beta || 0,
-      history: Array.from({ length: 7 }, () => (row.price || 0) * (1 + (Math.random() * 0.1 - 0.05))),
-      change: ((Math.random() * 4) - 2).toFixed(1) + "%",
-      isUp: Math.random() > 0.5,
-      sector: row.sector || '',
-      industry: row.industry || '',
-      country: row.country || '',
-      exchange: row.exchange || '',
-      shortName: row.short_name || '',
-      longName: row.long_name || '',
-      previousClose: row.previous_close || 0,
-      enterpriseValue: row.enterprise_value || 0,
-      pegRatio: row.peg_ratio || 0,
-      dividendRate: row.dividend_rate || 0,
-      payoutRatio: row.payout_ratio || 0,
-      fiveYearAvgDividendYield: row.five_year_avg_dividend_yield || 0,
-      grossMargins: row.gross_margins || 0,
-      operatingMargins: row.operating_margins || 0,
-      returnOnEquity: row.return_on_equity || 0,
-      returnOnAssets: row.return_on_assets || 0,
-      totalRevenue: row.total_revenue || 0,
-      ebitda: row.ebitda || 0,
-      totalDebt: row.total_debt || 0,
-      freeCashflow: row.free_cashflow || 0,
-      allTimeHigh: row.all_time_high || 0,
-      allTimeLow: row.all_time_low || 0,
-      sharesOutstanding: row.shares_outstanding || 0,
-      floatShares: row.float_shares || 0,
-      sharesShort: row.shares_short || 0,
-      heldPercentInsiders: row.held_percent_insiders || 0,
-      heldPercentInstitutions: row.held_percent_institutions || 0,
-      recommendationMean: row.recommendation_mean || 0,
-      targetMeanPrice: row.target_mean_price || 0,
-      targetHighPrice: row.target_high_price || 0,
-      trailingEps: row.trailing_eps || 0,
-      forwardEps: row.forward_eps || 0,
-      currency: row.currency || '',
-      website: row.website || '',
-      longBusinessSummary: row.long_business_summary || '',
-      netIncome: row.net_income || 0,
-      operatingCashflow: row.operating_cashflow || 0,
-      capex: row.capex || 0,
-      bookValuePerShare: row.book_value_per_share || 0,
-      revenuePerShare: row.revenue_per_share || 0,
-      debtToEquity: row.debt_to_equity || 0,
-      currentRatio: row.current_ratio || 0,
-      quickRatio: row.quick_ratio || 0,
-      cashAndEquivalents: row.cash_and_equivalents || 0,
-      targetLowPrice: row.target_low_price || 0,
-      analystCount: row.analyst_count || 0,
-      marketCapRank: row.market_cap_rank || 0,
-      priceChange24h: row.price_change_24h || 0,
-      priceChangePct24h: row.price_change_pct_24h || 0,
-      priceChange7d: row.price_change_7d || 0,
-      priceChange30d: row.price_change_30d || 0,
-      priceChange1y: row.price_change_1y || 0,
-      high24h: row.high_24h || 0,
-      low24h: row.low_24h || 0,
-      ath: row.ath || 0,
-      atl: row.atl || 0,
-      circulatingSupply: row.circulating_supply || 0,
-      totalSupply: row.total_supply || 0,
-      maxSupply: row.max_supply || 0,
-      fullyDilutedValuation: row.fully_diluted_valuation || 0,
-      developerScore: row.developer_score || 0,
-      communityScore: row.community_score || 0,
-      liquidityScore: row.liquidity_score || 0,
-      sentimentVotesUpPct: row.sentiment_votes_up_pct || 0,
-      sentimentVotesDownPct: row.sentiment_votes_down_pct || 0,
-      communityTwitterFollowers: row.community_twitter_followers || 0,
-      communityRedditSubscribers: row.community_reddit_subscribers || 0,
-    })),
-    ...validTraditionalRows.map((row: any) => ({
-      id: `trad_${row.id}`,
-      name: row.ticker,
-      symbol: row.ticker,
-      assetClass: normalizeClass(row.asset_class),
-      price: row.price || 0,
-      open: row.open || 0,
-      dayHigh: row.day_high || 0,
-      dayLow: row.day_low || 0,
-      volume: row.volume || 0,
-      avgVolume: row.avg_volume || 0,
-      marketCap: row.market_cap || 0,
-      peRatio: row.pe_ratio || 0,
-      forwardPe: row.forward_pe || 0,
-      priceToBook: row.price_to_book || 0,
-      priceToSales: row.price_to_sales || 0,
-      evToEbitda: row.ev_to_ebitda || 0,
-      dividendYield: row.dividend_yield || 0,
-      earningsGrowth: row.earnings_growth || 0,
-      revenueGrowth: row.revenue_growth || 0,
-      profitMargins: row.profit_margins || 0,
-      high52Week: row.high_52_week || 0,
-      low52Week: row.low_52_week || 0,
-      ma50Day: row.ma_50_day || 0,
-      ma200Day: row.ma_200_day || 0,
-      beta: row.beta || 0,
-      history: Array.from({ length: 7 }, () => (row.price || 0) * (1 + (Math.random() * 0.1 - 0.05))),
-      change: ((Math.random() * 4) - 2).toFixed(1) + "%",
-      isUp: Math.random() > 0.5,
-      sector: row.sector || '',
-      industry: row.industry || '',
-      country: row.country || '',
-      exchange: row.exchange || '',
-      shortName: row.short_name || '',
-      longName: row.long_name || '',
-      previousClose: row.previous_close || 0,
-      enterpriseValue: row.enterprise_value || 0,
-      pegRatio: row.peg_ratio || 0,
-      dividendRate: row.dividend_rate || 0,
-      payoutRatio: row.payout_ratio || 0,
-      fiveYearAvgDividendYield: row.five_year_avg_dividend_yield || 0,
-      grossMargins: row.gross_margins || 0,
-      operatingMargins: row.operating_margins || 0,
-      returnOnEquity: row.return_on_equity || 0,
-      returnOnAssets: row.return_on_assets || 0,
-      totalRevenue: row.total_revenue || 0,
-      ebitda: row.ebitda || 0,
-      totalDebt: row.total_debt || 0,
-      freeCashflow: row.free_cashflow || 0,
-      allTimeHigh: row.all_time_high || 0,
-      allTimeLow: row.all_time_low || 0,
-      sharesOutstanding: row.shares_outstanding || 0,
-      floatShares: row.float_shares || 0,
-      sharesShort: row.shares_short || 0,
-      heldPercentInsiders: row.held_percent_insiders || 0,
-      heldPercentInstitutions: row.held_percent_institutions || 0,
-      recommendationMean: row.recommendation_mean || 0,
-      targetMeanPrice: row.target_mean_price || 0,
-      targetHighPrice: row.target_high_price || 0,
-      trailingEps: row.trailing_eps || 0,
-      forwardEps: row.forward_eps || 0,
-      currency: row.currency || '',
-      website: row.website || '',
-      longBusinessSummary: row.long_business_summary || '',
-      netIncome: row.net_income || 0,
-      operatingCashflow: row.operating_cashflow || 0,
-      capex: row.capex || 0,
-      bookValuePerShare: row.book_value_per_share || 0,
-      revenuePerShare: row.revenue_per_share || 0,
-      debtToEquity: row.debt_to_equity || 0,
-      currentRatio: row.current_ratio || 0,
-      quickRatio: row.quick_ratio || 0,
-      cashAndEquivalents: row.cash_and_equivalents || 0,
-      targetLowPrice: row.target_low_price || 0,
-      analystCount: row.analyst_count || 0,
-      marketCapRank: row.market_cap_rank || 0,
-      priceChange24h: row.price_change_24h || 0,
-      priceChangePct24h: row.price_change_pct_24h || 0,
-      priceChange7d: row.price_change_7d || 0,
-      priceChange30d: row.price_change_30d || 0,
-      priceChange1y: row.price_change_1y || 0,
-      high24h: row.high_24h || 0,
-      low24h: row.low_24h || 0,
-      ath: row.ath || 0,
-      atl: row.atl || 0,
-      circulatingSupply: row.circulating_supply || 0,
-      totalSupply: row.total_supply || 0,
-      maxSupply: row.max_supply || 0,
-      fullyDilutedValuation: row.fully_diluted_valuation || 0,
-      developerScore: row.developer_score || 0,
-      communityScore: row.community_score || 0,
-      liquidityScore: row.liquidity_score || 0,
-      sentimentVotesUpPct: row.sentiment_votes_up_pct || 0,
-      sentimentVotesDownPct: row.sentiment_votes_down_pct || 0,
-      communityTwitterFollowers: row.community_twitter_followers || 0,
-      communityRedditSubscribers: row.community_reddit_subscribers || 0,
-    }))
-  ];
+  if (params.searchQuery.trim() !== '') {
+    const q = params.searchQuery.trim();
+    query = query.or(`ticker.ilike.%${q}%,short_name.ilike.%${q}%,asset_class.ilike.%${q}%`);
+  }
 
-  return allAssets;
+  const sortMap: Record<string, string> = {
+    'Market Cap': 'market_cap',
+    'Price': 'price',
+    'Volume': 'volume',
+    'P/E': 'pe_ratio',
+    'Div Yield': 'dividend_yield',
+    '52W High': 'high_52_week',
+    'Beta': 'beta'
+  };
+  const sortCol = sortMap[params.sortBy] ?? 'market_cap';
+  query = query.order(sortCol, { ascending: false, nullsFirst: false });
+
+  query = query.range(params.offset, params.offset + params.limit - 1);
+
+  const { data, count, error } = await query;
+  if (error) {
+    console.error('Supabase query error:', error);
+    throw new Error(error.message);
+  }
+
+  const mappedAssets: Asset[] = (data || []).map((row: any) => ({
+    id: `trad_${row.id || row.ticker}`,
+    name: row.short_name || row.ticker,
+    symbol: row.ticker,
+    assetClass: normalizeClass(row.asset_class),
+    price: row.price || 0,
+    open: row.open || 0,
+    dayHigh: row.day_high || 0,
+    dayLow: row.day_low || 0,
+    volume: row.volume || 0,
+    avgVolume: row.avg_volume || 0,
+    marketCap: row.market_cap || 0,
+    peRatio: row.pe_ratio || 0,
+    forwardPe: row.forward_pe || 0,
+    priceToBook: row.price_to_book || 0,
+    priceToSales: row.price_to_sales || 0,
+    evToEbitda: row.ev_to_ebitda || 0,
+    dividendYield: row.dividend_yield || 0,
+    earningsGrowth: row.earnings_growth || 0,
+    revenueGrowth: row.revenue_growth || 0,
+    profitMargins: row.profit_margins || 0,
+    high52Week: row.high_52_week || 0,
+    low52Week: row.low_52_week || 0,
+    ma50Day: row.ma_50_day || 0,
+    ma200Day: row.ma_200_day || 0,
+    beta: row.beta || 0,
+    history: Array.from({ length: 7 }, () => (row.price || 0) * (1 + (Math.random() * 0.1 - 0.05))),
+    change: ((Math.random() * 4) - 2).toFixed(1) + "%",
+    isUp: Math.random() > 0.5,
+    sector: row.sector || '',
+    industry: row.industry || '',
+    country: row.country || '',
+    exchange: row.exchange || '',
+    shortName: row.short_name || '',
+    longName: row.long_name || '',
+    previousClose: row.previous_close || 0,
+    enterpriseValue: row.enterprise_value || 0,
+    pegRatio: row.peg_ratio || 0,
+    dividendRate: row.dividend_rate || 0,
+    payoutRatio: row.payout_ratio || 0,
+    fiveYearAvgDividendYield: row.five_year_avg_dividend_yield || 0,
+    grossMargins: row.gross_margins || 0,
+    operatingMargins: row.operating_margins || 0,
+    returnOnEquity: row.return_on_equity || 0,
+    returnOnAssets: row.return_on_assets || 0,
+    totalRevenue: row.total_revenue || 0,
+    ebitda: row.ebitda || 0,
+    totalDebt: row.total_debt || 0,
+    freeCashflow: row.free_cashflow || 0,
+    allTimeHigh: row.all_time_high || 0,
+    allTimeLow: row.all_time_low || 0,
+    sharesOutstanding: row.shares_outstanding || 0,
+    floatShares: row.float_shares || 0,
+    sharesShort: row.shares_short || 0,
+    heldPercentInsiders: row.held_percent_insiders || 0,
+    heldPercentInstitutions: row.held_percent_institutions || 0,
+    recommendationMean: row.recommendation_mean || 0,
+    targetMeanPrice: row.target_mean_price || 0,
+    targetHighPrice: row.target_high_price || 0,
+    trailingEps: row.trailing_eps || 0,
+    forwardEps: row.forward_eps || 0,
+    currency: row.currency || '',
+    website: row.website || '',
+    longBusinessSummary: row.long_business_summary || '',
+  }));
+
+  return {
+    assets: mappedAssets,
+    totalCount: count || 0
+  };
+}
+
+export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
+  const assetClasses = ["Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
+  
+  const counts: Record<string, number> = {};
+  
+  const totalPromise = supabase
+    .from('asset_snapshots')
+    .select('*', { count: 'exact', head: true });
+    
+  const promises = assetClasses.map(cls => 
+    supabase
+      .from('asset_snapshots')
+      .select('*', { count: 'exact', head: true })
+      .eq('asset_class', cls)
+  );
+
+  const results = await Promise.all([totalPromise, ...promises]);
+  
+  counts['All'] = results[0].count || 0;
+  assetClasses.forEach((cls, idx) => {
+    counts[cls] = results[idx + 1].count || 0;
+  });
+  
+  return counts;
+}
+
+export async function fetchTickerTapeAssets(): Promise<Asset[]> {
+  const { data, error } = await supabase
+    .from('asset_snapshots')
+    .select('*')
+    .order('market_cap', { ascending: false, nullsFirst: false })
+    .limit(30);
+
+  if (error) {
+    console.error('Error fetching ticker tape assets:', error);
+    return [];
+  }
+
+  return (data || []).map((row: any) => ({
+    id: `trad_${row.id || row.ticker}`,
+    name: row.short_name || row.ticker,
+    symbol: row.ticker,
+    assetClass: normalizeClass(row.asset_class),
+    price: row.price || 0,
+    open: row.open || 0,
+    dayHigh: row.day_high || 0,
+    dayLow: row.day_low || 0,
+    volume: row.volume || 0,
+    avgVolume: row.avg_volume || 0,
+    marketCap: row.market_cap || 0,
+    peRatio: row.pe_ratio || 0,
+    forwardPe: row.forward_pe || 0,
+    priceToBook: row.price_to_book || 0,
+    priceToSales: row.price_to_sales || 0,
+    evToEbitda: row.ev_to_ebitda || 0,
+    dividendYield: row.dividend_yield || 0,
+    earningsGrowth: row.earnings_growth || 0,
+    revenueGrowth: row.revenue_growth || 0,
+    profitMargins: row.profit_margins || 0,
+    high52Week: row.high_52_week || 0,
+    low52Week: row.low_52_week || 0,
+    ma50Day: row.ma_50_day || 0,
+    ma200Day: row.ma_200_day || 0,
+    beta: row.beta || 0,
+    history: Array.from({ length: 7 }, () => (row.price || 0) * (1 + (Math.random() * 0.1 - 0.05))),
+    change: ((Math.random() * 4) - 2).toFixed(1) + "%",
+    isUp: Math.random() > 0.5,
+    sector: row.sector || '',
+    industry: row.industry || '',
+    country: row.country || '',
+    exchange: row.exchange || '',
+    shortName: row.short_name || '',
+    longName: row.long_name || '',
+    previousClose: row.previous_close || 0,
+    enterpriseValue: row.enterprise_value || 0,
+    pegRatio: row.peg_ratio || 0,
+    dividendRate: row.dividend_rate || 0,
+    payoutRatio: row.payout_ratio || 0,
+    fiveYearAvgDividendYield: row.five_year_avg_dividend_yield || 0,
+    grossMargins: row.gross_margins || 0,
+    operatingMargins: row.operating_margins || 0,
+    returnOnEquity: row.return_on_equity || 0,
+    returnOnAssets: row.return_on_assets || 0,
+    totalRevenue: row.total_revenue || 0,
+    ebitda: row.ebitda || 0,
+    totalDebt: row.total_debt || 0,
+    freeCashflow: row.free_cashflow || 0,
+    allTimeHigh: row.all_time_high || 0,
+    allTimeLow: row.all_time_low || 0,
+    sharesOutstanding: row.shares_outstanding || 0,
+    floatShares: row.float_shares || 0,
+    sharesShort: row.shares_short || 0,
+    heldPercentInsiders: row.held_percent_insiders || 0,
+    heldPercentInstitutions: row.held_percent_institutions || 0,
+    recommendationMean: row.recommendation_mean || 0,
+    targetMeanPrice: row.target_mean_price || 0,
+    targetHighPrice: row.target_high_price || 0,
+    trailingEps: row.trailing_eps || 0,
+    forwardEps: row.forward_eps || 0,
+    currency: row.currency || '',
+    website: row.website || '',
+    longBusinessSummary: row.long_business_summary || '',
+  }));
 }
