@@ -197,7 +197,26 @@ export default function SuperFinanceHub() {
 
   useEffect(() => {
     setOffset(0);
-    fetchData(0, false);
+    const run = async () => {
+      setIsRefreshing(true);
+      try {
+        const res = await fetchAssetsPaginated({
+          limit: 40,
+          offset: 0,
+          searchQuery: debouncedSearchQuery,
+          activeClass,
+          activeSector,
+          sortBy
+        });
+        setAssets(res.assets);
+        setTotalCount(res.totalCount);
+      } catch (e) {
+        console.error("Failed to load assets", e);
+      } finally {
+        setIsRefreshing(false);
+      }
+    };
+    run();
   }, [debouncedSearchQuery, activeClass, activeSector, sortBy]);
 
   const handleLoadMore = () => {
@@ -312,7 +331,7 @@ export default function SuperFinanceHub() {
             </div>
 
             {/* Asset Class Tabs */}
-            <div className="flex gap-2 overflow-x-auto hide-scrollbar items-center pb-1 lg:pb-0">
+            <div className="flex gap-2 overflow-x-auto items-center pb-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent w-full max-w-full">
               {assetClasses.map(cls => (
                 <button
                   key={cls}
