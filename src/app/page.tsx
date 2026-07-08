@@ -119,6 +119,11 @@ function LiveClock() {
 
 export default function SuperFinanceHub() {
   const [isRefreshing, setIsRefreshing] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [tickerTapeAssets, setTickerTapeAssets] = useState<Asset[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -257,7 +262,7 @@ export default function SuperFinanceHub() {
       {/* Global Backgrounds */}
       <div className="fixed inset-0 pointer-events-none z-0 bg-gradient-to-b from-[#000000] to-[#050508]" />
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        {typeof window !== 'undefined' && window.innerWidth > 768 && <DollarParticles />}
+        {isMounted && window.innerWidth > 768 && <DollarParticles />}
       </div>
 
       {/* Ticker Tape */}
