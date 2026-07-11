@@ -141,8 +141,8 @@ export async function fetchAssetsPaginated(params: {
   }
 
   if (params.searchQuery.trim() !== '') {
-    const q = params.searchQuery.trim();
-    query = query.or(`ticker.ilike.%${q}%,short_name.ilike.%${q}%`);
+    const q = params.searchQuery.trim().replace(/[%_]/g, '\\$&');
+    query = query.or(`ticker.ilike.%${q}%,short_name.ilike.%${q}%`, { referencedTable: undefined });
   }
 
   const sortMap: Record<string, string> = {
@@ -159,6 +159,7 @@ export async function fetchAssetsPaginated(params: {
 
   query = query.range(params.offset, params.offset + params.limit - 1);
 
+  console.log('Final query URL:', (query as any).url?.toString());
   const { data, count, error } = await query;
   if (error) {
     console.error('Supabase query error:', error);

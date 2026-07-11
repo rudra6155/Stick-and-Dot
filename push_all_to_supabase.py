@@ -66,6 +66,7 @@ def push_data():
     for t, r in trad_map.items():
         all_records.append({
             'ticker': r.get('ticker'),
+            'coin_id': '',  # Default to empty string for traditional assets to prevent duplicate NULL entries
             'asset_class': r.get('asset_class'),
             'short_name': r.get('short_name') or r.get('ticker'),
             'price': safe(r.get('price')),
@@ -111,6 +112,7 @@ def push_data():
         all_records.append({
             'ticker': r.get('ticker'),
             'asset_class': 'Crypto',
+            'coin_id': r.get('coin_id') or cid,  # Pushing the CoinGecko ID to prevent duplicate collisions on same tickers
             'short_name': r.get('short_name') or r.get('ticker'),
             'price': safe(r.get('price')),
             'market_cap': safe(r.get('market_cap')),
@@ -118,12 +120,15 @@ def push_data():
             'low_52_week': safe(r.get('atl')),
         })
 
-    # Deduplicate all records by ticker before pushing
+    # Deduplicate all records by (ticker, asset_class, coin_id) before pushing
     unique_records = {}
     for record in all_records:
         ticker = record['ticker']
+        asset_class = record.get('asset_class') or 'Stock'
+        coin_id = record.get('coin_id') or ''
+        key = (ticker, asset_class, coin_id)
         if ticker:
-            unique_records[ticker] = record
+            unique_records[key] = record
             
     final_records = list(unique_records.values())
 
@@ -133,13 +138,13 @@ def push_data():
         batch = final_records[i:i+batch_size]
         print(f"Pushing batch {i//batch_size + 1}/{(len(final_records)+batch_size-1)//batch_size}...")
         try:
-            supabase.table('asset_snapshots').upsert(batch, on_conflict='ticker').execute()
+            supabase.table('asset_snapshots').upsert(batch, on_conflict='ticker,asset_class,coin_id').execute()
         except Exception as e:
             print(f"Error pushing batch {i}: {e}")
             time.sleep(2)
             try:
                 # Retry once
-                supabase.table('asset_snapshots').upsert(batch, on_conflict='ticker').execute()
+                supabase.table('asset_snapshots').upsert(batch, on_conflict='ticker,asset_class,coin_id').execute()
             except Exception as e2:
                 print(f"Failed again: {e2}")
 

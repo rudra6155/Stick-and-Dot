@@ -21,7 +21,7 @@ from ticker_lists import (
 # Load downloaded tickers from CSV scrape
 def load_downloaded_tickers():
     all_tickers = []
-    for filename in ['downloaded_tickers.txt', 'downloaded_tickers_v3.txt', 'downloaded_etfs.txt', 'downloaded_china_real.txt', 'downloaded_korea_clean.txt', 'downloaded_otc.txt', 'downloaded_bse_only.txt', 'downloaded_more_exchanges.txt', 'downloaded_final_push.txt', 'downloaded_final_squeeze.txt']:
+    for filename in ['downloaded_tickers.txt', 'downloaded_tickers_v3.txt', 'downloaded_etfs.txt', 'downloaded_china_real.txt', 'downloaded_korea_clean.txt', 'downloaded_otc.txt', 'downloaded_bse_only.txt', 'downloaded_more_exchanges.txt', 'downloaded_final_push.txt', 'downloaded_final_squeeze.txt', 'downloaded_more_global.txt']:
         try:
             with open(filename, 'r') as f:
                 tickers = [line.strip() for line in f if line.strip()]

@@ -110,20 +110,47 @@ def push_historical_data():
     rows = cursor.fetchall()
     conn.close()
 
-    total = len(rows)
-    done = 0
+    # Query Supabase for already-synced tickers and skip them
+    try:
+        print("Querying existing tickers from Supabase...")
+        existing_tickers = set()
+        start = 0
+        limit = 1000
+        while True:
+            res = supabase.table('asset_snapshots').select('ticker').range(start, start + limit - 1).execute()
+            if not res.data:
+                break
+            for row in res.data:
+                if row.get('ticker'):
+                    existing_tickers.add(row['ticker'])
+            if len(res.data) < limit:
+                break
+            start += limit
+        print(f"Already in Supabase: {len(existing_tickers)}")
+    except Exception as e:
+        print(f"Error querying existing tickers from Supabase: {e}")
+        existing_tickers = set()
 
-    for ticker, asset_class in rows:
+    # Filter the list to only fetch what's missing
+    rows_to_fetch = [r for r in rows if r[0] not in existing_tickers]
+    total = len(rows_to_fetch)
+    done = 0
+    consecutive_rate_limits = 0
+
+    print(f"Need to fetch: {total}")
+
+    for ticker, asset_class in rows_to_fetch:
             done += 1
             print(f"[{done}/{total}] {ticker}...", end=" ")
             try:
                 t = yf.Ticker(ticker)
                 info = t.info
-                hist = t.history(period="6mo")
-
-                if hist.empty:
-                    print("No history")
-                    continue
+                
+                # Skipping price_history entirely for this run - skip history query
+                # hist = t.history(period="6mo")
+                # if hist.empty:
+                #     print("No history")
+                #     continue
 
                 price = info.get('currentPrice') or info.get('regularMarketPrice')
                 if not price:
@@ -133,6 +160,7 @@ def push_historical_data():
                 # Upsert snapshot
                 supabase.table('asset_snapshots').upsert({
                     'ticker': ticker,
+                    'coin_id': '',  # Ensure non-null unique constraint works
                     'asset_class': asset_class,
                     'short_name': info.get('shortName'),
                     'price': float(price),
@@ -171,33 +199,46 @@ def push_historical_data():
                     'sector': info.get('sector'),
                     'industry': info.get('industry'),
                     'country': info.get('country'),
-                }, on_conflict='ticker').execute()
+                }, on_conflict='ticker,asset_class,coin_id').execute()
 
-                # Insert price history rows
-                rows = []
-                for date, row in hist.iterrows():
-                    rows.append({
-                        'ticker': ticker,
-                        'asset_class': asset_class,
-                        'date': str(date.date()),
-                        'open': float(row['Open']),
-                        'high': float(row['High']),
-                        'low': float(row['Low']),
-                        'close': float(row['Close']),
-                        'volume': float(row['Volume']),
-                    })
+                # Insert price history rows - commented out for this run
+                # rows_hist = []
+                # for date, row in hist.iterrows():
+                #     rows_hist.append({
+                #         'ticker': ticker,
+                #         'asset_class': asset_class,
+                #         'date': str(date.date()),
+                #         'open': float(row['Open']),
+                #         'high': float(row['High']),
+                #         'low': float(row['Low']),
+                #         'close': float(row['Close']),
+                #         'volume': float(row['Volume']),
+                #     })
 
                 # Batch insert in chunks of 100
-                for i in range(0, len(rows), 100):
-                    supabase.table('price_history').upsert(
-                        rows[i:i+100], on_conflict='ticker,date'
-                    ).execute()
+                # for i in range(0, len(rows_hist), 100):
+                #     supabase.table('price_history').upsert(
+                #         rows_hist[i:i+100], on_conflict='ticker,date'
+                #     ).execute()
 
-                print(f"OK {len(rows)} days")
+                print("OK")
+                consecutive_rate_limits = 0
 
             except Exception as e:
+                err_str = str(e)
+                if "Too Many Requests" in err_str or "429" in err_str:
+                    consecutive_rate_limits += 1
+                    print(f"\nRate limited on {ticker}. Consecutive: {consecutive_rate_limits}/3. Backing off 60s...")
+                    if consecutive_rate_limits >= 3:
+                        print("Too many consecutive rate limits, stopping this run.")
+                        break
+                    time.sleep(60)
+                    continue
                 print(f"Failed ({e})")
                 continue
+
+            if done % 20 == 0:
+                print(f"\n--- Progress Update: Synced {done}/{total} of the missing tickers ---")
 
             time.sleep(2)
 
