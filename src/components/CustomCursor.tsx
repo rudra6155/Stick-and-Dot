@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { motion, useSpring, AnimatePresence } from "framer-motion";
 
-type CursorState = 'default' | 'profit' | 'loss';
+type CursorState = 'default' | 'profit' | 'loss' | 'text';
 
 interface CursorContextType {
   cursorState: CursorState;
@@ -39,7 +39,7 @@ interface Particle {
 
 function CustomCursor() {
   const [isTouchDevice, setIsTouchDevice] = useState(true);
-  const { cursorState } = useCursor();
+  const { cursorState, setCursorState } = useCursor();
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [particles, setParticles] = useState<Particle[]>([]);
   const [particleCounter, setParticleCounter] = useState(0);
@@ -63,6 +63,19 @@ function CustomCursor() {
     window.addEventListener("mousemove", moveCursor);
     return () => window.removeEventListener("mousemove", moveCursor);
   }, [cursorX, cursorY]);
+
+  useEffect(() => {
+    const handleMouseOver = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        setCursorState('text');
+      } else {
+        setCursorState(prev => prev === 'text' ? 'default' : prev);
+      }
+    };
+    document.addEventListener('mouseover', handleMouseOver);
+    return () => document.removeEventListener('mouseover', handleMouseOver);
+  }, [setCursorState]);
 
   // Particle spawner
   useEffect(() => {
@@ -108,26 +121,32 @@ function CustomCursor() {
         className="absolute top-0 left-0 flex items-center justify-center will-change-transform"
         style={{ x: cursorX, y: cursorY, translateX: '-50%', translateY: '-50%' }}
       >
-        <motion.div
-          animate={{
-            width: isHovering ? 56 : 36,
-            height: isHovering ? 56 : 36,
-            borderColor: isHovering ? 'transparent' : ringColor,
-            boxShadow: isHovering ? `0 0 20px ${ringColor}` : 'none',
-          }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-          className="absolute rounded-full border border-solid border-white/30"
-        />
-        <motion.div
-          animate={{
-            color: textColor,
-            textShadow: textShadow,
-          }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-          className="font-mono font-bold text-[20px] relative z-10 select-none flex items-center justify-center mt-0.5 ml-0.5"
-        >
-          $
-        </motion.div>
+        {cursorState === 'text' ? (
+          <div className="w-[2px] h-5 bg-emerald-400 animate-pulse" />
+        ) : (
+          <>
+            <motion.div
+              animate={{
+                width: isHovering ? 56 : 36,
+                height: isHovering ? 56 : 36,
+                borderColor: isHovering ? 'transparent' : ringColor,
+                boxShadow: isHovering ? `0 0 20px ${ringColor}` : 'none',
+              }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="absolute rounded-full border border-solid border-white/30"
+            />
+            <motion.div
+              animate={{
+                color: textColor,
+                textShadow: textShadow,
+              }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="font-mono font-bold text-[20px] relative z-10 select-none flex items-center justify-center mt-0.5 ml-0.5"
+            >
+              $
+            </motion.div>
+          </>
+        )}
       </motion.div>
 
       <AnimatePresence>
