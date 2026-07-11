@@ -329,15 +329,32 @@ export default function SuperFinanceHub() {
           <div className="flex flex-col lg:flex-row gap-4">
 
             {/* Search */}
-            <div className="relative flex-1 group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-emerald-400 transition-colors pointer-events-none" />
-              <input
-                type="text"
-                placeholder={scanlineText}
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-white/5 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono text-sm relative z-50 pointer-events-auto"
-              />
+            <div className="flex-1 flex flex-col justify-center">
+              <div className="relative group w-full">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-emerald-400 transition-colors pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search assets, tickers... (e.g. AAPL, Bitcoin)"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  className="w-full bg-white/5 border border-white/5 rounded-2xl py-3 pl-12 pr-12 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono text-sm relative z-50 pointer-events-auto"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors pointer-events-auto z-50 text-sm font-bold"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {searchQuery && (
+                <p className="text-xs text-zinc-500 mt-2 ml-2 font-mono">
+                  {isRefreshing ? "Searching..." : `${totalCount.toLocaleString()} results`}
+                </p>
+              )}
             </div>
 
             {/* Asset Class Tabs */}
