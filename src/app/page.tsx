@@ -195,6 +195,7 @@ export default function SuperFinanceHub() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
+      console.log("debouncedSearchQuery updated:", searchQuery);
       setDebouncedSearchQuery(searchQuery);
     }, 400);
     return () => clearTimeout(timer);
@@ -203,6 +204,7 @@ export default function SuperFinanceHub() {
   useEffect(() => {
     setOffset(0);
     const run = async () => {
+      console.log('fetching with query:', debouncedSearchQuery);
       setIsRefreshing(true);
       try {
         const res = await fetchAssetsPaginated({
@@ -250,8 +252,11 @@ export default function SuperFinanceHub() {
   const visibleAssets = assets;
 
   useEffect(() => {
-    window.dispatchEvent(new Event('resize'));
-  }, [assets.length]);
+    const timer = setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [assets.length, totalCount]);
 
   const assetClasses = ["All", "Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
   const sortOptions = ["Market Cap", "Price", "Volume", "P/E", "Div Yield", "52W High", "Beta"];
@@ -325,13 +330,13 @@ export default function SuperFinanceHub() {
 
             {/* Search */}
             <div className="relative flex-1 group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-emerald-400 transition-colors" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-emerald-400 transition-colors pointer-events-none" />
               <input
                 type="text"
                 placeholder={scanlineText}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-white/5 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono text-sm"
+                className="w-full bg-white/5 border border-white/5 rounded-2xl py-3 pl-12 pr-4 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono text-sm relative z-50 pointer-events-auto"
               />
             </div>
 
