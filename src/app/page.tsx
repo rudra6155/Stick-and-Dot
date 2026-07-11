@@ -329,29 +329,29 @@ export default function SuperFinanceHub() {
           <div className="flex flex-col lg:flex-row gap-4">
 
             {/* Search */}
-            <div className="flex-1 flex flex-col justify-center">
-              <div className="relative group w-full">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 group-focus-within:text-emerald-400 transition-colors pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Search assets, tickers... (e.g. AAPL, Bitcoin)"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  className="w-full bg-white/5 border border-white/5 rounded-2xl py-3 pl-12 pr-12 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono text-sm relative z-50 pointer-events-auto"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors pointer-events-auto z-50 text-sm font-bold"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none z-10" />
+              <input
+                type="search"
+                placeholder="Search assets, tickers... (e.g. AAPL, Bitcoin)"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                style={{ caretColor: '#10b981' }}
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-xl py-3 pl-10 pr-10 text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-text"
+              />
               {searchQuery && (
-                <p className="text-xs text-zinc-500 mt-2 ml-2 font-mono">
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors z-10"
+                >
+                  ✕
+                </button>
+              )}
+              {searchQuery && (
+                <p className="absolute -bottom-6 left-0 text-xs text-zinc-500 font-mono">
                   {isRefreshing ? "Searching..." : `${totalCount.toLocaleString()} results`}
                 </p>
               )}
