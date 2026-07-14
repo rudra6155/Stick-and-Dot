@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export default function StatsSection() {
+export default function StatsSection({ assetClassCounts = {} }: { assetClassCounts?: Record<string, number> }) {
   return (
     <section className="relative z-10 py-32 px-4 md:px-8 max-w-7xl mx-auto">
       {/* Panel 1 */}
@@ -30,24 +30,25 @@ export default function StatsSection() {
       <div className="mb-24">
         <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest mb-8 text-center">Asset Breakdown</p>
         <div className="flex flex-col gap-3 max-w-2xl mx-auto">
-          {[
-            { label: "Intl Stocks", count: 10632, color: "bg-purple-500" },
-            { label: "Crypto", count: 10119, color: "bg-violet-500" },
-            { label: "US Stocks", count: 7135, color: "bg-cyan-500" },
-            { label: "India", count: 1652, color: "bg-orange-500" },
-            { label: "ETFs", count: 611, color: "bg-blue-500" },
-            { label: "Forex", count: 74, color: "bg-rose-500" },
-            { label: "Commodities", count: 57, color: "bg-yellow-500" },
-            { label: "Indices", count: 55, color: "bg-indigo-500" },
-            { label: "REITs", count: 30, color: "bg-pink-500" },
-            { label: "Bonds", count: 27, color: "bg-emerald-500" },
-          ].map((item, i) => (
+            { label: "Intl Stocks", count: assetClassCounts['International'] || 0, color: "bg-purple-500" },
+            { label: "Crypto", count: assetClassCounts['Crypto'] || 0, color: "bg-violet-500" },
+            { label: "US Stocks", count: assetClassCounts['Stock'] || 0, color: "bg-cyan-500" },
+            { label: "India", count: assetClassCounts['Indian Stock'] || 0, color: "bg-orange-500" },
+            { label: "ETFs", count: assetClassCounts['ETF'] || 0, color: "bg-blue-500" },
+            { label: "Forex", count: assetClassCounts['Forex'] || 0, color: "bg-rose-500" },
+            { label: "Commodities", count: assetClassCounts['Commodity'] || 0, color: "bg-yellow-500" },
+            { label: "Indices", count: assetClassCounts['Index'] || 0, color: "bg-indigo-500" },
+            { label: "REITs", count: assetClassCounts['REIT'] || 0, color: "bg-pink-500" },
+            { label: "Bonds", count: assetClassCounts['Bond'] || 0, color: "bg-emerald-500" },
+          ].map((item, i) => {
+            const maxCount = Math.max(1, assetClassCounts['International'] || 1); // max bar based on biggest class
+            return (
             <div key={item.label} className="flex items-center gap-4">
               <span className="font-mono text-xs text-zinc-500 w-24 text-right shrink-0">{item.label}</span>
               <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  whileInView={{ width: `${Math.max((item.count / 10651) * 100, 1.5)}%` }}
+                  whileInView={{ width: `${Math.max((item.count / maxCount) * 100, 1.5)}%` }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.8, delay: i * 0.1 }}
                   className={`h-full rounded-full ${item.color}`}
@@ -55,13 +56,13 @@ export default function StatsSection() {
               </div>
               <span className="font-mono text-xs text-zinc-400 w-8 shrink-0">{item.count}</span>
             </div>
-          ))}
+          )})}
         </div>
       </div>
 
       {/* Panel 3 — Architecture */}
       <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-2">
-        {["Python Fetchers", "SQLite DB", "JSON Export", "Next.js", "You"].map((node, i, arr) => (
+        {["Python Fetchers", "Supabase DB", "Next.js", "You"].map((node, i, arr) => (
           <React.Fragment key={node}>
             <motion.div
               initial={{ opacity: 0, y: 20 }}

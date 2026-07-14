@@ -16,22 +16,26 @@ export default function BacktestPage() {
   const [loading, setLoading] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [ran, setRan] = useState(false);
+  const [error, setError] = useState("");
 
   const runBacktest = async (overrideFilters?: any) => {
     setLoading(true);
-    setRan(true);
+    setError("");
+    const reqFilters = overrideFilters || filters;
     try {
       const res = await fetch("/api/backtest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(overrideFilters || filters),
+        body: JSON.stringify(reqFilters),
       });
       const data = await res.json();
-      if (data.results) setResults(data.results);
+      if (data.error) setError(data.error);
+      else setResults(data.results || []);
     } catch (e) {
-      console.error(e);
+      setError("Failed to run backtest");
     }
     setLoading(false);
+    setRan(true);
   };
 
   const applyPreset = (preset: typeof PRESETS[0]) => {
@@ -142,9 +146,16 @@ export default function BacktestPage() {
           </div>
         </div>
 
+        {/* Error */}
+        {error && (
+          <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-6 text-rose-400 font-mono text-sm text-center">
+            {error}
+          </div>
+        )}
+
         {/* Summary Stats */}
-        {ran && !loading && results.length > 0 && (
-          <div className="grid grid-cols-3 gap-4">
+        {ran && !loading && !error && results.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 text-center">
               <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-2">Avg Return (6M)</p>
               <p className={`text-3xl font-black font-mono ${Number(avg) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -167,6 +178,7 @@ export default function BacktestPage() {
         {/* Results Table */}
         {ran && (
           <div className="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="bg-zinc-900/50 border-b border-zinc-800">
                 <tr>
@@ -225,6 +237,7 @@ export default function BacktestPage() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

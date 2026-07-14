@@ -195,6 +195,7 @@ export default function PortfolioPage() {
             <div>
               <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-4">Holdings</p>
               <div className="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden">
+              <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-zinc-900/50 border-b border-zinc-800">
                     <tr>
@@ -222,6 +223,7 @@ export default function PortfolioPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
               </div>
             </div>
 

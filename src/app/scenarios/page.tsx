@@ -23,9 +23,11 @@ export default function ScenariosPage() {
   const [loading, setLoading] = useState(false);
   const [activeScenario, setActiveScenario] = useState<any>(null);
   const [logic, setLogic] = useState("");
+  const [error, setError] = useState("");
 
   const fetchScenario = async (scenario: typeof SCENARIOS[0]) => {
     setLoading(true);
+    setError("");
     setActiveScenario(scenario);
     setGroups([]);
     try {
@@ -35,10 +37,11 @@ export default function ScenariosPage() {
         body: JSON.stringify({ scenario_key: scenario.key }),
       });
       const data = await res.json();
+      if (data.error) setError(data.error);
       if (data.groups) setGroups(data.groups);
       if (data.logic) setLogic(data.logic);
     } catch (e) {
-      console.error(e);
+      setError("Failed to fetch scenario analysis");
     }
     setLoading(false);
   };
@@ -71,8 +74,15 @@ export default function ScenariosPage() {
           ))}
         </div>
 
+        {/* Error */}
+        {error && (
+          <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-6 text-rose-400 font-mono text-sm text-center">
+            {error}
+          </div>
+        )}
+
         {/* Results */}
-        {activeScenario && (
+        {activeScenario && !loading && !error && (
           <div className="space-y-8">
             {/* Logic explanation */}
             <div className="bg-zinc-950 border border-emerald-900/30 rounded-2xl p-6">
@@ -89,6 +99,7 @@ export default function ScenariosPage() {
                 <div key={group.label}>
                   <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest mb-4">{group.label}</p>
                   <div className="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden">
+                  <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                       <thead className="bg-zinc-900/50 border-b border-zinc-800">
                         <tr>
@@ -119,6 +130,7 @@ export default function ScenariosPage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
                   </div>
                 </div>
               ))

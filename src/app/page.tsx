@@ -295,8 +295,8 @@ export default function SuperFinanceHub() {
             You&apos;re in the driver&apos;s seat. 51,000+ assets. Zero opinions.
           </motion.p>
           <div className="flex flex-col md:flex-row gap-8 md:gap-24 opacity-80">
-            <AnimatedStat value={51861} label="Assets" />
-            <AnimatedStat value={9} label="Asset Classes" />
+            <AnimatedStat value={assetClassCounts['All'] || 0} label="Assets" />
+            <AnimatedStat value={11} label="Asset Classes" />
             <AnimatedStat value={20} label="Data Points" suffix="+" />
           </div>
         </div>
@@ -319,7 +319,7 @@ export default function SuperFinanceHub() {
       </motion.div>
 
       {/* Stats Section */}
-      <StatsSection />
+      <StatsSection assetClassCounts={assetClassCounts} />
 
       {/* Dashboard */}
       <div className="relative z-20 max-w-[1600px] mx-auto px-4 md:px-8 py-24 min-h-screen bg-black/50 backdrop-blur-3xl border-t border-white/5">
