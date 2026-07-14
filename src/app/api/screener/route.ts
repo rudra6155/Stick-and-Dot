@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
     max_beta,
     min_roe,
     limit = 500,
+    search,
   } = body;
 
   let query = supabase
@@ -28,6 +29,11 @@ export async function POST(req: NextRequest) {
     .select('*')
     .order(sort_by, { ascending: sort_dir === 'asc' })
     .limit(limit);
+
+  if (search) {
+    const q = search.trim().replace(/[%_]/g, '\\$&');
+    query = query.or(`ticker.ilike.%${q}%,short_name.ilike.%${q}%`);
+  }
 
   if (asset_class) query = query.eq('asset_class', asset_class);
   if (sector) query = query.eq('sector', sector);

@@ -16,11 +16,38 @@ export default function PortfolioPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const addTicker = () => {
-    const t = input.toUpperCase().trim();
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const searchAssets = async (query: string) => {
+    if (query.trim().length < 1) {
+      setSearchResults([]);
+      return;
+    }
+    try {
+      const res = await fetch("/api/screener", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limit: 8, sort_by: "market_cap", search: query })
+      });
+      const data = await res.json();
+      const filtered = (data.results || []).filter((r: any) =>
+        r.ticker.toLowerCase().includes(query.toLowerCase()) ||
+        (r.short_name || '').toLowerCase().includes(query.toLowerCase())
+      );
+      setSearchResults(filtered);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const addTicker = (tickerVal?: string) => {
+    const t = (tickerVal || input).toUpperCase().trim();
     if (t && !tickers.includes(t) && tickers.length < 15) {
       setTickers(prev => [...prev, t]);
       setInput("");
+      setSearchResults([]);
+      setShowSuggestions(false);
     }
   };
 
@@ -77,15 +104,51 @@ export default function PortfolioPage() {
         <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 space-y-4">
           <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest">Build your portfolio (max 15 assets)</p>
           <div className="flex gap-3">
-            <input
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && addTicker()}
-              placeholder="Type ticker and press Enter — AAPL, BTC-USD, RELIANCE.NS..."
-              className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 font-mono text-sm"
-            />
-            <button onClick={addTicker}
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  searchAssets(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onKeyDown={e => e.key === "Enter" && addTicker()}
+                onFocus={() => {
+                  if (input.trim().length > 0) {
+                    setShowSuggestions(true);
+                  }
+                }}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                placeholder="Type ticker and press Enter — AAPL, BTC-USD, RELIANCE.NS..."
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 font-mono text-sm"
+              />
+              {showSuggestions && searchResults.length > 0 && (
+                <div className="absolute left-0 right-0 mt-1.5 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl z-50 overflow-hidden divide-y divide-zinc-800/80">
+                  {searchResults.map(r => (
+                    <button
+                      key={r.ticker}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                      }}
+                      onClick={() => addTicker(r.ticker)}
+                      className="w-full text-left px-4 py-3 hover:bg-zinc-800/80 transition-colors flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono font-bold text-emerald-400">{r.ticker}</span>
+                        <span className="text-sm text-zinc-300 truncate max-w-[220px]">{r.short_name || r.ticker}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono">
+                        <span className="bg-zinc-800 px-2 py-0.5 rounded text-zinc-400">{r.asset_class}</span>
+                        {r.price && <span>${r.price.toFixed(2)}</span>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={() => addTicker()}
               className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm font-mono transition-colors">
               Add
             </button>
