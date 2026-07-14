@@ -7,12 +7,12 @@ const supabase = createClient(
 );
 
 const SCENARIO_IMPACTS: Record<string, Record<string, number>> = {
-  recession_fear:    { Stock: -0.25, Crypto: -0.45, ETF: -0.15, REIT: -0.20, Bond: 0.08, Commodity: -0.10, "Indian Stock": -0.22, International: -0.20 },
-  inflation_high:    { Stock: -0.05, Crypto: -0.15, ETF: -0.05, REIT: 0.10, Bond: -0.12, Commodity: 0.25, "Indian Stock": -0.05, International: -0.08 },
-  rate_hike:         { Stock: -0.12, Crypto: -0.30, ETF: -0.10, REIT: -0.18, Bond: -0.08, Commodity: 0.05, "Indian Stock": -0.15, International: -0.12 },
-  ai_boom:           { Stock: 0.30, Crypto: 0.25, ETF: 0.20, REIT: 0.05, Bond: -0.02, Commodity: 0.00, "Indian Stock": 0.15, International: 0.18 },
-  us_china_tension:  { Stock: -0.08, Crypto: -0.10, ETF: -0.05, REIT: -0.05, Bond: 0.05, Commodity: 0.15, "Indian Stock": 0.05, International: -0.15 },
-  india_growth:      { Stock: 0.05, Crypto: 0.10, ETF: 0.08, REIT: 0.05, Bond: 0.02, Commodity: 0.05, "Indian Stock": 0.35, International: 0.05 },
+  recession_fear:    { Stock: -0.25, Crypto: -0.45, ETF: -0.15, REIT: -0.20, Bond: 0.08, Commodity: -0.10, "Indian Stock": -0.22, International: -0.20, Forex: 0.10, Index: -0.20 },
+  inflation_high:    { Stock: -0.05, Crypto: -0.15, ETF: -0.05, REIT: 0.10, Bond: -0.12, Commodity: 0.25, "Indian Stock": -0.05, International: -0.08, Forex: 0.10, Index: -0.10 },
+  rate_hike:         { Stock: -0.12, Crypto: -0.30, ETF: -0.10, REIT: -0.18, Bond: -0.08, Commodity: 0.05, "Indian Stock": -0.15, International: -0.12, Forex: 0.20, Index: -0.15 },
+  ai_boom:           { Stock: 0.30, Crypto: 0.25, ETF: 0.20, REIT: 0.05, Bond: -0.02, Commodity: 0.00, "Indian Stock": 0.15, International: 0.18, Forex: 0.00, Index: 0.10 },
+  us_china_tension:  { Stock: -0.08, Crypto: -0.10, ETF: -0.05, REIT: -0.05, Bond: 0.05, Commodity: 0.15, "Indian Stock": 0.05, International: -0.15, Forex: 0.15, Index: -0.10 },
+  india_growth:      { Stock: 0.05, Crypto: 0.10, ETF: 0.08, REIT: 0.05, Bond: 0.02, Commodity: 0.05, "Indian Stock": 0.35, International: 0.05, Forex: 0.05, Index: 0.05 },
 };
 
 export async function POST(req: NextRequest) {

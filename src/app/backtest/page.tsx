@@ -90,7 +90,7 @@ export default function BacktestPage() {
                 onChange={e => setFilters((f: any) => ({ ...f, asset_class: e.target.value !== "All" ? e.target.value : undefined }))}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100"
               >
-                {["All","Stock","ETF","REIT","Crypto","Commodity","Bond","Indian Stock","International"].map(a => (
+                {["All","Stock","ETF","REIT","Crypto","Commodity","Bond","Indian Stock","International","Forex","Index"].map(a => (
                   <option key={a} value={a}>{a}</option>
                 ))}
               </select>
@@ -102,7 +102,7 @@ export default function BacktestPage() {
                 onChange={e => setFilters((f: any) => ({ ...f, sector: e.target.value !== "All Sectors" ? e.target.value : undefined }))}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100"
               >
-                {["All Sectors","Technology","Healthcare","Financial Services","Energy","Industrials","Consumer Cyclical","Consumer Defensive","Basic Materials"].map(s => (
+                {["All Sectors","Technology","Healthcare","Financial Services","Energy","Industrials","Consumer Cyclical","Consumer Defensive","Basic Materials","Real Estate","Utilities","Communication Services"].map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
