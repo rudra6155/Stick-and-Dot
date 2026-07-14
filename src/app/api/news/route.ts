@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const GNEWS_API_KEY = 'e91739ced412d236b89fcf38b5cdb370';
+const GNEWS_API_KEY = process.env.GNEWS_API_KEY;
 
 const CLASS_KEYWORDS: { keywords: string[]; label: string }[] = [
   { keywords: ['crypto', 'bitcoin', 'ethereum'], label: 'Crypto' },

@@ -49,10 +49,15 @@ function CustomCursor() {
   const cursorY = useSpring(0, { stiffness: 400, damping: 25 });
 
   useEffect(() => {
-    const isTouch = window.matchMedia('(hover: none)').matches;
+    const isTouch = window.matchMedia('(hover: none)').matches || window.innerWidth < 768;
     setIsTouchDevice(isTouch);
 
-    if (isTouch) return;
+    if (isTouch) {
+      document.body.classList.remove('cursor-none');
+      return;
+    } else {
+      document.body.classList.add('cursor-none');
+    }
 
     const moveCursor = (e: MouseEvent) => {
       setMousePosition({ x: e.clientX, y: e.clientY });

@@ -7,14 +7,35 @@ const supabase = createClient(
 );
 
 export async function GET() {
-  const { data, error } = await supabase
-    .from('asset_snapshots')
-    .select('*')
-    .not('price', 'is', null)
-    .gt('price', 0);
+  const [
+    { data: dips },
+    { data: momentum },
+    { data: income },
+    { data: undervalued },
+    { data: analyst }
+  ] = await Promise.all([
+    // Dip Buy: revenue_growth > 0.1, profit_margins > 0, price < low_52_week * 1.1 (filtered in JS)
+    supabase.from('asset_snapshots').select('*').gt('revenue_growth', 0.1).gt('profit_margins', 0).not('low_52_week', 'is', null).gt('price', 0).order('revenue_growth', { ascending: false }).limit(100),
+    // Momentum: revenue_growth > 0.15, price >= high_52_week * 0.95 (filtered in JS)
+    supabase.from('asset_snapshots').select('*').gt('revenue_growth', 0.15).not('high_52_week', 'is', null).gt('price', 0).order('revenue_growth', { ascending: false }).limit(100),
+    // Income: dividend_yield > 0.04, payout_ratio 0 to 0.7, profit_margins > 0
+    supabase.from('asset_snapshots').select('*').gt('dividend_yield', 0.04).gt('payout_ratio', 0).lt('payout_ratio', 0.7).gt('profit_margins', 0).gt('price', 0).order('dividend_yield', { ascending: false }).limit(100),
+    // Undervalued: pe_ratio 0 to 15, revenue_growth > 0.1, roe > 0.15
+    supabase.from('asset_snapshots').select('*').gt('pe_ratio', 0).lt('pe_ratio', 15).gt('revenue_growth', 0.1).gt('return_on_equity', 0.15).gt('price', 0).order('revenue_growth', { ascending: false }).limit(100),
+    // Analyst Upside: recommendation_mean < 2.5, target_mean_price > price * 1.2 (filtered in JS)
+    supabase.from('asset_snapshots').select('*').lt('recommendation_mean', 2.5).gt('target_mean_price', 0).gt('price', 0).order('recommendation_mean', { ascending: true }).limit(100)
+  ]);
 
-  if (error) return NextResponse.json({ error }, { status: 500 });
-  if (!data) return NextResponse.json({ opportunities: [] });
+  if (!dips && !momentum && !income && !undervalued && !analyst) {
+    return NextResponse.json({ opportunities: [], total: 0 });
+  }
+
+  // Combine and deduplicate
+  const allDataMap = new Map();
+  [...(dips||[]), ...(momentum||[]), ...(income||[]), ...(undervalued||[]), ...(analyst||[])].forEach(r => {
+    if (!allDataMap.has(r.ticker)) allDataMap.set(r.ticker, r);
+  });
+  const data = Array.from(allDataMap.values());
 
   const opportunities: any[] = [];
 
@@ -97,7 +118,7 @@ export async function GET() {
     }
   }
 
-  // Sort by revenue_growth desc, limit 50
+  // Sort by revenue_growth desc, limit 60
   opportunities.sort((a, b) => (b.revenue_growth || 0) - (a.revenue_growth || 0));
 
   return NextResponse.json({ opportunities: opportunities.slice(0, 60), total: opportunities.length });
