@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     min_profit_margins,
     max_beta,
     min_roe,
-    limit = 25,
+    limit = 500,
   } = body;
 
   let query = supabase

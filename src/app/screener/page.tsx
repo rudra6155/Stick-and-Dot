@@ -98,7 +98,7 @@ export default function ScreenerPage() {
       const res = await fetch("/api/screener", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(overrideFilters || buildFilters()),
+        body: JSON.stringify({ limit: 200, ...(overrideFilters || buildFilters()) }),
       });
       const data = await res.json();
       if (data.results) setResults(data.results);
