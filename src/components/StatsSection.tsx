@@ -30,6 +30,7 @@ export default function StatsSection({ assetClassCounts = {} }: { assetClassCoun
       <div className="mb-24">
         <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest mb-8 text-center">Asset Breakdown</p>
         <div className="flex flex-col gap-3 max-w-2xl mx-auto">
+          {[
             { label: "Intl Stocks", count: assetClassCounts['International'] || 0, color: "bg-purple-500" },
             { label: "Crypto", count: assetClassCounts['Crypto'] || 0, color: "bg-violet-500" },
             { label: "US Stocks", count: assetClassCounts['Stock'] || 0, color: "bg-cyan-500" },
