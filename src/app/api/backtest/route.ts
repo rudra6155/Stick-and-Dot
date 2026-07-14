@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   let query = supabase
     .from('asset_snapshots')
     .select('ticker, short_name, asset_class, sector, price, beta, market_cap, pe_ratio, revenue_growth, dividend_yield, return_on_equity')
-    .limit(20);
+    .limit(200);
 
   if (asset_class) query = query.eq('asset_class', asset_class);
   if (sector) query = query.eq('sector', sector);
