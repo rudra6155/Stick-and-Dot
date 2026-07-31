@@ -1,250 +1,174 @@
 "use client";
-import { useState } from "react";
 
-const SUGGESTED = [
-  { label: "🛡️ Conservative", tickers: ["BND", "TLT", "GLD", "VNQ", "VTI"] },
-  { label: "🚀 Aggressive Growth", tickers: ["NVDA", "TSLA", "BTC-USD", "PLTR", "CRWD"] },
-  { label: "💵 Income Portfolio", tickers: ["O", "MAIN", "T", "VZ", "KO"] },
-  { label: "🇮🇳 India Focus", tickers: ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS"] },
-  { label: "🤖 AI & Tech", tickers: ["NVDA", "MSFT", "GOOGL", "AMD", "TSM"] },
-];
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, Trash2 } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import { AssetCard } from "@/components/AssetCard";
 
-export default function PortfolioPage() {
-  const [input, setInput] = useState("");
-  const [tickers, setTickers] = useState<string[]>([]);
-  const [result, setResult] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+export default function MyPortfolioPage() {
+  const [picks, setPicks] = useState<any[]>([]);
+  const [assets, setAssets] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  
+  const supabase = createClient();
 
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-
-  const searchAssets = async (query: string) => {
-    if (query.trim().length < 1) {
-      setSearchResults([]);
-      return;
-    }
+  const loadPortfolio = async () => {
+    setLoading(true);
+    setError("");
+    
     try {
-      const res = await fetch("/api/screener", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ limit: 8, sort_by: "market_cap", search: query })
-      });
-      const data = await res.json();
-      const filtered = (data.results || []).filter((r: any) =>
-        r.ticker.toLowerCase().includes(query.toLowerCase()) ||
-        (r.short_name || '').toLowerCase().includes(query.toLowerCase())
-      );
-      setSearchResults(filtered);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        window.location.href = "/login";
+        return;
+      }
+
+      const { data: userPicks, error: picksError } = await supabase
+        .from('user_picks')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (picksError) throw picksError;
+
+      setPicks(userPicks || []);
+
+      if (userPicks && userPicks.length > 0) {
+        const tickers = userPicks.map(p => p.ticker);
+        const { data: assetData, error: assetError } = await supabase
+          .from('asset_snapshots')
+          .select('*')
+          .in('ticker', tickers);
+          
+        if (assetError) throw assetError;
+        
+        const assetMap: Record<string, any> = {};
+        (assetData || []).forEach(row => {
+          assetMap[row.ticker] = {
+            ...row,
+            symbol: row.ticker,
+            name: row.short_name || row.ticker,
+            assetClass: row.asset_class,
+            price: row.price || 0,
+            change: "0.00%",
+            isUp: true,
+            history: [],
+            marketCap: row.market_cap || 0,
+            peRatio: row.pe_ratio || 0,
+            dividendYield: row.dividend_yield || 0,
+          };
+        });
+        setAssets(assetMap);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to load portfolio. Make sure user_picks table exists.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPortfolio();
+  }, []);
+
+  const handleRemove = async (id: string) => {
+    try {
+      await supabase.from('user_picks').delete().eq('id', id);
+      loadPortfolio();
     } catch (e) {
       console.error(e);
     }
   };
 
-  const addTicker = (tickerVal?: string) => {
-    const t = (tickerVal || input).toUpperCase().trim();
-    if (t && !tickers.includes(t) && tickers.length < 15) {
-      setTickers(prev => [...prev, t]);
-      setInput("");
-      setSearchResults([]);
-      setShowSuggestions(false);
-    }
-  };
+  const totalValue = picks.reduce((acc, p) => acc + Number(p.amount), 0);
 
-  const removeTicker = (t: string) => setTickers(prev => prev.filter(x => x !== t));
-
-  const loadSuggested = (suggested: typeof SUGGESTED[0]) => {
-    setTickers(suggested.tickers);
-    setResult(null);
-  };
-
-  const analyze = async () => {
-    if (tickers.length < 2) { setError("Add at least 2 assets"); return; }
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/portfolio", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tickers }),
-      });
-      const data = await res.json();
-      if (data.error) setError(data.error);
-      else setResult(data);
-    } catch { setError("Failed to analyze portfolio"); }
-    setLoading(false);
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-emerald-400 font-mono text-sm tracking-widest uppercase animate-pulse">
+          Loading Portfolio...
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-black text-white font-sans">
-      <div className="pt-24 max-w-6xl mx-auto px-4 md:px-8 py-12 space-y-10">
-
-        {/* Header */}
+    <div className="space-y-12">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-800 pb-8">
         <div>
-          <h1 className="text-5xl font-black tracking-tight">Portfolio Builder</h1>
-          <p className="text-emerald-400 mt-2 font-mono text-sm uppercase tracking-widest">
-            Build a portfolio, backtest 6 months, stress test against macro scenarios
+          <h1 className="text-4xl font-black tracking-tight mb-2">My Portfolio</h1>
+          <p className="text-zinc-500 font-mono text-sm">
+            {picks.length} assets tracked • Total invested: ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </p>
         </div>
-
-        {/* Suggested portfolios */}
-        <div>
-          <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-4">Start with a template</p>
-          <div className="flex flex-wrap gap-3">
-            {SUGGESTED.map(s => (
-              <button key={s.label} onClick={() => loadSuggested(s)}
-                className="px-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-300 hover:border-emerald-500/30 hover:text-emerald-400 transition-colors">
-                {s.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Ticker input */}
-        <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 space-y-4">
-          <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest">Build your portfolio (max 15 assets)</p>
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => {
-                  setInput(e.target.value);
-                  searchAssets(e.target.value);
-                  setShowSuggestions(true);
-                }}
-                onKeyDown={e => e.key === "Enter" && addTicker()}
-                onFocus={() => {
-                  if (input.trim().length > 0) {
-                    setShowSuggestions(true);
-                  }
-                }}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                placeholder="Type ticker and press Enter — AAPL, BTC-USD, RELIANCE.NS..."
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 font-mono text-sm"
-              />
-              {showSuggestions && searchResults.length > 0 && (
-                <div className="absolute left-0 right-0 mt-1.5 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl z-50 overflow-hidden divide-y divide-zinc-800/80">
-                  {searchResults.map(r => (
-                    <button
-                      key={r.ticker}
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                      }}
-                      onClick={() => addTicker(r.ticker)}
-                      className="w-full text-left px-4 py-3 hover:bg-zinc-800/80 transition-colors flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono font-bold text-emerald-400">{r.ticker}</span>
-                        <span className="text-sm text-zinc-300 truncate max-w-[220px]">{r.short_name || r.ticker}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono">
-                        <span className="bg-zinc-800 px-2 py-0.5 rounded text-zinc-400">{r.asset_class}</span>
-                        {r.price && <span>${r.price.toFixed(2)}</span>}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <button onClick={() => addTicker()}
-              className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm font-mono transition-colors">
-              Add
-            </button>
-          </div>
-          {tickers.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {tickers.map(t => (
-                <span key={t} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-sm font-mono text-emerald-400">
-                  {t}
-                  <button onClick={() => removeTicker(t)} className="text-emerald-600 hover:text-rose-400 transition-colors">×</button>
-                </span>
-              ))}
-            </div>
-          )}
-          {error && <p className="text-rose-400 text-sm font-mono">{error}</p>}
-          <button onClick={analyze} disabled={tickers.length < 2}
-            className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-black font-bold rounded-xl transition-colors">
-            {loading ? "Analyzing..." : `Analyze ${tickers.length} Asset Portfolio`}
-          </button>
-        </div>
-
-        {/* Results */}
-        {result && (
-          <div className="space-y-8">
-
-            {/* Summary stats */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {[
-                { label: "6M Return", value: `${result.summary.portfolio_return >= 0 ? '+' : ''}${result.summary.portfolio_return}%`, color: result.summary.portfolio_return >= 0 ? "text-emerald-400" : "text-rose-400" },
-                { label: "Avg Beta", value: result.summary.avg_beta.toFixed(2), color: result.summary.avg_beta < 1 ? "text-emerald-400" : result.summary.avg_beta < 1.5 ? "text-yellow-400" : "text-rose-400" },
-                { label: "Avg Div Yield", value: `${result.summary.avg_dividend_yield}%`, color: "text-zinc-200" },
-                { label: "Avg P/E", value: result.summary.avg_pe > 0 ? result.summary.avg_pe.toFixed(1) : "—", color: "text-zinc-200" },
-                { label: "Diversification", value: `${result.summary.diversification_score}/100`, color: result.summary.diversification_score > 60 ? "text-emerald-400" : "text-yellow-400" },
-                { label: "Asset Classes", value: result.summary.class_count, color: "text-zinc-200" },
-              ].map(s => (
-                <div key={s.label} className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 text-center">
-                  <p className="text-xs font-mono text-zinc-500 uppercase tracking-wider mb-2">{s.label}</p>
-                  <p className={`text-2xl font-black font-mono ${s.color}`}>{s.value}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Asset table */}
-            <div>
-              <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-4">Holdings</p>
-              <div className="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-zinc-900/50 border-b border-zinc-800">
-                    <tr>
-                      {["Ticker", "Name", "Class", "Price", "6M Return", "Beta", "Div Yield", "Rev Growth"].map(h => (
-                        <th key={h} className="p-4 font-mono text-xs text-zinc-500 uppercase">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-800/50">
-                    {result.assets.map((a: any) => (
-                      <tr key={a.ticker} className="hover:bg-zinc-900/30 transition-colors">
-                        <td className="p-4 font-bold font-mono text-emerald-400">{a.ticker}</td>
-                        <td className="p-4 text-zinc-300 truncate max-w-[160px]">{a.short_name || a.ticker}</td>
-                        <td className="p-4 text-zinc-500 text-xs">{a.asset_class}</td>
-                        <td className="p-4 font-mono">${(a.price || 0).toFixed(2)}</td>
-                        <td className={`p-4 font-mono font-bold ${a.return_6m >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {a.return_6m >= 0 ? '+' : ''}{a.return_6m}%
-                        </td>
-                        <td className={`p-4 font-mono text-xs ${!a.beta ? 'text-zinc-600' : a.beta < 1 ? 'text-emerald-400' : a.beta < 1.5 ? 'text-yellow-400' : 'text-rose-400'}`}>
-                          {a.beta ? a.beta.toFixed(2) : '—'}
-                        </td>
-                        <td className="p-4 font-mono text-xs text-zinc-400">{a.dividend_yield ? `${(a.dividend_yield * 100).toFixed(1)}%` : '—'}</td>
-                        <td className="p-4 font-mono text-xs text-emerald-400">{a.revenue_growth ? `${(a.revenue_growth * 100).toFixed(1)}%` : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              </div>
-            </div>
-
-            {/* Stress tests */}
-            <div>
-              <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-4">Stress Test — How does your portfolio perform in each scenario?</p>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {result.stress_tests.map((s: any) => (
-                  <div key={s.scenario} className={`bg-zinc-950 border rounded-2xl p-5 ${s.portfolio_impact >= 0 ? 'border-emerald-800/30' : 'border-rose-800/30'}`}>
-                    <p className="text-sm font-semibold mb-3">{s.label}</p>
-                    <p className={`text-3xl font-black font-mono ${s.portfolio_impact >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {s.portfolio_impact >= 0 ? '+' : ''}{s.portfolio_impact}%
-                    </p>
-                    <p className="text-xs text-zinc-600 mt-1 font-mono">estimated portfolio impact</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      {error && (
+        <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-6 text-rose-400 font-mono text-sm">
+          {error}
+        </div>
+      )}
+
+      {picks.length === 0 ? (
+        <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-16 text-center space-y-6">
+          <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto">
+            <span className="text-3xl">📭</span>
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">Your portfolio is empty</h2>
+            <p className="text-zinc-500 mt-2">Start exploring asset classes and pick some assets to track.</p>
+          </div>
+          <Link 
+            href="/portfolio/explore" 
+            className="inline-block px-8 py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-2xl transition-colors"
+          >
+            Go Explore
+          </Link>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {picks.map((pick) => {
+            const asset = assets[pick.ticker];
+            if (!asset) return null;
+            
+            return (
+              <div key={pick.id} className="bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden flex flex-col sm:flex-row relative group">
+                <div className="flex-1 p-2">
+                  <AssetCard asset={asset} selectedMetrics={["marketCap", "peRatio"]} index={0} hideHoverGlow />
+                </div>
+                <div className="p-6 bg-zinc-900/50 sm:w-64 flex flex-col justify-center border-t sm:border-t-0 sm:border-l border-zinc-800">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs text-zinc-500 font-mono uppercase tracking-wider">Amount</p>
+                      <p className="font-mono font-bold text-lg">${Number(pick.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-500 font-mono uppercase tracking-wider">Quantity</p>
+                      <p className="font-mono font-bold">{Number(pick.quantity).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-500 font-mono uppercase tracking-wider">Strategy</p>
+                      <p className="text-sm">{pick.holding_period}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Delete button (shows on hover) */}
+                <button 
+                  onClick={() => handleRemove(pick.id)}
+                  className="absolute top-4 right-4 p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                  title="Remove Pick"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

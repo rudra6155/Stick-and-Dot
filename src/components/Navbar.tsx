@@ -1,69 +1,57 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { User } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { createClient } from "@/utils/supabase/client";
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { user, openAuthModal } = useAuth();
+  const supabase = createClient();
 
-  const links = [
-    { href: "/", label: "Terminal" },
-    { href: "/screener", label: "Screener" },
-    { href: "/scenarios", label: "Scenarios" },
-    { href: "/backtest", label: "Backtest" },
-    { href: "/news", label: "News" },
-    { href: "/risk-score", label: "Risk Score" },
-    { href: "/opportunities", label: "Opportunities" },
-    { href: "/portfolio", label: "Portfolio" },
-  ];
+  const handlePortfolioClick = (e: React.MouseEvent) => {
+    if (!user) {
+      e.preventDefault();
+      openAuthModal("/portfolio");
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/";
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-40 bg-black/80 backdrop-blur-md border-b border-zinc-900/50" style={{top: '32px'}}>
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:justify-start">
-          <div className="flex items-center w-full justify-between sm:w-auto">
-            {/* Mobile menu button */}
-            <div className="sm:hidden flex items-center">
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="text-zinc-400 hover:text-white transition-colors p-2 -ml-2"
-              >
-                {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
-            </div>
-          </div>
-          {/* Desktop Nav */}
-          <div className="hidden sm:flex items-center gap-6 w-full">
-            {links.map((link, i) => (
-              <div key={link.href} className="flex items-center gap-6 shrink-0">
-                <Link href={link.href} className="text-zinc-400 hover:text-emerald-400 transition-colors text-sm font-medium uppercase tracking-wider">
-                  {link.label}
-                </Link>
-                {i < links.length - 1 && <span className="text-zinc-800">|</span>}
+        <div className="flex items-center justify-between h-16">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-xl font-black tracking-tighter text-white">Super Finance Hub</span>
+          </Link>
+          
+          <div className="flex items-center gap-6">
+            <Link 
+              href="/portfolio" 
+              onClick={handlePortfolioClick}
+              className="text-sm font-bold uppercase tracking-wider text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              My Portfolio
+            </Link>
+
+            {user && (
+              <div className="flex items-center gap-4 border-l border-zinc-800 pl-6">
+                <span className="text-xs text-zinc-500 font-mono flex items-center gap-2">
+                  <User className="w-3 h-3" />
+                  {user.email || user.phone}
+                </span>
+                <button onClick={handleLogout} className="text-xs text-rose-400 hover:text-rose-300 uppercase tracking-widest font-mono transition-colors">
+                  Log Out
+                </button>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
-      
-      {/* Mobile Nav */}
-      {isOpen && (
-        <div className="sm:hidden bg-black/95 backdrop-blur-xl border-b border-zinc-900/50">
-          <div className="px-4 pt-2 pb-6 space-y-1 shadow-2xl h-[calc(100vh-80px)] overflow-y-auto">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setIsOpen(false)}
-                className="block px-3 py-4 rounded-md text-base font-medium text-zinc-300 hover:text-emerald-400 hover:bg-zinc-900/50 uppercase tracking-wider border-b border-zinc-800/50"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
     </nav>
   );
 }

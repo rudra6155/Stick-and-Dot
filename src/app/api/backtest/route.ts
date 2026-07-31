@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     max_beta,
     min_roe,
     min_market_cap,
+    tickers: targetTickers,
   } = body;
 
   // Step 1 — get matching assets from snapshots
@@ -25,14 +26,18 @@ export async function POST(req: NextRequest) {
     .select('ticker, short_name, asset_class, sector, price, beta, market_cap, pe_ratio, revenue_growth, dividend_yield, return_on_equity')
     .limit(200);
 
-  if (asset_class) query = query.eq('asset_class', asset_class);
-  if (sector) query = query.eq('sector', sector);
-  if (max_pe) query = query.lte('pe_ratio', max_pe).gt('pe_ratio', 0);
-  if (min_dividend_yield) query = query.gte('dividend_yield', min_dividend_yield);
-  if (min_revenue_growth) query = query.gte('revenue_growth', min_revenue_growth);
-  if (max_beta) query = query.lte('beta', max_beta);
-  if (min_roe) query = query.gte('return_on_equity', min_roe);
-  if (min_market_cap) query = query.gte('market_cap', min_market_cap);
+  if (targetTickers && targetTickers.length > 0) {
+    query = query.in('ticker', targetTickers);
+  } else {
+    if (asset_class) query = query.eq('asset_class', asset_class);
+    if (sector) query = query.eq('sector', sector);
+    if (max_pe) query = query.lte('pe_ratio', max_pe).gt('pe_ratio', 0);
+    if (min_dividend_yield) query = query.gte('dividend_yield', min_dividend_yield);
+    if (min_revenue_growth) query = query.gte('revenue_growth', min_revenue_growth);
+    if (max_beta) query = query.lte('beta', max_beta);
+    if (min_roe) query = query.gte('return_on_equity', min_roe);
+    if (min_market_cap) query = query.gte('market_cap', min_market_cap);
+  }
 
   const { data: assets, error: assetError } = await query;
   if (assetError) return NextResponse.json({ error: assetError }, { status: 500 });

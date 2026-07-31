@@ -81,11 +81,20 @@ const AnimatedPrice = ({ price }: { price: number }) => {
   return <>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(displayPrice)}</>;
 };
 
-function AssetCardComponent({ asset, index, selectedMetrics, formatNumber }: any) {
+function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propFormatNumber }: any) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { setCursorState } = useCursor();
+
+  const formatNumber = propFormatNumber || ((num: number | undefined) => {
+    if (!num || num === 0) return "—";
+    if (num >= 1e12) return "$" + (num / 1e12).toFixed(2) + "T";
+    if (num >= 1e9)  return "$" + (num / 1e9).toFixed(2) + "B";
+    if (num >= 1e6)  return "$" + (num / 1e6).toFixed(2) + "M";
+    if (num >= 1e3)  return "$" + (num / 1e3).toFixed(2) + "K";
+    return "$" + num.toFixed(2);
+  });
 
   const getMetric = (id: string) => {
     switch(id) {

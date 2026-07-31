@@ -117,6 +117,29 @@ function LiveClock() {
   return <div>{time} UTC</div>;
 }
 
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+
+function AssetCardWrapper({ asset, index, selectedMetrics, formatNumber }: any) {
+  const { user, openAuthModal } = useAuth();
+  const router = useRouter();
+
+  const handleClick = () => {
+    const detailUrl = `/portfolio/explore/${encodeURIComponent(asset.assetClass)}/${encodeURIComponent(asset.symbol)}`;
+    if (!user) {
+      openAuthModal(detailUrl);
+    } else {
+      router.push(detailUrl);
+    }
+  };
+
+  return (
+    <div onClick={handleClick} className="cursor-pointer">
+      <AssetCard asset={asset} index={index} selectedMetrics={selectedMetrics} formatNumber={formatNumber} />
+    </div>
+  );
+}
+
 export default function SuperFinanceHub() {
   const [isRefreshing, setIsRefreshing] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
@@ -497,13 +520,7 @@ export default function SuperFinanceHub() {
           ) : (
             <>
               {visibleAssets.map((asset, index) => (
-                <AssetCard
-                  key={asset.id}
-                  asset={asset}
-                  index={index}
-                  selectedMetrics={selectedMetrics}
-                  formatNumber={formatNumber}
-                />
+                <AssetCardWrapper key={asset.id} asset={asset} index={index} selectedMetrics={selectedMetrics} formatNumber={formatNumber} />
               ))}
               {assets.length < totalCount && (
                 <div className="col-span-full flex justify-center pt-8">
