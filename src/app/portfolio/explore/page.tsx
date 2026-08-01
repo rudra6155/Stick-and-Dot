@@ -29,7 +29,7 @@ export default async function ExplorePage() {
         <div className="text-center space-y-4">
           <h1 className="text-5xl md:text-6xl font-black tracking-tight">Explore the Market</h1>
           <p className="text-zinc-500 font-mono text-sm uppercase tracking-widest">
-            {counts["All"]?.toLocaleString() || "51,000+"} Assets Available
+            {counts["All"]?.toLocaleString() || "..."} Assets Available
           </p>
         </div>
 
@@ -56,7 +56,7 @@ export default async function ExplorePage() {
             {assetClasses.map(cls => (
               <Link 
                 key={cls}
-                href={`/explore/${encodeURIComponent(cls)}`}
+                href={`/portfolio/explore/${encodeURIComponent(cls)}`}
                 className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 hover:bg-zinc-900 transition-colors group"
               >
                 <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xl text-zinc-400 group-hover:text-emerald-400 group-hover:border-emerald-500/30 transition-all">

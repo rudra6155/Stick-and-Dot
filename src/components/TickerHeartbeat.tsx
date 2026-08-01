@@ -33,8 +33,8 @@ export default function TickerHeartbeat({ assets }: TickerHeartbeatProps) {
     // Initialize tickers on client side only
     if (assets.length === 0) return;
     
-    // Pick up to 40 random assets
-    const count = Math.min(assets.length, 40);
+    // Pick up to 40 random assets (15 on mobile)
+    const count = Math.min(assets.length, window.innerWidth < 768 ? 15 : 40);
     const shuffled = [...assets].sort(() => 0.5 - Math.random());
     
     const w = window.innerWidth;
@@ -53,11 +53,16 @@ export default function TickerHeartbeat({ assets }: TickerHeartbeatProps) {
       isPulsing: false
     }));
 
-    const nodes = Array.from(containerRef.current?.children || []) as HTMLElement[];
+    let nodes: HTMLElement[] = [];
+    requestAnimationFrame(() => {
+      // Defer node query by one frame so React has time to render
+      // We skip the first child because it's the <style> tag
+      const allChildren = Array.from(containerRef.current?.children || []) as HTMLElement[];
+      nodes = allChildren.filter(el => el.classList.contains('ticker-node'));
+    });
 
     const animate = () => {
       if (!isVisible.current) {
-        requestRef.current = requestAnimationFrame(animate);
         return;
       }
       
@@ -106,7 +111,13 @@ export default function TickerHeartbeat({ assets }: TickerHeartbeatProps) {
 
     // Setup Intersection Observer to pause animation off-screen
     const observer = new IntersectionObserver((entries) => {
-      isVisible.current = entries[0].isIntersecting;
+      const isIntersecting = entries[0].isIntersecting;
+      if (isIntersecting && !isVisible.current) {
+        isVisible.current = true;
+        requestRef.current = requestAnimationFrame(animate);
+      } else {
+        isVisible.current = isIntersecting;
+      }
     });
     
     if (containerRef.current) {

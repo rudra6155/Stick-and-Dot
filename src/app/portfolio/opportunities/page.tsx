@@ -48,7 +48,7 @@ export default function OpportunitiesPage() {
         <div>
           <h1 className="text-5xl font-black tracking-tight">Opportunity Feed</h1>
           <p className="text-emerald-400 mt-2 font-mono text-sm uppercase tracking-widest">
-            Real-time signals from 51,000+ assets — dips, momentum, income, value
+            Real-time signals from all tracked assets — dips, momentum, income, value
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export default function OpportunitiesPage() {
 
         {/* Results count */}
         <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest">
-          {loading ? "Scanning 51,000+ assets..." : `${filtered.length} opportunities found`}
+          {loading ? "Scanning all tracked assets..." : `${filtered.length} opportunities found`}
         </p>
 
         {/* Cards grid */}

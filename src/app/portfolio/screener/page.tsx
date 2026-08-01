@@ -132,7 +132,7 @@ export default function ScreenerPage() {
         {/* Header */}
         <div>
           <h1 className="text-5xl font-black tracking-tight">Smart Screener</h1>
-          <p className="text-emerald-400 mt-2 font-mono text-sm uppercase tracking-widest">Filter 51,000+ assets by any metric</p>
+          <p className="text-emerald-400 mt-2 font-mono text-sm uppercase tracking-widest">Filter all tracked assets by any metric</p>
         </div>
 
         {/* Practical Investment Filters */}
@@ -158,7 +158,7 @@ export default function ScreenerPage() {
 
         {/* Advanced Filters */}
         <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6">
-          <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-6">Filter through 51,000+ assets across 11 classes instantly.</p>
+          <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-6">Filter through all tracked assets across 11 classes instantly.</p>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             <div className="space-y-2">
               <label className="text-xs text-zinc-400">Asset Class</label>

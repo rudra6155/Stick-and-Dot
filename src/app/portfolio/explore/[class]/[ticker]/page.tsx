@@ -88,7 +88,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center space-y-4">
         <div className="text-rose-400 font-mono text-sm">{error || "Asset not found"}</div>
-        <Link href={`/explore/${encodeURIComponent(assetClass)}`} className="text-emerald-400 hover:underline">
+        <Link href={`/portfolio/explore/${encodeURIComponent(assetClass)}`} className="text-emerald-400 hover:underline">
           Go back to {assetClass}
         </Link>
       </div>
@@ -101,7 +101,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
         
         {/* Top Nav */}
         <div className="flex items-center justify-between">
-          <Link href={`/explore/${encodeURIComponent(assetClass)}`} className="flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors">
+          <Link href={`/portfolio/explore/${encodeURIComponent(assetClass)}`} className="flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" />
             Back to {assetClass}
           </Link>

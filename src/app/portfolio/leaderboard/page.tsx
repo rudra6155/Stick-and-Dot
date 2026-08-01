@@ -123,7 +123,9 @@ export default async function LeaderboardPage({
       </div>
 
       <div className="bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl">
-        <div className="grid grid-cols-12 gap-4 px-8 py-4 border-b border-zinc-800 bg-zinc-900/20 text-xs font-mono text-zinc-500 uppercase tracking-widest">
+        <div className="overflow-x-auto">
+          <div className="min-w-[600px]">
+            <div className="grid grid-cols-12 gap-4 px-4 md:px-8 py-4 border-b border-zinc-800 bg-zinc-900/20 text-xs font-mono text-zinc-500 uppercase tracking-widest">
           <div className="col-span-2 sm:col-span-1">Rank</div>
           <div className="col-span-5 sm:col-span-7">Investor</div>
           <div className="col-span-2 text-right hidden sm:block">Picks</div>
@@ -142,7 +144,7 @@ export default async function LeaderboardPage({
               return (
                 <div 
                   key={user.username + idx} 
-                  className={`grid grid-cols-12 gap-4 px-8 py-6 items-center transition-colors hover:bg-zinc-900/30 ${
+                  className={`grid grid-cols-12 gap-4 px-4 md:px-8 py-6 items-center transition-colors hover:bg-zinc-900/30 ${
                     idx === 0 ? "bg-emerald-500/5" : ""
                   }`}
                 >
@@ -173,6 +175,8 @@ export default async function LeaderboardPage({
               );
             })
           )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

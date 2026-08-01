@@ -61,7 +61,13 @@ function scoreAsset(r: any) {
 }
 
 export async function POST(req: NextRequest) {
-  const { ticker } = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+  const { ticker } = body;
   if (!ticker) return NextResponse.json({ error: 'ticker required' }, { status: 400 });
 
   const { data, error } = await supabase

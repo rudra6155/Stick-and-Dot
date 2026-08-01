@@ -129,6 +129,7 @@ export async function fetchAssetsPaginated(params: {
   activeClass: string;
   activeSector: string;
   sortBy: string;
+  sortDir?: 'asc' | 'desc';
 }): Promise<{ assets: Asset[]; totalCount: number }> {
   let query = supabase
     .from('asset_snapshots')
@@ -156,7 +157,7 @@ export async function fetchAssetsPaginated(params: {
     'Beta': 'beta'
   };
   const sortCol = sortMap[params.sortBy] ?? 'market_cap';
-  query = query.order(sortCol, { ascending: false, nullsFirst: false });
+  query = query.order(sortCol, { ascending: params.sortDir === 'asc', nullsFirst: false });
 
   query = query.range(params.offset, params.offset + params.limit - 1);
 

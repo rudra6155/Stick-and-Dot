@@ -32,7 +32,7 @@ export default function VaultHeader({
   const particlesRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
   
-  const formattedValue = totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const formattedValue = totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const chars = formattedValue.split("");
 
   useGSAP(() => {
@@ -53,9 +53,8 @@ export default function VaultHeader({
       const particles = particlesRef.current.children;
       gsap.fromTo(
         particles,
-        { scale: 0, opacity: 0.8 },
+        { opacity: 0.8 },
         {
-          scale: 2,
           opacity: 0,
           duration: 1.5,
           stagger: 0.1,
@@ -66,23 +65,6 @@ export default function VaultHeader({
   }, [totalValue]);
 
   useGSAP(() => {
-    // Phase 4: Pinning the header
-    if (containerRef.current) {
-      const classesToAdd = ["backdrop-blur-xl", "bg-black/60", "border-b", "border-white/10"];
-      ScrollTrigger.create({
-        trigger: containerRef.current,
-        start: "top top",
-        endTrigger: "body",
-        end: "bottom bottom",
-        onEnter: () => containerRef.current?.classList.add(...classesToAdd),
-        onLeave: () => containerRef.current?.classList.remove(...classesToAdd),
-        onEnterBack: () => containerRef.current?.classList.add(...classesToAdd),
-        onLeaveBack: () => containerRef.current?.classList.remove(...classesToAdd)
-      });
-    }
-  }, []);
-
-  useGSAP(() => {
     // Phase 5: Pulse of Value
     if (hoveredValue > 0 && totalValue > 0 && glowRef.current) {
       const percent = hoveredValue / totalValue;
@@ -91,14 +73,12 @@ export default function VaultHeader({
       const opacity = Math.min(0.1 + percent * 0.3, 0.4);
       
       gsap.to(glowRef.current, {
-        scale,
         opacity,
         duration: 0.4,
         ease: "power2.out"
       });
     } else if (glowRef.current) {
       gsap.to(glowRef.current, {
-        scale: 1,
         opacity: 0,
         duration: 0.6,
         ease: "power2.out"
@@ -107,13 +87,13 @@ export default function VaultHeader({
   }, [hoveredValue, totalValue]);
 
   return (
-    <div ref={containerRef} className="w-full z-40 py-6 px-4 md:px-0 transition-colors duration-300">
+    <div ref={containerRef} className="w-full z-40 py-6 px-4 md:px-0 transition-colors duration-300 backdrop-blur-xl bg-black/60 border-b border-white/10">
       <div className="relative flex flex-col md:flex-row md:items-end justify-between gap-6 max-w-7xl mx-auto">
         
         {/* Glow Element */}
         <div 
           ref={glowRef}
-          className="absolute -inset-10 bg-emerald-500 rounded-full blur-[100px] pointer-events-none opacity-0 will-change-transform"
+          className="absolute -inset-10 bg-emerald-500 rounded-full blur-[100px] pointer-events-none opacity-0"
           style={{ zIndex: -1 }}
         />
         
@@ -124,7 +104,7 @@ export default function VaultHeader({
             <span className="text-5xl md:text-7xl font-light text-zinc-400 mr-2">$</span>
             <div ref={valueRef} className="flex overflow-hidden pb-2 text-5xl md:text-7xl font-black tracking-tighter text-white">
               {chars.map((char, i) => (
-                <span key={i} className="inline-block will-change-transform">
+                <span key={i} className="inline-block">
                   {char}
                 </span>
               ))}

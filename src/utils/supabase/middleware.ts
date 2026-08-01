@@ -35,7 +35,7 @@ export async function updateSession(request: NextRequest) {
   if (
     !user &&
     (request.nextUrl.pathname.startsWith('/explore') ||
-     request.nextUrl.pathname.startsWith('/portfolio'))
+     (request.nextUrl.pathname.startsWith('/portfolio') && !request.nextUrl.pathname.startsWith('/portfolio/leaderboard')))
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()

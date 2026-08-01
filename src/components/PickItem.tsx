@@ -122,7 +122,10 @@ export function PickItem({
       onMouseLeave={() => onLeave && onLeave()}
     >
       {/* Top Summary Row */}
-      <div className="flex flex-col sm:flex-row cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+      <div className="flex flex-col sm:flex-row cursor-pointer" onClick={() => {
+        setIsExpanded(!isExpanded);
+        setTimeout(() => ScrollTrigger.refresh(), 200);
+      }}>
         <div className="flex-1 p-2 pointer-events-none sm:pointer-events-auto">
           <AssetCard asset={asset} selectedMetrics={["marketCap", "peRatio"]} index={0} hideHoverGlow />
         </div>

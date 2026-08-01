@@ -154,7 +154,7 @@ export default function MyPortfolioPage() {
   return (
     <div className="space-y-12 pb-32">
       {/* Vault Header (Phase 3, 4, 5) */}
-      <div className="sticky top-0 z-[100] bg-[#020202] pb-4">
+      <div className="sticky top-0 z-40 bg-[#020202] pb-4">
         <VaultHeader 
           totalValue={totalValue}
           picksCount={picks.length}

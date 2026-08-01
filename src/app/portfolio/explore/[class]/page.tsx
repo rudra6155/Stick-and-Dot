@@ -170,7 +170,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
               </button>
               
               {isSortOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden z-20">
+                <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-48 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden z-20">
                   {sortOptions.map(opt => (
                     <button
                       key={opt}
@@ -216,7 +216,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
         {/* Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {assets.map(asset => (
-            <Link key={asset.symbol} href={`/explore/${encodeURIComponent(assetClass)}/${encodeURIComponent(asset.symbol)}`}>
+            <Link key={asset.symbol} href={`/portfolio/explore/${encodeURIComponent(assetClass)}/${encodeURIComponent(asset.symbol)}`}>
               <AssetCard asset={asset} selectedMetrics={selectedMetrics} index={0} />
             </Link>
           ))}

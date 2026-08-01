@@ -74,7 +74,13 @@ const SCENARIOS: Record<string, {
 };
 
 export async function POST(req: NextRequest) {
-  const { scenario_key, user_holdings } = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+  const { scenario_key, user_holdings } = body;
   const scenario = SCENARIOS[scenario_key];
   if (!scenario) return NextResponse.json({ error: 'Unknown scenario' }, { status: 400 });
 
