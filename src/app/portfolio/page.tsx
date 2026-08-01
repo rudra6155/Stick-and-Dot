@@ -1,10 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { ArrowLeft, Trash2, Crosshair, ChevronDown } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { PickItem } from "@/components/PickItem";
+import VaultHeader from "@/components/VaultHeader";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import ScrollTrigger from "gsap/dist/ScrollTrigger";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
+}
 
 export default function MyPortfolioPage() {
   const [picks, setPicks] = useState<any[]>([]);
@@ -14,6 +22,10 @@ export default function MyPortfolioPage() {
   const [showScenarioDropdown, setShowScenarioDropdown] = useState(false);
   const [alignmentData, setAlignmentData] = useState<any>(null);
   const [aligningScenario, setAligningScenario] = useState("");
+  const [hoveredPickValue, setHoveredPickValue] = useState<number>(0);
+  
+  // Ref for scenario chips
+  const alignmentRef = useRef<HTMLDivElement>(null);
   
   const scenarios = [
     { id: "us_china_tension", label: "US-China Tensions" },
@@ -116,6 +128,17 @@ export default function MyPortfolioPage() {
     }
   };
 
+  useGSAP(() => {
+    // Phase 6: GSAP stagger pattern for scenario chips
+    if (alignmentData && alignmentRef.current) {
+      const chips = alignmentRef.current.querySelectorAll('.scenario-chip');
+      gsap.fromTo(chips,
+        { y: 20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.4, stagger: 0.05, ease: "back.out(1.5)" }
+      );
+    }
+  }, [alignmentData]);
+
   const totalValue = picks.reduce((acc, p) => acc + Number(p.amount), 0);
 
   if (loading) {
@@ -129,46 +152,36 @@ export default function MyPortfolioPage() {
   }
 
   return (
-    <div className="space-y-12">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-800 pb-8">
-        <div>
-          <h1 className="text-4xl font-black tracking-tight mb-2">My Portfolio</h1>
-          <p className="text-zinc-500 font-mono text-sm">
-            {picks.length} assets tracked • Total invested: ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-          </p>
-        </div>
+    <div className="space-y-12 pb-32">
+      {/* Vault Header (Phase 3, 4, 5) */}
+      <div className="sticky top-0 z-[100] bg-[#020202] pb-4">
+        <VaultHeader 
+          totalValue={totalValue}
+          picksCount={picks.length}
+          hoveredValue={hoveredPickValue}
+          onAlignClick={() => setShowScenarioDropdown(!showScenarioDropdown)}
+          isAligning={!!aligningScenario}
+          hasPicks={picks.length > 0}
+        />
         
-        {picks.length > 0 && (
-          <div className="relative">
-            <button 
-              onClick={() => setShowScenarioDropdown(!showScenarioDropdown)}
-              className="flex items-center gap-2 px-5 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-xl font-medium transition-colors"
-            >
-              <Crosshair className="w-4 h-4 text-emerald-400" />
-              {aligningScenario ? "Aligning..." : "Align with Scenario"}
-              <ChevronDown className="w-4 h-4 text-zinc-500" />
-            </button>
-            
-            {showScenarioDropdown && (
-              <div className="absolute right-0 top-full mt-2 w-64 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-50 overflow-hidden">
-                {scenarios.map(s => (
-                  <button
-                    key={s.id}
-                    onClick={() => handleAlign(s.id)}
-                    className="w-full text-left px-4 py-3 hover:bg-zinc-800 transition-colors text-sm font-medium border-b border-zinc-800/50 last:border-0"
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            )}
+        {/* Scenario Dropdown */}
+        {showScenarioDropdown && picks.length > 0 && (
+          <div className="absolute right-4 top-full mt-2 w-64 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-50 overflow-hidden">
+            {scenarios.map(s => (
+              <button
+                key={s.id}
+                onClick={() => handleAlign(s.id)}
+                className="w-full text-left px-4 py-3 hover:bg-zinc-800 transition-colors text-sm font-medium border-b border-zinc-800/50 last:border-0"
+              >
+                {s.label}
+              </button>
+            ))}
           </div>
         )}
       </div>
 
       {alignmentData && alignmentData.alignment && (
-        <div className="bg-emerald-950/20 border border-emerald-900/30 rounded-3xl p-8 mb-8 animate-in fade-in slide-in-from-top-4">
+        <div ref={alignmentRef} className="max-w-7xl mx-auto px-4 md:px-0 bg-emerald-950/20 border border-emerald-900/30 rounded-3xl p-8 mb-8">
           <div className="flex items-center gap-3 mb-6">
             <Crosshair className="w-6 h-6 text-emerald-400" />
             <div>
@@ -183,7 +196,7 @@ export default function MyPortfolioPage() {
               <div className="flex flex-wrap gap-2">
                 {alignmentData.alignment.wellAligned.length === 0 && <span className="text-zinc-600 text-sm">None</span>}
                 {alignmentData.alignment.wellAligned.map((c: string) => (
-                  <span key={c} className="px-3 py-1 bg-emerald-500/10 text-emerald-300 text-xs font-medium rounded-full border border-emerald-500/20">{c}</span>
+                  <span key={c} className="scenario-chip px-3 py-1 bg-emerald-500/10 text-emerald-300 text-xs font-medium rounded-full border border-emerald-500/20">{c}</span>
                 ))}
               </div>
             </div>
@@ -193,7 +206,7 @@ export default function MyPortfolioPage() {
               <div className="flex flex-wrap gap-2">
                 {alignmentData.alignment.considerAdding.length === 0 && <span className="text-zinc-600 text-sm">None</span>}
                 {alignmentData.alignment.considerAdding.map((c: string) => (
-                  <Link key={c} href={`/portfolio/explore/${encodeURIComponent(c)}`} className="px-3 py-1 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 text-xs font-medium rounded-full border border-yellow-500/20 transition-colors cursor-pointer">
+                  <Link key={c} href={`/portfolio/explore/${encodeURIComponent(c)}`} className="scenario-chip px-3 py-1 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 text-xs font-medium rounded-full border border-yellow-500/20 transition-colors cursor-pointer">
                     + {c}
                   </Link>
                 ))}
@@ -205,7 +218,7 @@ export default function MyPortfolioPage() {
               <div className="flex flex-wrap gap-2">
                 {alignmentData.alignment.considerReducing.length === 0 && <span className="text-zinc-600 text-sm">None</span>}
                 {alignmentData.alignment.considerReducing.map((c: string) => (
-                  <span key={c} className="px-3 py-1 bg-rose-500/10 text-rose-300 text-xs font-medium rounded-full border border-rose-500/20">- {c}</span>
+                  <span key={c} className="scenario-chip px-3 py-1 bg-rose-500/10 text-rose-300 text-xs font-medium rounded-full border border-rose-500/20">- {c}</span>
                 ))}
               </div>
             </div>
@@ -236,13 +249,20 @@ export default function MyPortfolioPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-7xl mx-auto px-4 md:px-0">
           {picks.map((pick) => {
             const asset = assets[pick.ticker];
             if (!asset) return null;
             
             return (
-              <PickItem key={pick.id} pick={pick} asset={asset} onRemove={handleRemove} />
+              <PickItem 
+                key={pick.id} 
+                pick={pick} 
+                asset={asset} 
+                onRemove={handleRemove} 
+                onHover={(val) => setHoveredPickValue(val)}
+                onLeave={() => setHoveredPickValue(0)}
+              />
             );
           })}
         </div>

@@ -4,12 +4,77 @@ import { AssetCard } from "@/components/AssetCard";
 import { AssetRiskPanel } from "@/components/AssetRiskPanel";
 import { AssetBacktestPanel } from "@/components/AssetBacktestPanel";
 import { AVAILABLE_METRICS, getMetric } from "@/components/AssetCard";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import ScrollTrigger from "gsap/dist/ScrollTrigger";
+import { useRef } from "react";
 
-export function PickItem({ pick, asset, onRemove }: { pick: any, asset: any, onRemove: (id: string) => void }) {
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
+}
+
+export function PickItem({ 
+  pick, 
+  asset, 
+  onRemove,
+  onHover,
+  onLeave
+}: { 
+  pick: any, 
+  asset: any, 
+  onRemove: (id: string) => void,
+  onHover?: (val: number) => void,
+  onLeave?: () => void
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [riskResult, setRiskResult] = useState<any>(null);
   const [backtestResult, setBacktestResult] = useState<any>(null);
   const [loadingExtras, setLoadingExtras] = useState(false);
+  
+  const itemRef = useRef<HTMLDivElement>(null);
+  const amountRef = useRef<HTMLSpanElement>(null);
+  const pickAmount = Number(pick.amount);
+
+  useGSAP(() => {
+    if (!itemRef.current) return;
+    
+    // Phase 4: Scroll-Driven Asset Reveal
+    gsap.fromTo(
+      itemRef.current,
+      { y: 50, opacity: 0 },
+      {
+        y: 0,
+        opacity: 1,
+        duration: 0.8,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: itemRef.current,
+          start: "top 90%",
+          end: "top 60%",
+          toggleActions: "play none none reverse",
+        }
+      }
+    );
+
+    // Phase 4: Value counts up from 0 synced to scroll
+    if (amountRef.current) {
+      const counter = { val: 0 };
+      gsap.to(counter, {
+        val: pickAmount,
+        scrollTrigger: {
+          trigger: itemRef.current,
+          start: "top 90%",
+          end: "center center",
+          scrub: true,
+        },
+        onUpdate: () => {
+          if (amountRef.current) {
+            amountRef.current.innerText = counter.val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          }
+        }
+      });
+    }
+  }, [pickAmount]);
 
   useEffect(() => {
     if (isExpanded && (!riskResult || !backtestResult)) {
@@ -50,7 +115,12 @@ export function PickItem({ pick, asset, onRemove }: { pick: any, asset: any, onR
   }, [isExpanded, asset.symbol, riskResult, backtestResult]);
 
   return (
-    <div className={`bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden flex flex-col relative group transition-all duration-500 ${isExpanded ? 'col-span-1 lg:col-span-2' : ''}`}>
+    <div 
+      ref={itemRef}
+      className={`bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden flex flex-col relative group transition-all duration-500 will-change-transform ${isExpanded ? 'col-span-1 lg:col-span-2' : ''}`}
+      onMouseEnter={() => onHover && onHover(pickAmount)}
+      onMouseLeave={() => onLeave && onLeave()}
+    >
       {/* Top Summary Row */}
       <div className="flex flex-col sm:flex-row cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
         <div className="flex-1 p-2 pointer-events-none sm:pointer-events-auto">
@@ -61,7 +131,7 @@ export function PickItem({ pick, asset, onRemove }: { pick: any, asset: any, onR
           <div className="space-y-4">
             <div>
               <p className="text-xs text-zinc-500 font-mono uppercase tracking-wider">Amount</p>
-              <p className="font-mono font-bold text-lg">${Number(pick.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <p className="font-mono font-bold text-lg">$<span ref={amountRef}>0.00</span></p>
             </div>
             <div>
               <p className="text-xs text-zinc-500 font-mono uppercase tracking-wider">Quantity</p>

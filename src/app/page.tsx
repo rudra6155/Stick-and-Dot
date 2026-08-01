@@ -9,7 +9,7 @@ import { useCountUp } from "@/hooks/useCountUp";
 import { AssetCard } from "@/components/AssetCard";
 
 const DollarParticles = dynamic(() => import('@/components/DollarParticles'), { ssr: false });
-const HeroParticles = dynamic(() => import('@/components/HeroParticles'), { ssr: false });
+const TickerHeartbeat = dynamic(() => import('@/components/TickerHeartbeat'), { ssr: false });
 const StatsSection = dynamic(() => import('@/components/StatsSection'), { ssr: false });
 
 const AVAILABLE_METRICS = [
@@ -73,12 +73,43 @@ const AnimatedText = ({ text, delayOffset = 0 }: { text: string; delayOffset?: n
   </div>
 );
 
+import gsap from "gsap";
+import ScrollTrigger from "gsap/dist/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
+import { useRef } from "react";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
+}
+
 const AnimatedStat = ({ value, label, suffix = "" }: { value: number; label: string; suffix?: string }) => {
-  const displayValue = useCountUp(value, 1500);
+  const numRef = useRef<HTMLSpanElement>(null);
+  
+  useGSAP(() => {
+    if (!numRef.current) return;
+    
+    // We animate a dummy object and push its value to the DOM
+    const counter = { val: 0 };
+    gsap.to(counter, {
+      val: value,
+      scrollTrigger: {
+        trigger: numRef.current,
+        start: "top bottom",
+        end: "top center",
+        scrub: 1, // 1 second smoothing
+      },
+      onUpdate: () => {
+        if (numRef.current) {
+          numRef.current.innerText = Math.floor(counter.val).toString();
+        }
+      }
+    });
+  }, [value]);
+
   return (
     <div className="flex flex-col items-center">
       <div className="text-4xl md:text-5xl font-mono text-emerald-400 font-bold tracking-tighter">
-        {Math.floor(displayValue)}{suffix}
+        <span ref={numRef}>0</span>{suffix}
       </div>
       <div className="text-zinc-500 font-mono text-xs uppercase tracking-widest mt-2">{label}</div>
     </div>
@@ -303,7 +334,7 @@ export default function SuperFinanceHub() {
         style={{ opacity: heroOpacity, scale: heroScale }}
         className="relative w-full h-screen flex flex-col items-center justify-center pt-32 z-10"
       >
-        <HeroParticles />
+        <TickerHeartbeat assets={tickerTapeAssets} />
         <div className="relative z-10 flex flex-col items-center pointer-events-none">
           <h1 className="text-5xl md:text-8xl lg:text-9xl font-black tracking-tighter leading-none bg-gradient-to-b from-white to-zinc-500 bg-clip-text text-transparent text-center mb-6">
             <AnimatedText text="THE MARKET." />

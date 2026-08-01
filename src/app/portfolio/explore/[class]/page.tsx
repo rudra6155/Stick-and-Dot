@@ -143,7 +143,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
         </div>
 
         {/* Filters Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 bg-zinc-950/50 p-4 border border-zinc-800/50 rounded-2xl backdrop-blur-xl">
+        <div className="relative z-50 flex flex-col sm:flex-row items-stretch sm:items-center gap-4 bg-zinc-950/50 p-4 border border-zinc-800/50 rounded-2xl backdrop-blur-xl">
           {/* Search */}
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
