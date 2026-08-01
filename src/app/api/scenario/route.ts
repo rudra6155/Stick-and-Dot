@@ -74,13 +74,16 @@ const SCENARIOS: Record<string, {
 };
 
 export async function POST(req: NextRequest) {
-  const { scenario_key } = await req.json();
+  const { scenario_key, user_holdings } = await req.json();
   const scenario = SCENARIOS[scenario_key];
   if (!scenario) return NextResponse.json({ error: 'Unknown scenario' }, { status: 400 });
 
   const groupedResults: Array<{ label: string; assets: any[] }> = [];
+  const recommendedClasses = new Set<string>();
 
   for (const q of scenario.queries) {
+    if (q.filters.asset_class) recommendedClasses.add(q.filters.asset_class);
+    
     let query = supabase
       .from('asset_snapshots')
       .select('*')
@@ -94,10 +97,26 @@ export async function POST(req: NextRequest) {
     groupedResults.push({ label: q.label, assets: data || [] });
   }
 
+  let alignment = undefined;
+
+  if (user_holdings && Array.isArray(user_holdings)) {
+    const holdings = new Set(user_holdings);
+    const wellAligned = Array.from(holdings).filter(c => recommendedClasses.has(c));
+    const considerAdding = Array.from(recommendedClasses).filter(c => !holdings.has(c));
+    const considerReducing = Array.from(holdings).filter(c => !recommendedClasses.has(c));
+    
+    alignment = {
+      wellAligned,
+      considerAdding,
+      considerReducing
+    };
+  }
+
   return NextResponse.json({
     scenario: scenario_key,
     description: scenario.description,
     logic: scenario.logic,
     groups: groupedResults,
+    alignment,
   });
 }

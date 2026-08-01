@@ -60,7 +60,8 @@ export function PickModal({
         asset_class: asset.asset_class,
         amount: Number(amount),
         quantity: Number(quantity),
-        holding_period: holdingPeriod
+        holding_period: holdingPeriod,
+        picked_at_price: asset.price
       });
 
       if (dbError) throw dbError;

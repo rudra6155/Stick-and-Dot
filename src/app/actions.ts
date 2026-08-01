@@ -1,5 +1,6 @@
 "use server";
 import { supabase } from "@/lib/supabase";
+import { unstable_cache } from "next/cache";
 
 export type Asset = {
   id: string;
@@ -239,29 +240,35 @@ export async function fetchAssetsPaginated(params: {
 }
 
 export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
-  const assetClasses = ["Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
-  
-  const counts: Record<string, number> = {};
-  
-  const totalPromise = supabase
-    .from('asset_snapshots')
-    .select('*', { count: 'exact', head: true });
-    
-  const promises = assetClasses.map(cls => 
-    supabase
-      .from('asset_snapshots')
-      .select('*', { count: 'exact', head: true })
-      .eq('asset_class', cls)
-  );
+  return unstable_cache(
+    async () => {
+      const assetClasses = ["Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
+      
+      const counts: Record<string, number> = {};
+      
+      const totalPromise = supabase
+        .from('asset_snapshots')
+        .select('*', { count: 'exact', head: true });
+        
+      const promises = assetClasses.map(cls => 
+        supabase
+          .from('asset_snapshots')
+          .select('*', { count: 'exact', head: true })
+          .eq('asset_class', cls)
+      );
 
-  const results = await Promise.all([totalPromise, ...promises]);
-  
-  counts['All'] = results[0].count || 0;
-  assetClasses.forEach((cls, idx) => {
-    counts[cls] = results[idx + 1].count || 0;
-  });
-  
-  return counts;
+      const results = await Promise.all([totalPromise, ...promises]);
+      
+      counts['All'] = results[0].count || 0;
+      assetClasses.forEach((cls, idx) => {
+        counts[cls] = results[idx + 1].count || 0;
+      });
+      
+      return counts;
+    },
+    ['asset-class-counts'],
+    { revalidate: 3600 } // Cache for 1 hour
+  )();
 }
 
 export async function fetchTickerTapeAssets(): Promise<Asset[]> {

@@ -30,7 +30,7 @@ const classColors: Record<string, string> = {
   Gold: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
 };
 
-const AVAILABLE_METRICS = [
+export const AVAILABLE_METRICS = [
   { id: "volume",        label: "Volume" },
   { id: "avgVolume",     label: "Avg Volume" },
   { id: "marketCap",     label: "Market Cap" },
@@ -81,69 +81,72 @@ const AnimatedPrice = ({ price }: { price: number }) => {
   return <>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(displayPrice)}</>;
 };
 
-function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propFormatNumber }: any) {
+export const formatNumber = (num: number | undefined) => {
+  if (!num || num === 0) return "—";
+  if (num >= 1e12) return "$" + (num / 1e12).toFixed(2) + "T";
+  if (num >= 1e9)  return "$" + (num / 1e9).toFixed(2) + "B";
+  if (num >= 1e6)  return "$" + (num / 1e6).toFixed(2) + "M";
+  if (num >= 1e3)  return "$" + (num / 1e3).toFixed(2) + "K";
+  return "$" + num.toFixed(2);
+};
+
+export const getMetric = (id: string, asset: any, customFormatNumber?: any) => {
+  const formatter = customFormatNumber || formatNumber;
+  switch(id) {
+    case "volume": return formatter(asset.volume);
+    case "avgVolume": return formatter(asset.avg_volume);
+    case "marketCap": return formatter(asset.marketCap);
+    case "peRatio": return asset.peRatio ? asset.peRatio.toFixed(2) : "—";
+    case "forwardPe": return asset.forward_pe ? asset.forward_pe.toFixed(2) : "—";
+    case "priceToBook": return asset.price_to_book ? asset.price_to_book.toFixed(2) : "—";
+    case "priceToSales": return asset.price_to_sales ? asset.price_to_sales.toFixed(2) : "—";
+    case "evToEbitda": return asset.ev_to_ebitda ? asset.ev_to_ebitda.toFixed(2) : "—";
+    case "dividendYield": return asset.dividendYield ? (asset.dividendYield * 100).toFixed(2) + "%" : "—";
+    case "earningsGrowth": return asset.earnings_growth ? (asset.earnings_growth * 100).toFixed(2) + "%" : "—";
+    case "revenueGrowth": return asset.revenue_growth ? (asset.revenue_growth * 100).toFixed(2) + "%" : "—";
+    case "profitMargins": return asset.profit_margins ? (asset.profit_margins * 100).toFixed(2) + "%" : "—";
+    case "high52Week": return asset.high52Week ? "$" + asset.high52Week.toFixed(2) : "—";
+    case "low52Week": return asset.low52Week ? "$" + asset.low52Week.toFixed(2) : "—";
+    case "ma50Day": return asset.ma50Day ? "$" + asset.ma50Day.toFixed(2) : "—";
+    case "ma200Day": return asset.ma200Day ? "$" + asset.ma200Day.toFixed(2) : "—";
+    case "beta": return asset.beta ? asset.beta.toFixed(2) : "—";
+    case "dayHigh": return asset.dayHigh ? "$" + asset.dayHigh.toFixed(2) : "—";
+    case "dayLow": return asset.dayLow ? "$" + asset.dayLow.toFixed(2) : "—";
+    case "sector": return asset.sector || "—";
+    case "previousClose": return asset.previousClose ? "$" + asset.previousClose.toFixed(2) : "—";
+    case "enterpriseValue": return formatter(asset.enterpriseValue);
+    case "pegRatio": return asset.pegRatio ? asset.pegRatio.toFixed(2) : "—";
+    case "dividendRate": return asset.dividendRate ? "$" + asset.dividendRate.toFixed(2) : "—";
+    case "payoutRatio": return asset.payoutRatio ? (asset.payoutRatio * 100).toFixed(2) + "%" : "—";
+    case "grossMargins": return asset.grossMargins ? (asset.grossMargins * 100).toFixed(2) + "%" : "—";
+    case "operatingMargins": return asset.operatingMargins ? (asset.operatingMargins * 100).toFixed(2) + "%" : "—";
+    case "returnOnEquity": return asset.returnOnEquity ? (asset.returnOnEquity * 100).toFixed(2) + "%" : "—";
+    case "returnOnAssets": return asset.returnOnAssets ? (asset.returnOnAssets * 100).toFixed(2) + "%" : "—";
+    case "totalRevenue": return formatter(asset.totalRevenue);
+    case "ebitda": return formatter(asset.ebitda);
+    case "totalDebt": return formatter(asset.totalDebt);
+    case "freeCashflow": return formatter(asset.freeCashflow);
+    case "allTimeHigh": return asset.allTimeHigh ? "$" + asset.allTimeHigh.toFixed(2) : "—";
+    case "allTimeLow": return asset.allTimeLow ? "$" + asset.allTimeLow.toFixed(2) : "—";
+    case "sharesOutstanding": return formatter(asset.sharesOutstanding);
+    case "heldPercentInsiders": return asset.heldPercentInsiders ? (asset.heldPercentInsiders * 100).toFixed(2) + "%" : "—";
+    case "heldPercentInstitutions": return asset.heldPercentInstitutions ? (asset.heldPercentInstitutions * 100).toFixed(2) + "%" : "—";
+    case "recommendationMean": return asset.recommendationMean ? asset.recommendationMean.toFixed(2) : "—";
+    case "targetMeanPrice": return asset.targetMeanPrice ? "$" + asset.targetMeanPrice.toFixed(2) : "—";
+    case "trailingEps": return asset.trailingEps ? "$" + asset.trailingEps.toFixed(2) : "—";
+    case "forwardEps": return asset.forwardEps ? "$" + asset.forwardEps.toFixed(2) : "—";
+    case "currency": return asset.currency || "USD";
+    default: return "—";
+  }
+};
+
+function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propFormatNumber, hideHoverGlow }: any) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { setCursorState } = useCursor();
 
-  const formatNumber = propFormatNumber || ((num: number | undefined) => {
-    if (!num || num === 0) return "—";
-    if (num >= 1e12) return "$" + (num / 1e12).toFixed(2) + "T";
-    if (num >= 1e9)  return "$" + (num / 1e9).toFixed(2) + "B";
-    if (num >= 1e6)  return "$" + (num / 1e6).toFixed(2) + "M";
-    if (num >= 1e3)  return "$" + (num / 1e3).toFixed(2) + "K";
-    return "$" + num.toFixed(2);
-  });
-
-  const getMetric = (id: string) => {
-    switch(id) {
-      case "volume": return formatNumber(asset.volume);
-      case "avgVolume": return formatNumber(asset.avg_volume);
-      case "marketCap": return formatNumber(asset.marketCap);
-      case "peRatio": return asset.peRatio ? asset.peRatio.toFixed(2) : "—";
-      case "forwardPe": return asset.forward_pe ? asset.forward_pe.toFixed(2) : "—";
-      case "priceToBook": return asset.price_to_book ? asset.price_to_book.toFixed(2) : "—";
-      case "priceToSales": return asset.price_to_sales ? asset.price_to_sales.toFixed(2) : "—";
-      case "evToEbitda": return asset.ev_to_ebitda ? asset.ev_to_ebitda.toFixed(2) : "—";
-      case "dividendYield": return asset.dividendYield ? (asset.dividendYield * 100).toFixed(2) + "%" : "—";
-      case "earningsGrowth": return asset.earnings_growth ? (asset.earnings_growth * 100).toFixed(2) + "%" : "—";
-      case "revenueGrowth": return asset.revenue_growth ? (asset.revenue_growth * 100).toFixed(2) + "%" : "—";
-      case "profitMargins": return asset.profit_margins ? (asset.profit_margins * 100).toFixed(2) + "%" : "—";
-      case "high52Week": return asset.high52Week ? "$" + asset.high52Week.toFixed(2) : "—";
-      case "low52Week": return asset.low52Week ? "$" + asset.low52Week.toFixed(2) : "—";
-      case "ma50Day": return asset.ma50Day ? "$" + asset.ma50Day.toFixed(2) : "—";
-      case "ma200Day": return asset.ma200Day ? "$" + asset.ma200Day.toFixed(2) : "—";
-      case "beta": return asset.beta ? asset.beta.toFixed(2) : "—";
-      case "dayHigh": return asset.dayHigh ? "$" + asset.dayHigh.toFixed(2) : "—";
-      case "dayLow": return asset.dayLow ? "$" + asset.dayLow.toFixed(2) : "—";
-      case "sector": return asset.sector || "—";
-      case "previousClose": return asset.previousClose ? "$" + asset.previousClose.toFixed(2) : "—";
-      case "enterpriseValue": return formatNumber(asset.enterpriseValue);
-      case "pegRatio": return asset.pegRatio ? asset.pegRatio.toFixed(2) : "—";
-      case "dividendRate": return asset.dividendRate ? "$" + asset.dividendRate.toFixed(2) : "—";
-      case "payoutRatio": return asset.payoutRatio ? (asset.payoutRatio * 100).toFixed(2) + "%" : "—";
-      case "grossMargins": return asset.grossMargins ? (asset.grossMargins * 100).toFixed(2) + "%" : "—";
-      case "operatingMargins": return asset.operatingMargins ? (asset.operatingMargins * 100).toFixed(2) + "%" : "—";
-      case "returnOnEquity": return asset.returnOnEquity ? (asset.returnOnEquity * 100).toFixed(2) + "%" : "—";
-      case "returnOnAssets": return asset.returnOnAssets ? (asset.returnOnAssets * 100).toFixed(2) + "%" : "—";
-      case "totalRevenue": return formatNumber(asset.totalRevenue);
-      case "ebitda": return formatNumber(asset.ebitda);
-      case "totalDebt": return formatNumber(asset.totalDebt);
-      case "freeCashflow": return formatNumber(asset.freeCashflow);
-      case "allTimeHigh": return asset.allTimeHigh ? "$" + asset.allTimeHigh.toFixed(2) : "—";
-      case "allTimeLow": return asset.allTimeLow ? "$" + asset.allTimeLow.toFixed(2) : "—";
-      case "sharesOutstanding": return formatNumber(asset.sharesOutstanding);
-      case "heldPercentInsiders": return asset.heldPercentInsiders ? (asset.heldPercentInsiders * 100).toFixed(2) + "%" : "—";
-      case "heldPercentInstitutions": return asset.heldPercentInstitutions ? (asset.heldPercentInstitutions * 100).toFixed(2) + "%" : "—";
-      case "recommendationMean": return asset.recommendationMean ? asset.recommendationMean.toFixed(2) : "—";
-      case "targetMeanPrice": return asset.targetMeanPrice ? "$" + asset.targetMeanPrice.toFixed(2) : "—";
-      case "trailingEps": return asset.trailingEps ? "$" + asset.trailingEps.toFixed(2) : "—";
-      case "forwardEps": return asset.forwardEps ? "$" + asset.forwardEps.toFixed(2) : "—";
-      case "currency": return asset.currency || "—";
-      default: return "—";
-    }
-  };
+  const getMetricLocal = (id: string) => getMetric(id, asset, propFormatNumber || formatNumber);
 
   return (
     <motion.div
@@ -218,7 +221,7 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
             return (
               <div key={metricId} className="flex flex-col">
                 <p className="text-zinc-600 text-[9px] font-mono uppercase tracking-widest mb-1">{metric.label}</p>
-                <p className="font-mono text-xs text-zinc-300 font-medium truncate">{getMetric(metricId)}</p>
+                <p className="font-mono text-xs text-zinc-300 font-medium truncate">{getMetricLocal(metricId)}</p>
               </div>
             );
           })}

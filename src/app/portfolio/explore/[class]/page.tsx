@@ -2,8 +2,9 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
-import { Search, Filter, ArrowUp, ArrowDown, ArrowLeft } from "lucide-react";
 import { fetchAssetsPaginated, fetchAssetClassCounts } from "@/app/actions";
+import { createClient } from "@/utils/supabase/client";
+import { Search, Filter, ArrowUp, ArrowDown, ArrowLeft } from "lucide-react";
 import { AssetCard } from "@/components/AssetCard";
 
 type Asset = any;
@@ -26,6 +27,11 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
   const [liveCount, setLiveCount] = useState<number | null>(null);
   
   const [loading, setLoading] = useState(false);
+  
+  const [requestName, setRequestName] = useState("");
+  const [requestNote, setRequestNote] = useState("");
+  const [requestStatus, setRequestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const supabase = createClient();
   
   // Basic metrics for all cards on this page
   const selectedMetrics = ["marketCap", "volume", "peRatio", "dividendYield"];
@@ -84,7 +90,37 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
   }, [offset, debouncedSearchQuery, sortBy, sortDir, assetClass]);
 
   const toggleSortDir = () => {
-    setSortDir(prev => prev === 'desc' ? 'asc' : 'desc');
+    setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+    setOffset(0);
+  };
+
+  const handleRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!requestName.trim()) return;
+    
+    setRequestStatus('loading');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setRequestStatus('error');
+        return;
+      }
+      
+      const { error } = await supabase.from('asset_requests').insert({
+        user_id: user.id,
+        requested_name: requestName,
+        note: requestNote
+      });
+      
+      if (error) throw error;
+      setRequestStatus('success');
+      setRequestName("");
+      setRequestNote("");
+      setTimeout(() => setRequestStatus('idle'), 5000);
+    } catch (err) {
+      console.error(err);
+      setRequestStatus('error');
+    }
   };
 
   return (
@@ -121,7 +157,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
           </div>
 
           {/* Controls */}
-          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar sm:overflow-visible">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             {/* Sort Dropdown */}
             <div className="relative shrink-0">
               <button 
@@ -202,6 +238,53 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
             </button>
           </div>
         )}
+
+        {/* Missing Asset Request Form */}
+        <div className="mt-20 border-t border-zinc-800 pt-12 max-w-xl">
+          <h3 className="text-xl font-bold mb-2">Can't find an asset?</h3>
+          <p className="text-sm text-zinc-500 mb-6">Request it and we'll review it for addition.</p>
+          
+          <form onSubmit={handleRequestSubmit} className="space-y-4">
+            <div>
+              <input 
+                type="text" 
+                placeholder="Asset Name or Ticker" 
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                value={requestName}
+                onChange={e => setRequestName(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <textarea 
+                placeholder="Optional notes (e.g. why we should add it)" 
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-colors resize-none h-24"
+                value={requestNote}
+                onChange={e => setRequestNote(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-4">
+              <button 
+                type="submit" 
+                disabled={requestStatus === 'loading' || !requestName.trim()}
+                className="px-6 py-2.5 bg-emerald-500 text-black font-bold rounded-xl hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+              >
+                {requestStatus === 'loading' ? 'Submitting...' : 'Submit Request'}
+              </button>
+              
+              {requestStatus === 'success' && (
+                <span className="text-emerald-400 text-sm font-medium animate-in fade-in">
+                  Request submitted, we'll review it soon.
+                </span>
+              )}
+              {requestStatus === 'error' && (
+                <span className="text-rose-400 text-sm font-medium animate-in fade-in">
+                  Error submitting request. Please ensure you are logged in.
+                </span>
+              )}
+            </div>
+          </form>
+        </div>
       </div>
       
       <style dangerouslySetInnerHTML={{__html: `

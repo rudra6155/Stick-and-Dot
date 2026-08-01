@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Compass, LineChart, BarChart3, TestTube, Newspaper, ShieldAlert, Target } from "lucide-react";
+import { LayoutDashboard, Compass, LineChart, BarChart3, TestTube, Newspaper, ShieldAlert, Target, Trophy } from "lucide-react";
 
 const sidebarLinks = [
   { href: "/portfolio", label: "My Picks", icon: LayoutDashboard },
+  { href: "/portfolio/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/portfolio/explore", label: "Explore Markets", icon: Compass },
   { href: "/portfolio/screener", label: "Screener", icon: BarChart3 },
   { href: "/portfolio/scenarios", label: "Scenarios", icon: LineChart },
