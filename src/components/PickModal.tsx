@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
@@ -21,6 +21,14 @@ export function PickModal({
   const [error, setError] = useState("");
   const router = useRouter();
   const supabase = createClient();
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   if (!isOpen || !asset) return null;
 
@@ -54,6 +62,19 @@ export function PickModal({
         throw new Error("You must be logged in to pick an asset.");
       }
 
+      const { data: existing } = await supabase
+        .from('user_picks')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('ticker', asset.ticker)
+        .maybeSingle();
+
+      if (existing) {
+        setError('You have already picked this asset.');
+        setLoading(false);
+        return;
+      }
+
       const { error: dbError } = await supabase.from('user_picks').insert({
         user_id: user.id,
         ticker: asset.ticker,
@@ -67,7 +88,9 @@ export function PickModal({
       if (dbError) throw dbError;
 
       onClose();
-      router.push('/portfolio'); // Redirect to portfolio after picking
+      if (isMountedRef.current) {
+        router.push('/portfolio'); // Redirect to portfolio after picking
+      }
     } catch (err: any) {
       setError(err.message || "Failed to save pick. Ensure user_picks table exists.");
     } finally {
@@ -80,7 +103,7 @@ export function PickModal({
       <div className="bg-zinc-950 border border-zinc-800 rounded-3xl w-full max-w-md overflow-hidden relative">
         <div className="flex justify-between items-center p-6 border-b border-zinc-800">
           <h2 className="text-xl font-bold">Pick {asset.ticker}</h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
+          <button onClick={onClose} disabled={loading} className="text-zinc-500 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
             <X className="w-6 h-6" />
           </button>
         </div>

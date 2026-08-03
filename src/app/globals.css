@@ -17,3 +17,320 @@ body {
 @media (hover: none) {
   body { cursor: auto; }
 }
+
+/* ═══════════════════════════════════════════════════
+   GLASSMORPHISM SYSTEM
+   ═══════════════════════════════════════════════════ */
+
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px) saturate(120%);
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(40px) saturate(140%);
+  -webkit-backdrop-filter: blur(40px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  backdrop-filter: blur(20px) saturate(120%);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* ═══════════════════════════════════════════════════
+   NOISE TEXTURE OVERLAY
+   ═══════════════════════════════════════════════════ */
+
+.noise::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.03;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.5'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+  border-radius: inherit;
+}
+
+/* ═══════════════════════════════════════════════════
+   GLOW EFFECTS
+   ═══════════════════════════════════════════════════ */
+
+.glow-emerald {
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.15), 0 0 60px rgba(16, 185, 129, 0.05);
+}
+
+.glow-emerald-intense {
+  box-shadow: 0 0 40px rgba(16, 185, 129, 0.25), 0 0 80px rgba(16, 185, 129, 0.1);
+}
+
+.text-glow-emerald {
+  text-shadow: 0 0 20px rgba(16, 185, 129, 0.5), 0 0 40px rgba(16, 185, 129, 0.2);
+}
+
+.text-glow-rose {
+  text-shadow: 0 0 20px rgba(244, 63, 94, 0.5), 0 0 40px rgba(244, 63, 94, 0.2);
+}
+
+/* ═══════════════════════════════════════════════════
+   DIGIT ROLLER ANIMATION
+   ═══════════════════════════════════════════════════ */
+
+.digit-roller {
+  display: inline-flex;
+  overflow: hidden;
+  height: 1em;
+  line-height: 1;
+}
+
+.digit-roller-inner {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.digit-roller-inner span {
+  display: block;
+  height: 1em;
+  line-height: 1;
+}
+
+/* ═══════════════════════════════════════════════════
+   3D TILT CARD
+   ═══════════════════════════════════════════════════ */
+
+.tilt-card {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+.tilt-card-inner {
+  transition: transform 0.15s ease-out;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.tilt-card:hover .tilt-card-inner {
+  /* Default slight tilt — JS overrides this for mouse tracking */
+  transform: rotateX(-2deg) rotateY(2deg) scale(1.01);
+}
+
+/* ═══════════════════════════════════════════════════
+   SVG DONUT RING ANIMATIONS
+   ═══════════════════════════════════════════════════ */
+
+@keyframes donut-segment-in {
+  from {
+    stroke-dashoffset: var(--circumference);
+    opacity: 0;
+  }
+  to {
+    stroke-dashoffset: var(--dash-offset);
+    opacity: 1;
+  }
+}
+
+@keyframes ring-pulse {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.3)); }
+  50% { filter: drop-shadow(0 0 16px rgba(16, 185, 129, 0.6)); }
+}
+
+.donut-segment {
+  animation: donut-segment-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
+.donut-segment:hover,
+.donut-segment.active {
+  filter: drop-shadow(0 0 12px var(--segment-color));
+}
+
+/* ═══════════════════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════════════════ */
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ═══════════════════════════════════════════════════
+   AMBIENT GRADIENT MESH (for vault header)
+   ═══════════════════════════════════════════════════ */
+
+@keyframes mesh-drift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.gradient-mesh {
+  background: radial-gradient(
+      ellipse at 20% 50%,
+      rgba(16, 185, 129, 0.08) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 80% 20%,
+      rgba(59, 130, 246, 0.05) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 50% 80%,
+      rgba(168, 85, 247, 0.04) 0%,
+      transparent 50%
+    );
+  background-size: 200% 200%;
+  animation: mesh-drift 20s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   VAULT DOOR ANIMATION (empty state)
+   ═══════════════════════════════════════════════════ */
+
+@keyframes vault-breathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 
+      0 0 0 2px rgba(16, 185, 129, 0.2),
+      0 0 30px rgba(16, 185, 129, 0.1);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 
+      0 0 0 3px rgba(16, 185, 129, 0.3),
+      0 0 60px rgba(16, 185, 129, 0.15);
+  }
+}
+
+.vault-door {
+  animation: vault-breathe 4s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   MAGNETIC BUTTON GLOW
+   ═══════════════════════════════════════════════════ */
+
+@keyframes glow-trail {
+  0% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.5), 0 0 80px rgba(16, 185, 129, 0.2); }
+  100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+}
+
+.btn-glow {
+  animation: glow-trail 3s ease-in-out infinite;
+}
+
+.btn-glow:hover {
+  animation: none;
+  box-shadow: 0 0 50px rgba(16, 185, 129, 0.5), 0 0 100px rgba(16, 185, 129, 0.25);
+}
+
+/* ═══════════════════════════════════════════════════
+   FADE / SLIDE ENTRANCE UTILITIES
+   ═══════════════════════════════════════════════════ */
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
+}
+
+/* ═══════════════════════════════════════════════════
+   TICKER TAPE (from SuperFinanceHub)
+   ═══════════════════════════════════════════════════ */
+
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-ticker {
+  animation: ticker 40s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   SHIMMER / SKELETON LOADING
+   ═══════════════════════════════════════════════════ */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   PERFORMANCE METRIC PULSE
+   ═══════════════════════════════════════════════════ */
+
+@keyframes stat-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.stat-live::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  margin-left: 8px;
+  animation: stat-pulse 2s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
