@@ -33,7 +33,7 @@ export function AssetBacktestPanel({ result }: { result: any }) {
       </div>
 
       <div className="h-40 w-full pt-4">
-        <Sparkline data={data} isUp={isPositive} width={400} height={120} />
+        <Sparkline data={data} isUp={isPositive} height={120} />
       </div>
 
       {result.monthly_returns && result.monthly_returns.length > 0 && (

@@ -34,7 +34,7 @@ const generateAreaPath = (data: number[], width: number, height: number) => {
   return `${path} L ${width} ${height} L 0 ${height} Z`;
 };
 
-export default function Sparkline({ data, isUp, width = 100, height = 40 }: { data: number[], isUp: boolean, width?: number, height?: number }) {
+export default function Sparkline({ data, isUp, width = 400, height = 120 }: { data: number[], isUp: boolean, width?: number, height?: number }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "0px" });
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -47,8 +47,8 @@ export default function Sparkline({ data, isUp, width = 100, height = 40 }: { da
   const filterId = `glow-${isUp ? 'up' : 'down'}-${Math.random().toString(36).substring(2,9)}`;
 
   return (
-    <div ref={ref} style={{ width, height }} className="relative opacity-60 group-hover:opacity-100 transition-opacity duration-500">
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+    <div ref={ref} style={{ height }} className="w-full relative opacity-60 group-hover:opacity-100 transition-opacity duration-500">
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="overflow-visible">
         <defs>
           <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="4" result="blur" />

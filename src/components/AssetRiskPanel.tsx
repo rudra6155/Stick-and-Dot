@@ -19,14 +19,14 @@ export function AssetRiskPanel({ result }: { result: any }) {
   return (
     <div className="space-y-6">
       {/* Asset header + grade */}
-      <div className={`border rounded-2xl p-8 flex items-center justify-between ${GRADE_BG[result.score.grade]}`}>
+      <div className={`border rounded-2xl p-8 flex flex-col-reverse sm:flex-row items-start sm:items-center justify-between gap-4 ${GRADE_BG[result.score.grade]}`}>
         <div>
           <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest mb-1">{result.asset.asset_class} · {result.asset.sector || "—"}</p>
           <h2 className="text-3xl font-black">{result.asset.ticker}</h2>
           <p className="text-zinc-400 mt-1">{result.asset.short_name}</p>
           <p className="text-2xl font-mono font-bold mt-2">${(result.asset.price || 0).toFixed(2)}</p>
         </div>
-        <div className="text-center">
+        <div className="text-left sm:text-center">
           <div className={`text-6xl md:text-8xl font-black ${GRADE_COLORS[result.score.grade]}`}>
             {result.score.grade}
           </div>

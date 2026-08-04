@@ -263,7 +263,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
                 onChange={e => setRequestNote(e.target.value)}
               />
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <button 
                 type="submit" 
                 disabled={requestStatus === 'loading' || !requestName.trim()}
