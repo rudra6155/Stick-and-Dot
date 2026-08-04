@@ -188,12 +188,12 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
         </div>
         
         <div className="flex flex-col items-end gap-2">
-          <span className={`px-2 py-0.5 rounded-md text-[9px] font-mono uppercase tracking-wider ${classColors[asset.assetClass] || classColors["Stock"]}`}>
+          <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium font-mono uppercase tracking-wider ${classColors[asset.assetClass] || classColors["Stock"]}`}>
             {asset.assetClass}
           </span>
           <div className="flex items-center gap-1.5">
             <div className={`w-1.5 h-1.5 rounded-full ${asset.isUp ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"} animate-pulse`} />
-            <span className="text-[9px] font-mono text-zinc-500 uppercase">Live</span>
+            <span className="text-[10px] font-medium font-mono text-zinc-500 uppercase">Live</span>
           </div>
         </div>
       </div>
@@ -220,7 +220,7 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
             if (!metric) return null;
             return (
               <div key={metricId} className="flex flex-col">
-                <p className="text-zinc-600 text-[9px] font-mono uppercase tracking-widest mb-1">{metric.label}</p>
+                <p className="text-zinc-600 text-[10px] font-medium font-mono uppercase tracking-widest mb-1">{metric.label}</p>
                 <p className="font-mono text-xs text-zinc-300 font-medium truncate">{getMetricLocal(metricId)}</p>
               </div>
             );

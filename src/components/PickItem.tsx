@@ -295,7 +295,7 @@ export function PickItem({
           <div className="p-5 sm:w-56 flex flex-col justify-center border-t sm:border-t-0 sm:border-l border-white/5 relative bg-white/[0.01]">
             <div className="space-y-3.5">
               <div>
-                <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-[0.15em] mb-1">
+                <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-widest mb-1">
                   Invested
                 </p>
                 <p className="font-mono font-bold text-base text-white">
@@ -303,7 +303,7 @@ export function PickItem({
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-[0.15em] mb-1">
+                <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-widest mb-1">
                   Quantity
                 </p>
                 <p className="font-mono font-bold text-sm text-zinc-300">
@@ -311,7 +311,7 @@ export function PickItem({
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-[0.15em] mb-1">
+                <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-widest mb-1">
                   Strategy
                 </p>
                 <p className="text-xs text-zinc-400 font-medium">{pick.holding_period}</p>
@@ -352,7 +352,7 @@ export function PickItem({
                         key={metric.id}
                         className="glass rounded-xl p-3 hover:bg-white/[0.03] transition-colors"
                       >
-                        <p className="text-zinc-600 text-[9px] font-mono uppercase tracking-[0.15em] mb-1">
+                        <p className="text-zinc-600 text-[9px] font-mono uppercase tracking-widest mb-1">
                           {metric.label}
                         </p>
                         <p className="font-mono text-xs text-zinc-300 font-medium truncate">

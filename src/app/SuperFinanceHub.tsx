@@ -387,7 +387,7 @@ export default function SuperFinanceHub({
                 autoCorrect="off"
                 spellCheck={false}
                 style={{ caretColor: '#10b981' }}
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-xl py-3 pl-10 pr-10 text-white text-sm placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-text"
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-xl py-3 pl-10 pr-10 text-white text-sm font-medium placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-text"
               />
               {searchQuery && (
                 <button

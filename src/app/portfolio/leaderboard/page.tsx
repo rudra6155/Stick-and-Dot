@@ -105,7 +105,7 @@ export default async function LeaderboardPage({
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-800 pb-8">
         <div>
-          <h1 className="text-4xl font-black tracking-tight mb-2 flex items-center gap-3">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 flex items-center gap-3">
             <Trophy className="w-8 h-8 text-yellow-500" />
             Top Investors
           </h1>

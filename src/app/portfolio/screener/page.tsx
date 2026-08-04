@@ -280,7 +280,7 @@ export default function ScreenerPage() {
                 </tr>
               ) : (
                 results.map((r, i) => (
-                  <tr key={r.ticker} className="hover:bg-zinc-900/30 transition-colors">
+                  <tr key={r.ticker} className="hover:bg-zinc-900/30 transition-colors font-medium leading-relaxed">
                     <td className="p-4 text-zinc-500 font-mono">#{i + 1}</td>
                     <td className="p-4 font-bold text-emerald-400 font-mono">{r.ticker}</td>
                     <td className="p-4 text-zinc-300 truncate max-w-[180px]">{r.short_name || r.ticker}</td>

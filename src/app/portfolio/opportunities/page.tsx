@@ -129,15 +129,15 @@ export default function OpportunitiesPage() {
                 <div className="grid grid-cols-3 gap-2 pt-3 border-t border-zinc-800">
                   <div>
                     <p className="text-[10px] text-zinc-600 uppercase font-mono">Rev Growth</p>
-                    <p className="text-xs font-mono text-emerald-400">{o.revenue_growth ? `${(o.revenue_growth * 100).toFixed(1)}%` : "—"}</p>
+                    <p className="text-xs font-mono text-emerald-400 font-medium leading-relaxed">{o.revenue_growth ? `${(o.revenue_growth * 100).toFixed(1)}%` : "—"}</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-zinc-600 uppercase font-mono">Div Yield</p>
-                    <p className="text-xs font-mono text-zinc-300">{o.dividend_yield ? `${(o.dividend_yield * 100).toFixed(1)}%` : "—"}</p>
+                    <p className="text-xs font-mono text-zinc-300 font-medium leading-relaxed">{o.dividend_yield ? `${(o.dividend_yield * 100).toFixed(1)}%` : "—"}</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-zinc-600 uppercase font-mono">Market Cap</p>
-                    <p className="text-xs font-mono text-zinc-300">{o.market_cap > 1e9 ? `$${(o.market_cap / 1e9).toFixed(1)}B` : "—"}</p>
+                    <p className="text-xs font-mono text-zinc-300 font-medium leading-relaxed">{o.market_cap > 1e9 ? `$${(o.market_cap / 1e9).toFixed(1)}B` : "—"}</p>
                   </div>
                 </div>
               </div>

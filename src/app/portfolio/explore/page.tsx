@@ -27,7 +27,7 @@ export default async function ExplorePage() {
       <div className="pt-32 max-w-5xl mx-auto px-4 md:px-8 py-12 space-y-12">
         {/* Header */}
         <div className="text-center space-y-4">
-          <h1 className="text-5xl md:text-6xl font-black tracking-tight">Explore the Market</h1>
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight">Explore the Market</h1>
           <p className="text-zinc-500 font-mono text-sm uppercase tracking-widest">
             {counts["All"]?.toLocaleString() || "..."} Assets Available
           </p>

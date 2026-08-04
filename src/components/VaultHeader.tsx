@@ -208,7 +208,7 @@ export default function VaultHeader({
             {/* Title */}
             <h1
               ref={titleRef}
-              className="flex items-center gap-2 text-xs font-mono text-zinc-500 uppercase tracking-[0.2em] mb-4"
+              className="flex items-center gap-2 text-xs font-mono text-zinc-500 uppercase tracking-widest mb-4"
             >
               <Wallet className="w-3.5 h-3.5 text-emerald-500" />
               Portfolio Vault
