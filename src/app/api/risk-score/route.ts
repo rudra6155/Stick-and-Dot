@@ -70,6 +70,10 @@ export async function POST(req: NextRequest) {
   const { ticker } = body;
   if (!ticker) return NextResponse.json({ error: 'ticker required' }, { status: 400 });
 
+  if (typeof ticker !== 'string' || !ticker.trim()) {
+      return NextResponse.json({ error: 'Invalid ticker' }, { status: 400 });
+  }
+
   const { data, error } = await supabase
     .from('asset_snapshots')
     .select('*')

@@ -34,14 +34,24 @@ function getSentiment(title: string): 'positive' | 'negative' | 'neutral' {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
   const topic = body.topic || 'finance';
 
   const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(topic)}&lang=en&country=us&max=10&apikey=${GNEWS_API_KEY}`;
 
   try {
     const res = await fetch(url);
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON response from news API' }, { status: 500 });
+    }
 
     if (!data.articles) {
       return NextResponse.json({ error: 'No articles returned', raw: data }, { status: 500 });

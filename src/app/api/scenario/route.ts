@@ -84,28 +84,32 @@ export async function POST(req: NextRequest) {
   const scenario = SCENARIOS[scenario_key];
   if (!scenario) return NextResponse.json({ error: 'Unknown scenario' }, { status: 400 });
 
-  const groupedResults: Array<{ label: string; assets: any[] }> = [];
   const recommendedClasses = new Set<string>();
 
-  for (const q of scenario.queries) {
-    if (q.filters.asset_class) recommendedClasses.add(q.filters.asset_class);
-    
-    let query = supabase
-      .from('asset_snapshots')
-      .select('*')
-      .order(q.sort_by, { ascending: q.sort_dir === 'asc' })
-      .limit(q.limit);
+  const groupedResults = await Promise.all(
+    scenario.queries.map(async (q) => {
+      if (q.filters.asset_class) recommendedClasses.add(q.filters.asset_class);
+      
+      let query = supabase
+        .from('asset_snapshots')
+        .select('*')
+        .order(q.sort_by, { ascending: q.sort_dir === 'asc' })
+        .limit(q.limit);
 
-    if (q.filters.asset_class) query = query.eq('asset_class', q.filters.asset_class);
-    if (q.filters.sector) query = query.eq('sector', q.filters.sector);
+      if (q.filters.asset_class) query = query.eq('asset_class', q.filters.asset_class);
+      if (q.filters.sector) query = query.eq('sector', q.filters.sector);
 
-    const { data } = await query;
-    groupedResults.push({ label: q.label, assets: data || [] });
-  }
+      const { data } = await query;
+      return { label: q.label, assets: data || [] };
+    })
+  );
 
   let alignment = undefined;
 
-  if (user_holdings && Array.isArray(user_holdings)) {
+  if (user_holdings) {
+    if (!Array.isArray(user_holdings)) {
+        return NextResponse.json({ error: 'user_holdings must be an array' }, { status: 400 });
+    }
     const holdings = new Set(user_holdings);
     const wellAligned = Array.from(holdings).filter(c => recommendedClasses.has(c));
     const considerAdding = Array.from(recommendedClasses).filter(c => !holdings.has(c));

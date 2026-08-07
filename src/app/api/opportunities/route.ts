@@ -8,11 +8,11 @@ const supabase = createClient(
 
 export async function GET() {
   const [
-    { data: dips },
-    { data: momentum },
-    { data: income },
-    { data: undervalued },
-    { data: analyst }
+    { data: dips, error: errDips },
+    { data: momentum, error: errMomentum },
+    { data: income, error: errIncome },
+    { data: undervalued, error: errUndervalued },
+    { data: analyst, error: errAnalyst }
   ] = await Promise.all([
     // Dip Buy: revenue_growth > 0.1, profit_margins > 0, price < low_52_week * 1.1 (filtered in JS)
     supabase.from('asset_snapshots').select('*').gt('revenue_growth', 0.1).gt('profit_margins', 0).not('low_52_week', 'is', null).gt('price', 0).order('revenue_growth', { ascending: false }).limit(100),
@@ -25,6 +25,11 @@ export async function GET() {
     // Analyst Upside: recommendation_mean < 2.5, target_mean_price > price * 1.2 (filtered in JS)
     supabase.from('asset_snapshots').select('*').lt('recommendation_mean', 2.5).gt('target_mean_price', 0).gt('price', 0).order('recommendation_mean', { ascending: true }).limit(100)
   ]);
+
+  const errors = [errDips, errMomentum, errIncome, errUndervalued, errAnalyst].filter(Boolean);
+  if (errors.length > 0) {
+    console.error("Errors fetching opportunities:", errors);
+  }
 
   if (!dips && !momentum && !income && !undervalued && !analyst) {
     return NextResponse.json({ opportunities: [], total: 0 });

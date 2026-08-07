@@ -7,7 +7,16 @@ const supabase = createClient(
 );
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
+  const search = typeof body.search === 'string' ? body.search : '';
+  const limit = Math.min(body.limit || 50, 500);
+
   const {
     asset_class,
     sector,
@@ -20,8 +29,6 @@ export async function POST(req: NextRequest) {
     min_profit_margins,
     max_beta,
     min_roe,
-    limit = 500,
-    search,
   } = body;
 
   let query = supabase

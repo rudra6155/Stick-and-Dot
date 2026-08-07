@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
     .from('price_history')
     .select('ticker, date, close')
     .in('ticker', tickers)
-    .order('date', { ascending: true });
+    .order('date', { ascending: true })
+    .limit(30000);
 
   // Compute 6M return per asset
   const tickerHistory: Record<string, any[]> = {};
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
   const assetDetails = assets.map((a: any) => {
     const hist = tickerHistory[a.ticker] || [];
     const return_6m = hist.length >= 2
-      ? ((hist[hist.length - 1].close - hist[0].close) / hist[0].close) * 100
+      ? (hist[0].close !== 0 ? ((hist[hist.length - 1].close - hist[0].close) / hist[0].close) * 100 : 0)
       : 0;
     return { ...a, weight, return_6m: parseFloat(return_6m.toFixed(2)) };
   });

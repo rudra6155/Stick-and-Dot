@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
     .from('price_history')
     .select('ticker, date, close')
     .in('ticker', tickers)
-    .order('date', { ascending: true });
+    .order('date', { ascending: true })
+    .limit(30000);
 
   if (histError) return NextResponse.json({ error: histError }, { status: 500 });
 
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
 
     const first = hist[0].close;
     const last = hist[hist.length - 1].close;
-    const return_pct = ((last - first) / first) * 100;
+    const return_pct = first !== 0 ? ((last - first) / first) * 100 : 0;
 
     // Sample 12 points for sparkline
     const step = Math.floor(hist.length / 12);

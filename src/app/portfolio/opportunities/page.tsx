@@ -27,9 +27,19 @@ export default function OpportunitiesPage() {
   const setActiveFilter = useStateFilter; // mapped due to previous error if existing
 
   useEffect(() => {
-    fetch("/api/opportunities")
-      .then(r => r.json())
-      .then(d => { setOpportunities(d.opportunities || []); setLoading(false); });
+    const fetchData = async () => {
+      try {
+        const res = await fetch('/api/opportunities');
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        setOpportunities(data.opportunities || []);
+      } catch (err) {
+        console.error('Failed to fetch opportunities:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
   const filtered = opportunities.filter(o => {

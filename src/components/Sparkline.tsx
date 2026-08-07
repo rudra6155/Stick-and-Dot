@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useInView } from "framer-motion";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useId } from "react";
 
 function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(false);
@@ -44,7 +44,8 @@ export default function Sparkline({ data, isUp, width = 400, height = 120 }: { d
   const safeData = data && data.length > 0 ? data : [0,0,0,0,0,0,0];
   const path = generatePath(safeData, width, height);
   const areaPath = generateAreaPath(safeData, width, height);
-  const filterId = `glow-${isUp ? 'up' : 'down'}-${Math.random().toString(36).substring(2,9)}`;
+  const reactId = useId();
+  const filterId = `glow-${isUp ? 'up' : 'down'}-${reactId}`;
 
   return (
     <div ref={ref} style={{ height }} className="w-full relative opacity-60 group-hover:opacity-100 transition-opacity duration-500">

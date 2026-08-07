@@ -131,6 +131,7 @@ export async function fetchAssetsPaginated(params: {
   sortBy: string;
   sortDir?: 'asc' | 'desc';
 }): Promise<{ assets: Asset[]; totalCount: number }> {
+  const safeLimit = Math.min(Math.max(params.limit, 1), 100);
   let query = supabase
     .from('asset_snapshots')
     .select('*', { count: 'exact' });
@@ -159,9 +160,8 @@ export async function fetchAssetsPaginated(params: {
   const sortCol = sortMap[params.sortBy] ?? 'market_cap';
   query = query.order(sortCol, { ascending: params.sortDir === 'asc', nullsFirst: false });
 
-  query = query.range(params.offset, params.offset + params.limit - 1);
+  query = query.range(params.offset, params.offset + safeLimit - 1);
 
-  console.log('Final query URL:', (query as any).url?.toString());
   const { data, count, error } = await query;
   if (error) {
     console.error('Supabase query error:', error);
@@ -364,6 +364,7 @@ async function enrichAssetsWithHistory(assets: Asset[]) {
     .from('price_history')
     .select('ticker, date, close')
     .in('ticker', tickers)
+    .gte('date', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
     .order('date', { ascending: true });
 
   if (!histError && historyData) {
@@ -387,7 +388,7 @@ async function enrichAssetsWithHistory(assets: Asset[]) {
       
       const first = recentHist[0].close;
       const last = recentHist[recentHist.length - 1].close;
-      const changePct = ((last - first) / first) * 100;
+      const changePct = first !== 0 ? ((last - first) / first) * 100 : 0;
       
       asset.change = (Math.abs(changePct)).toFixed(2) + "%";
       asset.isUp = changePct >= 0;
