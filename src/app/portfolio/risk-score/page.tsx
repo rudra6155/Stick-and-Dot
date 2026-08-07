@@ -31,19 +31,22 @@ export default function RiskScorePage() {
       return;
     }
     try {
+      setError("");
       const res = await fetch("/api/screener", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ limit: 8, sort_by: "market_cap", search: query })
       });
+      if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       const filtered = (data.results || []).filter((r: any) =>
         r.ticker.toLowerCase().includes(query.toLowerCase()) ||
         (r.short_name || '').toLowerCase().includes(query.toLowerCase())
       );
       setSearchResults(filtered);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setError(e.message || 'Something went wrong');
     }
   };
 
@@ -64,8 +67,8 @@ export default function RiskScorePage() {
       const data = await res.json();
       if (data.error) { setError(data.error); }
       else { setResult(data); }
-    } catch {
-      setError("Failed to fetch. Try again.");
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong');
     }
     setLoading(false);
   };
@@ -88,6 +91,7 @@ export default function RiskScorePage() {
             <input
               type="text"
               value={ticker}
+              aria-label="Search ticker"
               onChange={(e) => {
                 setTicker(e.target.value);
                 searchAssets(e.target.value);
@@ -150,8 +154,9 @@ export default function RiskScorePage() {
 
         {/* Error */}
         {error && (
-          <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-6 text-rose-400 font-mono text-sm">
-            {error} — make sure the ticker exists in the database.
+          <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+            <div className="text-red-400 font-mono text-sm">{error || "Something went wrong loading this."}</div>
+            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white">Try again</button>
           </div>
         )}
 

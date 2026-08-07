@@ -84,8 +84,8 @@ export function AssetRiskPanel({ result }: { result: any }) {
           <div className="bg-rose-500/5 border border-rose-500/20 rounded-2xl p-6">
             <p className="font-mono text-xs text-rose-400 uppercase tracking-widest mb-4">⚠️ Risk Factors</p>
             <ul className="space-y-2">
-              {result.score.risks.map((r: string, i: number) => (
-                <li key={i} className="text-sm text-zinc-400 flex gap-2">
+              {result.score.risks.map((r: string) => (
+                <li key={r} className="text-sm text-zinc-400 flex gap-2">
                   <span className="text-rose-500 shrink-0">·</span>{r}
                 </li>
               ))}
@@ -96,8 +96,8 @@ export function AssetRiskPanel({ result }: { result: any }) {
           <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6">
             <p className="font-mono text-xs text-emerald-400 uppercase tracking-widest mb-4">✅ Opportunities</p>
             <ul className="space-y-2">
-              {result.score.opportunities.map((o: string, i: number) => (
-                <li key={i} className="text-sm text-zinc-400 flex gap-2">
+              {result.score.opportunities.map((o: string) => (
+                <li key={o} className="text-sm text-zinc-400 flex gap-2">
                   <span className="text-emerald-500 shrink-0">·</span>{o}
                 </li>
               ))}

@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   if (min_roe) query = query.gte('return_on_equity', min_roe);
 
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error }, { status: 500 });
+  if (error) return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
 
   // Compute investment scores for each result
   const scored = (data || []).map((r: any) => {

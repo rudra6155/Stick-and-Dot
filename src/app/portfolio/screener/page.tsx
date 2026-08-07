@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const PRACTICAL_FILTERS = [
   {
@@ -77,7 +77,9 @@ export default function ScreenerPage() {
   const [minRoe, setMinRoe] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const buildFilters = () => ({
     asset_class: assetClass !== "All" ? assetClass : undefined,
@@ -94,16 +96,23 @@ export default function ScreenerPage() {
 
   const fetchResults = async (overrideFilters?: any) => {
     setLoading(true);
+    setError(null);
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
     try {
       const res = await fetch("/api/screener", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ limit: 200, ...(overrideFilters || buildFilters()) }),
+        signal: abortControllerRef.current.signal,
       });
+      if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       if (data.results) setResults(data.results);
-    } catch (e) {
+    } catch (e: any) {
+      if (e.name === 'AbortError') return;
       console.error(e);
+      setError(e.message || 'Something went wrong');
     }
     setLoading(false);
   };
@@ -161,8 +170,8 @@ export default function ScreenerPage() {
           <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-6">Filter through all tracked assets across 11 classes instantly.</p>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Asset Class</label>
-              <select value={assetClass} onChange={e => setAssetClass(e.target.value)}
+              <label htmlFor="assetClass" className="text-xs text-zinc-400">Asset Class</label>
+              <select id="assetClass" value={assetClass} onChange={e => setAssetClass(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100">
                 {["All","Stock","ETF","REIT","Crypto","Commodity","Bond","Indian Stock","International","Forex","Index"].map(a => (
                   <option key={a} value={a}>{a}</option>
@@ -170,8 +179,8 @@ export default function ScreenerPage() {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Sector</label>
-              <select value={sector} onChange={e => setSector(e.target.value)}
+              <label htmlFor="sector" className="text-xs text-zinc-400">Sector</label>
+              <select id="sector" value={sector} onChange={e => setSector(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100">
                 {["All Sectors","Technology","Healthcare","Financial Services","Energy","Industrials","Consumer Cyclical","Consumer Defensive","Basic Materials","Real Estate","Utilities","Communication Services"].map(s => (
                   <option key={s} value={s}>{s}</option>
@@ -179,53 +188,53 @@ export default function ScreenerPage() {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Sort By</label>
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+              <label htmlFor="sortBy" className="text-xs text-zinc-400">Sort By</label>
+              <select id="sortBy" value={sortBy} onChange={e => setSortBy(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100">
                 {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Direction</label>
-              <select value={sortDir} onChange={e => setSortDir(e.target.value)}
+              <label htmlFor="sortDir" className="text-xs text-zinc-400">Direction</label>
+              <select id="sortDir" value={sortDir} onChange={e => setSortDir(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100">
                 <option value="desc">Best First</option>
                 <option value="asc">Lowest First</option>
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Min Market Cap ($B)</label>
-              <input type="number" value={minMarketCap} onChange={e => setMinMarketCap(e.target.value)}
+              <label htmlFor="minMarketCap" className="text-xs text-zinc-400">Min Market Cap ($B)</label>
+              <input id="minMarketCap" type="number" value={minMarketCap} onChange={e => setMinMarketCap(e.target.value)}
                 placeholder="e.g. 1"
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100 placeholder:text-zinc-600" />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Max P/E</label>
-              <input type="number" value={maxPe} onChange={e => setMaxPe(e.target.value)}
+              <label htmlFor="maxPe" className="text-xs text-zinc-400">Max P/E</label>
+              <input id="maxPe" type="number" value={maxPe} onChange={e => setMaxPe(e.target.value)}
                 placeholder="e.g. 25"
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100 placeholder:text-zinc-600" />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Min Div Yield (%)</label>
-              <input type="number" value={minDiv} onChange={e => setMinDiv(e.target.value)}
+              <label htmlFor="minDiv" className="text-xs text-zinc-400">Min Div Yield (%)</label>
+              <input id="minDiv" type="number" value={minDiv} onChange={e => setMinDiv(e.target.value)}
                 placeholder="e.g. 3"
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100 placeholder:text-zinc-600" />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Min Rev Growth (%)</label>
-              <input type="number" value={minRevGrowth} onChange={e => setMinRevGrowth(e.target.value)}
+              <label htmlFor="minRevGrowth" className="text-xs text-zinc-400">Min Rev Growth (%)</label>
+              <input id="minRevGrowth" type="number" value={minRevGrowth} onChange={e => setMinRevGrowth(e.target.value)}
                 placeholder="e.g. 10"
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100 placeholder:text-zinc-600" />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Max Beta (Risk)</label>
-              <input type="number" value={maxBeta} onChange={e => setMaxBeta(e.target.value)}
+              <label htmlFor="maxBeta" className="text-xs text-zinc-400">Max Beta (Risk)</label>
+              <input id="maxBeta" type="number" value={maxBeta} onChange={e => setMaxBeta(e.target.value)}
                 placeholder="e.g. 1.2"
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100 placeholder:text-zinc-600" />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Min ROE (%)</label>
-              <input type="number" value={minRoe} onChange={e => setMinRoe(e.target.value)}
+              <label htmlFor="minRoe" className="text-xs text-zinc-400">Min ROE (%)</label>
+              <input id="minRoe" type="number" value={minRoe} onChange={e => setMinRoe(e.target.value)}
                 placeholder="e.g. 15"
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100 placeholder:text-zinc-600" />
             </div>
@@ -248,6 +257,12 @@ export default function ScreenerPage() {
         {/* Results Table */}
         <div className="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden">
           <div className="p-6 overflow-x-auto">
+          {error ? (
+            <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+              <div className="text-red-400 font-mono text-sm">{error || "Something went wrong loading this."}</div>
+              <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white">Try again</button>
+            </div>
+          ) : (
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-900/50 text-zinc-400 border-b border-zinc-800">
               <tr>
@@ -316,6 +331,7 @@ export default function ScreenerPage() {
               )}
             </tbody>
           </table>
+          )}
           </div>
         </div>
       </div>

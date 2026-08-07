@@ -225,7 +225,6 @@ export function PickItem({
           className="flex flex-col sm:flex-row cursor-pointer relative z-10"
           onClick={() => {
             setIsExpanded(!isExpanded);
-            setTimeout(() => ScrollTrigger.refresh(), 200);
           }}
         >
           {/* Asset Info */}
@@ -337,6 +336,7 @@ export function PickItem({
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              onAnimationComplete={() => ScrollTrigger.refresh()}
               className="overflow-hidden border-t border-white/5"
             >
               <div className="p-6 space-y-8 bg-black/20 relative z-10">

@@ -16,7 +16,13 @@ const SCENARIO_IMPACTS: Record<string, Record<string, number>> = {
 };
 
 export async function POST(req: NextRequest) {
-  const { tickers } = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+  const { tickers } = body;
   if (!tickers || tickers.length === 0) return NextResponse.json({ error: 'No tickers provided' }, { status: 400 });
 
   // Fetch asset snapshots
@@ -27,11 +33,14 @@ export async function POST(req: NextRequest) {
 
   if (!assets || assets.length === 0) return NextResponse.json({ error: 'No assets found' }, { status: 404 });
 
-  // Fetch price history
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
   const { data: history } = await supabase
     .from('price_history')
     .select('ticker, date, close')
     .in('ticker', tickers)
+    .gte('date', sixMonthsAgo.toISOString().split('T')[0])
     .order('date', { ascending: true })
     .limit(30000);
 

@@ -45,20 +45,23 @@ export async function POST(req: NextRequest) {
   }
 
   const { data: assets, error: assetError } = await query;
-  if (assetError) return NextResponse.json({ error: assetError }, { status: 500 });
+  if (assetError) return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   if (!assets || assets.length === 0) return NextResponse.json({ results: [] });
 
   const tickers = assets.map((a: any) => a.ticker);
 
-  // Step 2 — get 6 months of price history for matching tickers
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
   const { data: history, error: histError } = await supabase
     .from('price_history')
     .select('ticker, date, close')
     .in('ticker', tickers)
+    .gte('date', sixMonthsAgo.toISOString().split('T')[0])
     .order('date', { ascending: true })
     .limit(30000);
 
-  if (histError) return NextResponse.json({ error: histError }, { status: 500 });
+  if (histError) return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
 
   // Step 3 — compute performance per ticker
   const tickerHistory: Record<string, Array<{ date: string; close: number }>> = {};

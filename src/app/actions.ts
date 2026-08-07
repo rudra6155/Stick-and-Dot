@@ -14,20 +14,20 @@ export type Asset = {
   volume: number;
   avgVolume: number;
   marketCap: number;
-  peRatio: number;
-  forwardPe: number;
-  priceToBook: number;
-  priceToSales: number;
-  evToEbitda: number;
-  dividendYield: number;
-  earningsGrowth: number;
-  revenueGrowth: number;
-  profitMargins: number;
+  peRatio: number | null;
+  forwardPe: number | null;
+  priceToBook: number | null;
+  priceToSales: number | null;
+  evToEbitda: number | null;
+  dividendYield: number | null;
+  earningsGrowth: number | null;
+  revenueGrowth: number | null;
+  profitMargins: number | null;
   high52Week: number;
   low52Week: number;
   ma50Day: number;
   ma200Day: number;
-  beta: number;
+  beta: number | null;
   history: number[];
   change: string;
   isUp: boolean;
@@ -39,14 +39,14 @@ export type Asset = {
   longName: string;
   previousClose: number;
   enterpriseValue: number;
-  pegRatio: number;
-  dividendRate: number;
-  payoutRatio: number;
-  fiveYearAvgDividendYield: number;
-  grossMargins: number;
-  operatingMargins: number;
-  returnOnEquity: number;
-  returnOnAssets: number;
+  pegRatio: number | null;
+  dividendRate: number | null;
+  payoutRatio: number | null;
+  fiveYearAvgDividendYield: number | null;
+  grossMargins: number | null;
+  operatingMargins: number | null;
+  returnOnEquity: number | null;
+  returnOnAssets: number | null;
   totalRevenue: number;
   ebitda: number;
   totalDebt: number;
@@ -180,20 +180,20 @@ export async function fetchAssetsPaginated(params: {
     volume: row.volume || 0,
     avgVolume: row.avg_volume || 0,
     marketCap: row.market_cap || 0,
-    peRatio: row.pe_ratio || 0,
-    forwardPe: row.forward_pe || 0,
-    priceToBook: row.price_to_book || 0,
-    priceToSales: row.price_to_sales || 0,
-    evToEbitda: row.ev_to_ebitda || 0,
-    dividendYield: row.dividend_yield || 0,
-    earningsGrowth: row.earnings_growth || 0,
-    revenueGrowth: row.revenue_growth || 0,
-    profitMargins: row.profit_margins || 0,
+    peRatio: row.pe_ratio ?? null,
+    forwardPe: row.forward_pe ?? null,
+    priceToBook: row.price_to_book ?? null,
+    priceToSales: row.price_to_sales ?? null,
+    evToEbitda: row.ev_to_ebitda ?? null,
+    dividendYield: row.dividend_yield ?? null,
+    earningsGrowth: row.earnings_growth ?? null,
+    revenueGrowth: row.revenue_growth ?? null,
+    profitMargins: row.profit_margins ?? null,
     high52Week: row.high_52_week || 0,
     low52Week: row.low_52_week || 0,
     ma50Day: row.ma_50_day || 0,
     ma200Day: row.ma_200_day || 0,
-    beta: row.beta || 0,
+    beta: row.beta ?? null,
     history: [],
     change: "0.00%",
     isUp: true,
@@ -205,14 +205,14 @@ export async function fetchAssetsPaginated(params: {
     longName: row.long_name || '',
     previousClose: row.previous_close || 0,
     enterpriseValue: row.enterprise_value || 0,
-    pegRatio: row.peg_ratio || 0,
-    dividendRate: row.dividend_rate || 0,
-    payoutRatio: row.payout_ratio || 0,
-    fiveYearAvgDividendYield: row.five_year_avg_dividend_yield || 0,
-    grossMargins: row.gross_margins || 0,
-    operatingMargins: row.operating_margins || 0,
-    returnOnEquity: row.return_on_equity || 0,
-    returnOnAssets: row.return_on_assets || 0,
+    pegRatio: row.peg_ratio ?? null,
+    dividendRate: row.dividend_rate ?? null,
+    payoutRatio: row.payout_ratio ?? null,
+    fiveYearAvgDividendYield: row.five_year_avg_dividend_yield ?? null,
+    grossMargins: row.gross_margins ?? null,
+    operatingMargins: row.operating_margins ?? null,
+    returnOnEquity: row.return_on_equity ?? null,
+    returnOnAssets: row.return_on_assets ?? null,
     totalRevenue: row.total_revenue || 0,
     ebitda: row.ebitda || 0,
     totalDebt: row.total_debt || 0,
@@ -245,27 +245,16 @@ export async function fetchAssetsPaginated(params: {
 export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
   return unstable_cache(
     async () => {
-      const assetClasses = ["Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
+      const { data, error } = await supabase.rpc('get_asset_class_counts');
       
-      const counts: Record<string, number> = {};
+      const counts: Record<string, number> = { All: 0 };
       
-      const totalPromise = supabase
-        .from('asset_snapshots')
-        .select('*', { count: 'exact', head: true });
-        
-      const promises = assetClasses.map(cls => 
-        supabase
-          .from('asset_snapshots')
-          .select('*', { count: 'exact', head: true })
-          .eq('asset_class', cls)
-      );
-
-      const results = await Promise.all([totalPromise, ...promises]);
-      
-      counts['All'] = results[0].count || 0;
-      assetClasses.forEach((cls, idx) => {
-        counts[cls] = results[idx + 1].count || 0;
-      });
+      if (!error && data) {
+        data.forEach((row: any) => {
+          counts[row.asset_class] = row.count;
+          counts['All'] += row.count;
+        });
+      }
       
       return counts;
     },
@@ -298,20 +287,20 @@ export async function fetchTickerTapeAssets(): Promise<Asset[]> {
     volume: row.volume || 0,
     avgVolume: row.avg_volume || 0,
     marketCap: row.market_cap || 0,
-    peRatio: row.pe_ratio || 0,
-    forwardPe: row.forward_pe || 0,
-    priceToBook: row.price_to_book || 0,
-    priceToSales: row.price_to_sales || 0,
-    evToEbitda: row.ev_to_ebitda || 0,
-    dividendYield: row.dividend_yield || 0,
-    earningsGrowth: row.earnings_growth || 0,
-    revenueGrowth: row.revenue_growth || 0,
-    profitMargins: row.profit_margins || 0,
+    peRatio: row.pe_ratio ?? null,
+    forwardPe: row.forward_pe ?? null,
+    priceToBook: row.price_to_book ?? null,
+    priceToSales: row.price_to_sales ?? null,
+    evToEbitda: row.ev_to_ebitda ?? null,
+    dividendYield: row.dividend_yield ?? null,
+    earningsGrowth: row.earnings_growth ?? null,
+    revenueGrowth: row.revenue_growth ?? null,
+    profitMargins: row.profit_margins ?? null,
     high52Week: row.high_52_week || 0,
     low52Week: row.low_52_week || 0,
     ma50Day: row.ma_50_day || 0,
     ma200Day: row.ma_200_day || 0,
-    beta: row.beta || 0,
+    beta: row.beta ?? null,
     history: [],
     change: "0.00%",
     isUp: true,
@@ -323,14 +312,14 @@ export async function fetchTickerTapeAssets(): Promise<Asset[]> {
     longName: row.long_name || '',
     previousClose: row.previous_close || 0,
     enterpriseValue: row.enterprise_value || 0,
-    pegRatio: row.peg_ratio || 0,
-    dividendRate: row.dividend_rate || 0,
-    payoutRatio: row.payout_ratio || 0,
-    fiveYearAvgDividendYield: row.five_year_avg_dividend_yield || 0,
-    grossMargins: row.gross_margins || 0,
-    operatingMargins: row.operating_margins || 0,
-    returnOnEquity: row.return_on_equity || 0,
-    returnOnAssets: row.return_on_assets || 0,
+    pegRatio: row.peg_ratio ?? null,
+    dividendRate: row.dividend_rate ?? null,
+    payoutRatio: row.payout_ratio ?? null,
+    fiveYearAvgDividendYield: row.five_year_avg_dividend_yield ?? null,
+    grossMargins: row.gross_margins ?? null,
+    operatingMargins: row.operating_margins ?? null,
+    returnOnEquity: row.return_on_equity ?? null,
+    returnOnAssets: row.return_on_assets ?? null,
     totalRevenue: row.total_revenue || 0,
     ebitda: row.ebitda || 0,
     totalDebt: row.total_debt || 0,

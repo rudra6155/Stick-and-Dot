@@ -2,8 +2,8 @@ import SuperFinanceHub from './SuperFinanceHub';
 import { fetchAssetClassCounts, fetchTickerTapeAssets } from './actions';
 
 export default async function Page() {
-  const initialAssetClassCounts = await fetchAssetClassCounts();
-  const initialTickerTapeAssets = await fetchTickerTapeAssets();
+  const initialAssetClassCounts = await fetchAssetClassCounts().catch(() => ({}));
+  const initialTickerTapeAssets = await fetchTickerTapeAssets().catch(() => []);
 
   return (
     <SuperFinanceHub

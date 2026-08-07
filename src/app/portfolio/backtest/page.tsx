@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 const PRESETS = [
   { label: "📈 High Growth Stocks", desc: "Rev growth > 20%, any sector", filters: { min_revenue_growth: 0.2 } },
@@ -17,21 +17,26 @@ export default function BacktestPage() {
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [ran, setRan] = useState(false);
   const [error, setError] = useState("");
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const runBacktest = async (overrideFilters?: any) => {
     setLoading(true);
     setError("");
     const reqFilters = overrideFilters || filters;
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
     try {
       const res = await fetch("/api/backtest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(reqFilters),
+        signal: abortControllerRef.current.signal,
       });
       const data = await res.json();
       if (data.error) setError(data.error);
       else setResults(data.results || []);
-    } catch (e) {
+    } catch (e: any) {
+      if (e.name === 'AbortError') return;
       setError("Failed to run backtest");
     }
     setLoading(false);
@@ -88,8 +93,9 @@ export default function BacktestPage() {
           <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-6">Custom filters</p>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Asset Class</label>
+              <label htmlFor="assetClass" className="text-xs text-zinc-400">Asset Class</label>
               <select
+                id="assetClass"
                 value={filters.asset_class || "All"}
                 onChange={e => setFilters((f: any) => ({ ...f, asset_class: e.target.value !== "All" ? e.target.value : undefined }))}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100"
@@ -100,8 +106,9 @@ export default function BacktestPage() {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Sector</label>
+              <label htmlFor="sector" className="text-xs text-zinc-400">Sector</label>
               <select
+                id="sector"
                 value={filters.sector || "All Sectors"}
                 onChange={e => setFilters((f: any) => ({ ...f, sector: e.target.value !== "All Sectors" ? e.target.value : undefined }))}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100"
@@ -112,26 +119,26 @@ export default function BacktestPage() {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Max P/E</label>
-              <input type="number" placeholder="e.g. 20"
+              <label htmlFor="maxPe" className="text-xs text-zinc-400">Max P/E</label>
+              <input id="maxPe" type="number" placeholder="e.g. 20"
                 onChange={e => setFilters((f: any) => ({ ...f, max_pe: e.target.value ? Number(e.target.value) : undefined }))}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100 placeholder:text-zinc-600" />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Min Rev Growth (%)</label>
-              <input type="number" placeholder="e.g. 15"
+              <label htmlFor="minRevGrowth" className="text-xs text-zinc-400">Min Rev Growth (%)</label>
+              <input id="minRevGrowth" type="number" placeholder="e.g. 15"
                 onChange={e => setFilters((f: any) => ({ ...f, min_revenue_growth: e.target.value ? Number(e.target.value) / 100 : undefined }))}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100 placeholder:text-zinc-600" />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Max Beta</label>
-              <input type="number" placeholder="e.g. 1.0"
+              <label htmlFor="maxBeta" className="text-xs text-zinc-400">Max Beta</label>
+              <input id="maxBeta" type="number" placeholder="e.g. 1.0"
                 onChange={e => setFilters((f: any) => ({ ...f, max_beta: e.target.value ? Number(e.target.value) : undefined }))}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100 placeholder:text-zinc-600" />
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-zinc-400">Min Div Yield (%)</label>
-              <input type="number" placeholder="e.g. 3"
+              <label htmlFor="minDivYield" className="text-xs text-zinc-400">Min Div Yield (%)</label>
+              <input id="minDivYield" type="number" placeholder="e.g. 3"
                 onChange={e => setFilters((f: any) => ({ ...f, min_dividend_yield: e.target.value ? Number(e.target.value) / 100 : undefined }))}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100 placeholder:text-zinc-600" />
             </div>

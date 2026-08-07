@@ -31,8 +31,6 @@ const classColors: Record<string, string> = {
 };
 
 export const AVAILABLE_METRICS = [
-  { id: "volume",        label: "Volume" },
-  { id: "avgVolume",     label: "Avg Volume" },
   { id: "marketCap",     label: "Market Cap" },
   { id: "peRatio",       label: "P/E Ratio" },
   { id: "forwardPe",     label: "Fwd P/E" },
@@ -48,8 +46,6 @@ export const AVAILABLE_METRICS = [
   { id: "ma50Day",       label: "50D MA" },
   { id: "ma200Day",      label: "200D MA" },
   { id: "beta",          label: "Beta" },
-  { id: "dayHigh",       label: "Day High" },
-  { id: "dayLow",        label: "Day Low" },
   { id: "sector",        label: "Sector" },
   { id: "previousClose",           label: "Prev Close" },
   { id: "enterpriseValue",         label: "Ent Value" },
@@ -64,16 +60,12 @@ export const AVAILABLE_METRICS = [
   { id: "ebitda",                  label: "EBITDA" },
   { id: "totalDebt",               label: "Total Debt" },
   { id: "freeCashflow",            label: "Free CF" },
-  { id: "allTimeHigh",             label: "All Time High" },
-  { id: "allTimeLow",              label: "All Time Low" },
-  { id: "sharesOutstanding",       label: "Shares Out" },
   { id: "heldPercentInsiders",     label: "Insider %" },
   { id: "heldPercentInstitutions", label: "Institution %" },
   { id: "recommendationMean",      label: "Analyst Score" },
   { id: "targetMeanPrice",         label: "Price Target" },
   { id: "trailingEps",             label: "EPS" },
   { id: "forwardEps",              label: "Fwd EPS" },
-  { id: "currency",                label: "Currency" },
 ];
 
 const AnimatedPrice = ({ price }: { price: number }) => {
@@ -81,8 +73,9 @@ const AnimatedPrice = ({ price }: { price: number }) => {
   return <>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(displayPrice)}</>;
 };
 
-export const formatNumber = (num: number | undefined) => {
-  if (!num || num === 0) return "—";
+export const formatNumber = (num: number | undefined | null) => {
+  if (num == null) return "—";
+  if (num === 0) return "$0.00";
   if (num >= 1e12) return "$" + (num / 1e12).toFixed(2) + "T";
   if (num >= 1e9)  return "$" + (num / 1e9).toFixed(2) + "B";
   if (num >= 1e6)  return "$" + (num / 1e6).toFixed(2) + "M";
@@ -94,47 +87,47 @@ export const getMetric = (id: string, asset: any, customFormatNumber?: any) => {
   const formatter = customFormatNumber || formatNumber;
   switch(id) {
     case "volume": return formatter(asset.volume);
-    case "avgVolume": return formatter(asset.avg_volume);
+    case "avgVolume": return formatter(asset.avgVolume);
     case "marketCap": return formatter(asset.marketCap);
-    case "peRatio": return asset.peRatio ? asset.peRatio.toFixed(2) : "—";
-    case "forwardPe": return asset.forward_pe ? asset.forward_pe.toFixed(2) : "—";
-    case "priceToBook": return asset.price_to_book ? asset.price_to_book.toFixed(2) : "—";
-    case "priceToSales": return asset.price_to_sales ? asset.price_to_sales.toFixed(2) : "—";
-    case "evToEbitda": return asset.ev_to_ebitda ? asset.ev_to_ebitda.toFixed(2) : "—";
-    case "dividendYield": return asset.dividendYield ? (asset.dividendYield * 100).toFixed(2) + "%" : "—";
-    case "earningsGrowth": return asset.earnings_growth ? (asset.earnings_growth * 100).toFixed(2) + "%" : "—";
-    case "revenueGrowth": return asset.revenue_growth ? (asset.revenue_growth * 100).toFixed(2) + "%" : "—";
-    case "profitMargins": return asset.profit_margins ? (asset.profit_margins * 100).toFixed(2) + "%" : "—";
-    case "high52Week": return asset.high52Week ? "$" + asset.high52Week.toFixed(2) : "—";
-    case "low52Week": return asset.low52Week ? "$" + asset.low52Week.toFixed(2) : "—";
-    case "ma50Day": return asset.ma50Day ? "$" + asset.ma50Day.toFixed(2) : "—";
-    case "ma200Day": return asset.ma200Day ? "$" + asset.ma200Day.toFixed(2) : "—";
-    case "beta": return asset.beta ? asset.beta.toFixed(2) : "—";
-    case "dayHigh": return asset.dayHigh ? "$" + asset.dayHigh.toFixed(2) : "—";
-    case "dayLow": return asset.dayLow ? "$" + asset.dayLow.toFixed(2) : "—";
+    case "peRatio": return asset.peRatio != null ? asset.peRatio.toFixed(2) : "—";
+    case "forwardPe": return asset.forwardPe != null ? asset.forwardPe.toFixed(2) : "—";
+    case "priceToBook": return asset.priceToBook != null ? asset.priceToBook.toFixed(2) : "—";
+    case "priceToSales": return asset.priceToSales != null ? asset.priceToSales.toFixed(2) : "—";
+    case "evToEbitda": return asset.evToEbitda != null ? asset.evToEbitda.toFixed(2) : "—";
+    case "dividendYield": return asset.dividendYield != null ? (asset.dividendYield * 100).toFixed(2) + "%" : "—";
+    case "earningsGrowth": return asset.earningsGrowth != null ? (asset.earningsGrowth * 100).toFixed(2) + "%" : "—";
+    case "revenueGrowth": return asset.revenueGrowth != null ? (asset.revenueGrowth * 100).toFixed(2) + "%" : "—";
+    case "profitMargins": return asset.profitMargins != null ? (asset.profitMargins * 100).toFixed(2) + "%" : "—";
+    case "high52Week": return asset.high52Week != null ? "$" + asset.high52Week.toFixed(2) : "—";
+    case "low52Week": return asset.low52Week != null ? "$" + asset.low52Week.toFixed(2) : "—";
+    case "ma50Day": return asset.ma50Day != null ? "$" + asset.ma50Day.toFixed(2) : "—";
+    case "ma200Day": return asset.ma200Day != null ? "$" + asset.ma200Day.toFixed(2) : "—";
+    case "beta": return asset.beta != null ? asset.beta.toFixed(2) : "—";
+    case "dayHigh": return asset.dayHigh != null ? "$" + asset.dayHigh.toFixed(2) : "—";
+    case "dayLow": return asset.dayLow != null ? "$" + asset.dayLow.toFixed(2) : "—";
     case "sector": return asset.sector || "—";
-    case "previousClose": return asset.previousClose ? "$" + asset.previousClose.toFixed(2) : "—";
+    case "previousClose": return asset.previousClose != null ? "$" + asset.previousClose.toFixed(2) : "—";
     case "enterpriseValue": return formatter(asset.enterpriseValue);
-    case "pegRatio": return asset.pegRatio ? asset.pegRatio.toFixed(2) : "—";
-    case "dividendRate": return asset.dividendRate ? "$" + asset.dividendRate.toFixed(2) : "—";
-    case "payoutRatio": return asset.payoutRatio ? (asset.payoutRatio * 100).toFixed(2) + "%" : "—";
-    case "grossMargins": return asset.grossMargins ? (asset.grossMargins * 100).toFixed(2) + "%" : "—";
-    case "operatingMargins": return asset.operatingMargins ? (asset.operatingMargins * 100).toFixed(2) + "%" : "—";
-    case "returnOnEquity": return asset.returnOnEquity ? (asset.returnOnEquity * 100).toFixed(2) + "%" : "—";
-    case "returnOnAssets": return asset.returnOnAssets ? (asset.returnOnAssets * 100).toFixed(2) + "%" : "—";
+    case "pegRatio": return asset.pegRatio != null ? asset.pegRatio.toFixed(2) : "—";
+    case "dividendRate": return asset.dividendRate != null ? "$" + asset.dividendRate.toFixed(2) : "—";
+    case "payoutRatio": return asset.payoutRatio != null ? (asset.payoutRatio * 100).toFixed(2) + "%" : "—";
+    case "grossMargins": return asset.grossMargins != null ? (asset.grossMargins * 100).toFixed(2) + "%" : "—";
+    case "operatingMargins": return asset.operatingMargins != null ? (asset.operatingMargins * 100).toFixed(2) + "%" : "—";
+    case "returnOnEquity": return asset.returnOnEquity != null ? (asset.returnOnEquity * 100).toFixed(2) + "%" : "—";
+    case "returnOnAssets": return asset.returnOnAssets != null ? (asset.returnOnAssets * 100).toFixed(2) + "%" : "—";
     case "totalRevenue": return formatter(asset.totalRevenue);
     case "ebitda": return formatter(asset.ebitda);
     case "totalDebt": return formatter(asset.totalDebt);
     case "freeCashflow": return formatter(asset.freeCashflow);
-    case "allTimeHigh": return asset.allTimeHigh ? "$" + asset.allTimeHigh.toFixed(2) : "—";
-    case "allTimeLow": return asset.allTimeLow ? "$" + asset.allTimeLow.toFixed(2) : "—";
+    case "allTimeHigh": return asset.allTimeHigh != null ? "$" + asset.allTimeHigh.toFixed(2) : "—";
+    case "allTimeLow": return asset.allTimeLow != null ? "$" + asset.allTimeLow.toFixed(2) : "—";
     case "sharesOutstanding": return formatter(asset.sharesOutstanding);
-    case "heldPercentInsiders": return asset.heldPercentInsiders ? (asset.heldPercentInsiders * 100).toFixed(2) + "%" : "—";
-    case "heldPercentInstitutions": return asset.heldPercentInstitutions ? (asset.heldPercentInstitutions * 100).toFixed(2) + "%" : "—";
-    case "recommendationMean": return asset.recommendationMean ? asset.recommendationMean.toFixed(2) : "—";
-    case "targetMeanPrice": return asset.targetMeanPrice ? "$" + asset.targetMeanPrice.toFixed(2) : "—";
-    case "trailingEps": return asset.trailingEps ? "$" + asset.trailingEps.toFixed(2) : "—";
-    case "forwardEps": return asset.forwardEps ? "$" + asset.forwardEps.toFixed(2) : "—";
+    case "heldPercentInsiders": return asset.heldPercentInsiders != null ? (asset.heldPercentInsiders * 100).toFixed(2) + "%" : "—";
+    case "heldPercentInstitutions": return asset.heldPercentInstitutions != null ? (asset.heldPercentInstitutions * 100).toFixed(2) + "%" : "—";
+    case "recommendationMean": return asset.recommendationMean != null ? asset.recommendationMean.toFixed(2) : "—";
+    case "targetMeanPrice": return asset.targetMeanPrice != null ? "$" + asset.targetMeanPrice.toFixed(2) : "—";
+    case "trailingEps": return asset.trailingEps != null ? "$" + asset.trailingEps.toFixed(2) : "—";
+    case "forwardEps": return asset.forwardEps != null ? "$" + asset.forwardEps.toFixed(2) : "—";
     case "currency": return asset.currency || "USD";
     default: return "—";
   }
@@ -144,6 +137,7 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const rectRef = useRef<DOMRect | null>(null);
   const { setCursorState } = useCursor();
 
   const getMetricLocal = (id: string) => getMetric(id, asset, propFormatNumber || formatNumber);
@@ -156,12 +150,14 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ type: "spring", stiffness: 300, damping: 25 }}
       onMouseMove={(e) => {
-        if (!cardRef.current) return;
-        const rect = cardRef.current.getBoundingClientRect();
-        setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+        if (!rectRef.current) return;
+        setMousePosition({ x: e.clientX - rectRef.current.left, y: e.clientY - rectRef.current.top });
       }}
       onMouseEnter={() => {
         setIsHovered(true);
+        if (cardRef.current) {
+          rectRef.current = cardRef.current.getBoundingClientRect();
+        }
         setCursorState(asset.isUp ? 'profit' : 'loss');
       }}
       onMouseLeave={() => {

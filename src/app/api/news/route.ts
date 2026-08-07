@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!data.articles) {
-      return NextResponse.json({ error: 'No articles returned', raw: data }, { status: 500 });
+      return NextResponse.json({ error: 'No articles returned' }, { status: 500 });
     }
 
     const articles = data.articles.map((article: any) => {
@@ -68,6 +68,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ articles });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

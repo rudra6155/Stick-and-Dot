@@ -233,6 +233,7 @@ export default function MyPortfolioPage() {
     setAligningScenario(scenarioId);
     setShowScenarioDropdown(false);
     setAlignmentData(null);
+    setError("");
     try {
       const userHoldings = Array.from(new Set(picks.map((p) => p.asset_class)));
       const res = await fetch("/api/scenario", {
@@ -244,8 +245,9 @@ export default function MyPortfolioPage() {
       if (data.alignment) {
         setAlignmentData(data);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Something went wrong');
     } finally {
       setAligningScenario("");
     }
@@ -445,8 +447,9 @@ export default function MyPortfolioPage() {
       {/* ─── Error ────────────────────────────── */}
       {error && (
         <div className="max-w-7xl mx-auto px-4 md:px-0">
-          <div className="glass-card rounded-2xl p-6 border-rose-500/20 text-rose-400 font-mono text-sm">
-            {error}
+          <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+            <div className="text-red-400 font-mono text-sm">{error || "Something went wrong loading this."}</div>
+            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white">Try again</button>
           </div>
         </div>
       )}

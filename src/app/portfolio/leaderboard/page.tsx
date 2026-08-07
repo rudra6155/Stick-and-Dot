@@ -11,6 +11,7 @@ export default async function LeaderboardPage({
 }) {
   const { window = "daily" } = await searchParams;
   const supabase = await createClient();
+  let error: string | null = null;
 
   // Determine time threshold
   const now = new Date();
@@ -37,6 +38,7 @@ export default async function LeaderboardPage({
 
   if (picksError) {
     console.error("Error fetching leaderboard picks:", picksError);
+    error = picksError.message || 'Something went wrong';
   }
 
   const validPicks = picks || [];
@@ -46,12 +48,15 @@ export default async function LeaderboardPage({
   let currentPrices: Record<string, number> = {};
 
   if (tickers.length > 0) {
-    const { data: assets } = await supabase
+    const { data: assets, error: assetsError } = await supabase
       .from('asset_snapshots')
       .select('ticker, price')
       .in('ticker', tickers);
       
-    if (assets) {
+    if (assetsError) {
+      console.error("Error fetching assets:", assetsError);
+      error = assetsError.message || 'Something went wrong';
+    } else if (assets) {
       assets.forEach(a => {
         currentPrices[a.ticker] = a.price;
       });
@@ -123,6 +128,12 @@ export default async function LeaderboardPage({
       </div>
 
       <div className="bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl">
+        {error ? (
+          <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+            <div className="text-red-400 font-mono text-sm">{error || "Something went wrong loading this."}</div>
+            <a href={`/portfolio/leaderboard?window=${window}`} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white">Try again</a>
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <div className="min-w-[600px]">
             <div className="grid grid-cols-12 gap-4 px-4 md:px-8 py-4 border-b border-zinc-800 bg-zinc-900/20 text-xs font-mono text-zinc-500 uppercase tracking-widest">
@@ -177,7 +188,8 @@ export default async function LeaderboardPage({
           )}
             </div>
           </div>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

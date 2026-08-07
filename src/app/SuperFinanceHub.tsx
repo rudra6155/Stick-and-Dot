@@ -180,6 +180,7 @@ export default function SuperFinanceHub({
 }) {
   const [isRefreshing, setIsRefreshing] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -218,6 +219,7 @@ export default function SuperFinanceHub({
 
   const fetchData = async (currentOffset: number, append: boolean) => {
     setIsRefreshing(true);
+    setError(null);
     try {
       const res = await fetchAssetsPaginated({
         limit: 40,
@@ -233,8 +235,9 @@ export default function SuperFinanceHub({
         setAssets(res.assets);
       }
       setTotalCount(res.totalCount);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to load assets", e);
+      setError(e.message || 'Something went wrong');
     } finally {
       setIsRefreshing(false);
     }
@@ -253,6 +256,7 @@ export default function SuperFinanceHub({
     const run = async () => {
       console.log('fetching with query:', debouncedSearchQuery);
       setIsRefreshing(true);
+      setError(null);
       try {
         const res = await fetchAssetsPaginated({
           limit: 40,
@@ -264,8 +268,9 @@ export default function SuperFinanceHub({
         });
         setAssets(res.assets);
         setTotalCount(res.totalCount);
-      } catch (e) {
+      } catch (e: any) {
         console.error("Failed to load assets", e);
+        setError(e.message || 'Something went wrong');
       } finally {
         setIsRefreshing(false);
       }
@@ -380,6 +385,7 @@ export default function SuperFinanceHub({
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none z-10" />
               <input
                 type="search"
+                aria-label="Search assets and tickers"
                 placeholder="Search assets, tickers... (e.g. AAPL, Bitcoin)"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
@@ -430,6 +436,8 @@ export default function SuperFinanceHub({
               <div className="relative min-w-[130px]">
                 <button
                   onClick={() => { setIsMetricsOpen(!isMetricsOpen); setIsSortOpen(false); }}
+                  aria-expanded={isMetricsOpen}
+                  aria-label="Toggle metrics menu"
                   className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white/5 border border-white/5 hover:border-white/20 rounded-2xl transition-all"
                 >
                   <div className="flex items-center gap-2">
@@ -470,6 +478,8 @@ export default function SuperFinanceHub({
               <div className="relative min-w-[130px]">
                 <button
                   onClick={() => { setIsSortOpen(!isSortOpen); setIsMetricsOpen(false); }}
+                  aria-expanded={isSortOpen}
+                  aria-label="Toggle sort menu"
                   className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white/5 border border-white/5 hover:border-white/20 rounded-2xl transition-all"
                 >
                   <div className="flex items-center gap-2">
@@ -536,7 +546,12 @@ export default function SuperFinanceHub({
 
         {/* Asset Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 relative z-10">
-          {assets.length === 0 && isRefreshing ? (
+          {error ? (
+            <div className="col-span-full flex flex-col items-center justify-center p-8 text-center space-y-4">
+              <div className="text-red-400 font-mono text-sm">{error || "Something went wrong loading this."}</div>
+              <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white">Try again</button>
+            </div>
+          ) : assets.length === 0 && isRefreshing ? (
             <div className="col-span-full py-20 flex flex-col items-center justify-center text-center">
               <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4" />
               <p className="font-mono text-zinc-500 uppercase tracking-widest text-sm">Loading Market Data...</p>

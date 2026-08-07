@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 const SCENARIOS = [
   { key: "us_china_tension", title: "🇺🇸🇨🇳 US-China Tensions", desc: "Rotate to domestic US, gold, defense" },
@@ -25,22 +25,30 @@ export default function ScenariosPage() {
   const [logic, setLogic] = useState("");
   const [error, setError] = useState("");
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const fetchScenario = async (scenario: typeof SCENARIOS[0]) => {
     setLoading(true);
     setError("");
     setActiveScenario(scenario);
     setGroups([]);
+    
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
+
     try {
       const res = await fetch("/api/scenario", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scenario_key: scenario.key }),
+        signal: abortControllerRef.current.signal,
       });
       const data = await res.json();
       if (data.error) setError(data.error);
       if (data.groups) setGroups(data.groups);
       if (data.logic) setLogic(data.logic);
-    } catch (e) {
+    } catch (e: any) {
+      if (e.name === 'AbortError') return;
       setError("Failed to fetch scenario analysis");
     }
     setLoading(false);

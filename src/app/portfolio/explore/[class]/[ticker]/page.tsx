@@ -42,25 +42,41 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
         if (active) setAsset(assetData);
 
         // 2. Fetch Risk Score
-        const riskRes = await fetch("/api/risk-score", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ticker }),
-        });
-        const riskData = await riskRes.json();
-        if (active && !riskData.error) {
-          setRiskResult(riskData);
+        try {
+          const riskRes = await fetch("/api/risk-score", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ticker }),
+          });
+          const riskData = await riskRes.json();
+          if (active) {
+            if (!riskData.error) {
+              setRiskResult(riskData);
+            } else {
+              setRiskResult({ hasError: true });
+            }
+          }
+        } catch (err) {
+          if (active) setRiskResult({ hasError: true });
         }
 
         // 3. Fetch Backtest (single ticker)
-        const btRes = await fetch("/api/backtest", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tickers: [ticker] }),
-        });
-        const btData = await btRes.json();
-        if (active && !btData.error && btData.results && btData.results.length > 0) {
-          setBacktestResult(btData.results[0]);
+        try {
+          const btRes = await fetch("/api/backtest", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tickers: [ticker] }),
+          });
+          const btData = await btRes.json();
+          if (active) {
+            if (!btData.error && btData.results && btData.results.length > 0) {
+              setBacktestResult(btData.results[0]);
+            } else {
+              setBacktestResult({ hasError: true });
+            }
+          }
+        } catch (err) {
+          if (active) setBacktestResult({ hasError: true });
         }
 
       } catch (err: any) {
@@ -121,7 +137,13 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
           <div>
             <h2 className="text-xl font-bold mb-6">AI Risk Analysis</h2>
             {riskResult ? (
-              <AssetRiskPanel result={riskResult} />
+              riskResult.hasError ? (
+                <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-12 flex justify-center text-rose-400 text-sm">
+                  Failed to load risk analysis
+                </div>
+              ) : (
+                <AssetRiskPanel result={riskResult} />
+              )
             ) : (
               <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-12 flex justify-center">
                 <span className="text-zinc-500 font-mono text-sm uppercase tracking-widest animate-pulse">
@@ -135,7 +157,13 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
           <div>
             <h2 className="text-xl font-bold mb-6">Historical Backtest</h2>
             {backtestResult ? (
-              <AssetBacktestPanel result={backtestResult} />
+              backtestResult.hasError ? (
+                <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-12 flex justify-center text-rose-400 text-sm">
+                  Failed to load backtest
+                </div>
+              ) : (
+                <AssetBacktestPanel result={backtestResult} />
+              )
             ) : (
               <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-12 flex justify-center">
                 <span className="text-zinc-500 font-mono text-sm uppercase tracking-widest animate-pulse">

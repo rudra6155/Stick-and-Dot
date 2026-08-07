@@ -27,6 +27,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
   const [liveCount, setLiveCount] = useState<number | null>(null);
   
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const [requestName, setRequestName] = useState("");
   const [requestNote, setRequestNote] = useState("");
@@ -37,7 +38,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
   const selectedMetrics = ["marketCap", "volume", "peRatio", "dividendYield"];
 
   useEffect(() => {
-    fetchAssetClassCounts().then(counts => {
+    fetchAssetClassCounts().catch(() => ({})).then(counts => {
       setLiveCount(counts[assetClass] || 0);
     });
   }, [assetClass]);
@@ -59,6 +60,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
     let active = true;
     const loadAssets = async () => {
       setLoading(true);
+      setError(null);
       try {
         const { assets: newAssets, totalCount: newTotal } = await fetchAssetsPaginated({
           limit: 40,
@@ -79,8 +81,9 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
           });
           setTotalCount(newTotal);
         }
-      } catch (error) {
-        console.error("Failed to load assets", error);
+      } catch (err: any) {
+        console.error("Failed to load assets", err);
+        if (active) setError(err.message || 'Something went wrong');
       } finally {
         if (active) setLoading(false);
       }
@@ -149,6 +152,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
             <input 
               type="text" 
+              aria-label="Search in this class"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search in this class..." 
@@ -162,6 +166,8 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
             <div className="relative shrink-0">
               <button 
                 onClick={() => setIsSortOpen(!isSortOpen)}
+                aria-expanded={isSortOpen}
+                aria-label="Toggle sort menu"
                 className="flex items-center gap-2 px-4 py-2 bg-zinc-900/50 border border-zinc-800 rounded-xl text-sm hover:bg-zinc-800 transition-colors"
               >
                 <Filter className="w-4 h-4 text-zinc-400" />
@@ -192,6 +198,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
             {/* Asc/Desc Toggle */}
             <button
               onClick={toggleSortDir}
+              aria-label={sortDir === 'desc' ? "Sort Ascending" : "Sort Descending"}
               className="flex items-center justify-center p-2 bg-zinc-900/50 border border-zinc-800 rounded-xl hover:bg-zinc-800 transition-colors text-emerald-400 shrink-0"
               title={sortDir === 'desc' ? "Descending" : "Ascending"}
             >
@@ -214,13 +221,20 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {assets.map(asset => (
-            <Link key={asset.symbol} href={`/portfolio/explore/${encodeURIComponent(assetClass)}/${encodeURIComponent(asset.symbol)}`}>
-              <AssetCard asset={asset} selectedMetrics={selectedMetrics} index={0} />
-            </Link>
-          ))}
-        </div>
+        {error ? (
+          <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+            <div className="text-red-400 font-mono text-sm">{error || "Something went wrong loading this."}</div>
+            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white">Try again</button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {assets.map(asset => (
+              <Link key={asset.symbol} href={`/portfolio/explore/${encodeURIComponent(assetClass)}/${encodeURIComponent(asset.symbol)}`}>
+                <AssetCard asset={asset} selectedMetrics={selectedMetrics} index={0} />
+              </Link>
+            ))}
+          </div>
+        )}
 
         {/* Load More */}
         {totalCount !== null && assets.length < totalCount && (
@@ -247,6 +261,8 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
           <form onSubmit={handleRequestSubmit} className="space-y-4">
             <div>
               <input 
+                id="requestName"
+                aria-label="Asset Name or Ticker"
                 type="text" 
                 placeholder="Asset Name or Ticker" 
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
@@ -257,6 +273,8 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
             </div>
             <div>
               <textarea 
+                id="requestNote"
+                aria-label="Optional notes"
                 placeholder="Optional notes (e.g. why we should add it)" 
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-colors resize-none h-24"
                 value={requestNote}

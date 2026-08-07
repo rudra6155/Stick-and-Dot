@@ -149,10 +149,11 @@ export default function LoginPage() {
           {mode === "email" ? (
             <form onSubmit={handleEmailAuth} className="space-y-4">
               <div>
-                <label className="block text-xs text-zinc-400 mb-1.5 uppercase tracking-wider">Email</label>
+                <label htmlFor="email" className="block text-xs text-zinc-400 mb-1.5 uppercase tracking-wider">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                   <input 
+                    id="email"
                     type="email" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -163,10 +164,11 @@ export default function LoginPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-zinc-400 mb-1.5 uppercase tracking-wider">Password</label>
+                <label htmlFor="password" className="block text-xs text-zinc-400 mb-1.5 uppercase tracking-wider">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                   <input 
+                    id="password"
                     type="password" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -251,10 +253,11 @@ export default function LoginPage() {
               {!otpSent ? (
                 <form onSubmit={handleSendOtp} className="space-y-4">
                   <div>
-                    <label className="block text-xs text-zinc-400 mb-1.5 uppercase tracking-wider">Phone Number</label>
+                    <label htmlFor="phone" className="block text-xs text-zinc-400 mb-1.5 uppercase tracking-wider">Phone Number</label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                       <input 
+                        id="phone"
                         type="tel" 
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
@@ -275,10 +278,11 @@ export default function LoginPage() {
               ) : (
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
                   <div>
-                    <label className="block text-xs text-zinc-400 mb-1.5 uppercase tracking-wider">Enter OTP</label>
+                    <label htmlFor="otp" className="block text-xs text-zinc-400 mb-1.5 uppercase tracking-wider">Enter OTP</label>
                     <div className="relative">
                       <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                       <input 
+                        id="otp"
                         type="text" 
                         value={otp}
                         onChange={(e) => setOtp(e.target.value)}

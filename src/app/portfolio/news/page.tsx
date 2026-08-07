@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const TOPICS = [
   { label: "All", value: "finance" },
@@ -34,20 +34,29 @@ function timeAgo(dateStr: string) {
 export default function NewsPage() {
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [activeTopic, setActiveTopic] = useState("finance");
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchNews = async (topic: string) => {
     setLoading(true);
+    setError(null);
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
     try {
       const res = await fetch("/api/news", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic }),
+        signal: abortControllerRef.current.signal,
       });
+      if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       if (data.articles) setArticles(data.articles);
-    } catch (e) {
+    } catch (e: any) {
+      if (e.name === 'AbortError') return;
       console.error(e);
+      setError(e.message || 'Something went wrong');
     }
     setLoading(false);
   };
@@ -91,7 +100,12 @@ export default function NewsPage() {
         </div>
 
         {/* Articles Grid */}
-        {loading ? (
+        {error ? (
+          <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+            <div className="text-red-400 font-mono text-sm">{error || "Something went wrong loading this."}</div>
+            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white">Try again</button>
+          </div>
+        ) : loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <div

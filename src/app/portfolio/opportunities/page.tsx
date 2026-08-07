@@ -21,6 +21,7 @@ const COLOR_MAP: Record<string, string> = {
 export default function OpportunitiesPage() {
   const [opportunities, setOpportunities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeFilter, useStateFilter] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -29,12 +30,14 @@ export default function OpportunitiesPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setError(null);
         const res = await fetch('/api/opportunities');
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
         setOpportunities(data.opportunities || []);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to fetch opportunities:', err);
+        setError(err.message || 'Something went wrong');
       } finally {
         setLoading(false);
       }
@@ -109,7 +112,12 @@ export default function OpportunitiesPage() {
         </p>
 
         {/* Cards grid */}
-        {loading ? (
+        {error ? (
+          <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+            <div className="text-red-400 font-mono text-sm">{error || "Something went wrong loading this."}</div>
+            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white">Try again</button>
+          </div>
+        ) : loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 animate-pulse h-40" />
