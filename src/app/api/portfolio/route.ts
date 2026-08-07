@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     .from('price_history')
     .select('ticker, date, close')
     .in('ticker', tickers)
-    .gte('date', sixMonthsAgo.toISOString().split('T')[0])
+    // Remove .gte filter because DB data is stale
     .order('date', { ascending: true })
     .limit(30000);
 

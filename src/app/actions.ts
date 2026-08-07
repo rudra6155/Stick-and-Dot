@@ -353,7 +353,14 @@ async function enrichAssetsWithHistory(assets: Asset[]) {
     .from('price_history')
     .select('ticker, date, close')
     .in('ticker', tickers)
-    .gte('date', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+    // We can't use an absolute Date.now() filter because the DB data might be stale (e.g. from June 2026).
+    // Instead, we just order by date and we'll process the latest data in JS.
+    // We still want to avoid fetching the *entire* history, so ideally we would use a lateral join or RPC.
+    // For now, to ensure we get the latest 7 days without downloading 500 rows per ticker,
+    // we fetch a bounded amount of recent history (e.g. 6 months back from the max date in DB, or just fetch and limit).
+    // Given PostgREST limitations, we'll fetch a reasonable window. Let's just fetch everything and slice if we have to, 
+    // but the issue was the .gte filter was returning 0 rows.
+    // Let's remove the .gte filter for now to restore functionality, since we already slice(-7) in JS.
     .order('date', { ascending: true });
 
   if (!histError && historyData) {
