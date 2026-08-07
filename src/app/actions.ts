@@ -234,6 +234,8 @@ export async function fetchAssetsPaginated(params: {
     longBusinessSummary: row.long_business_summary || '',
   }));
 
+  await enrichAssetsWithHistory(mappedAssets);
+
   return {
     assets: mappedAssets,
     totalCount: count || 0
@@ -284,7 +286,7 @@ export async function fetchTickerTapeAssets(): Promise<Asset[]> {
     return [];
   }
 
-  return (data || []).map((row: any) => ({
+  const mappedAssets = (data || []).map((row: any) => ({
     id: `trad_${row.id || row.ticker}`,
     name: row.short_name || row.ticker,
     symbol: row.ticker,
@@ -349,4 +351,47 @@ export async function fetchTickerTapeAssets(): Promise<Asset[]> {
     website: row.website || '',
     longBusinessSummary: row.long_business_summary || '',
   }));
+
+  await enrichAssetsWithHistory(mappedAssets);
+  return mappedAssets;
+}
+
+async function enrichAssetsWithHistory(assets: Asset[]) {
+  if (assets.length === 0) return assets;
+  const tickers = assets.map(a => a.symbol);
+  
+  const { data: historyData, error: histError } = await supabase
+    .from('price_history')
+    .select('ticker, date, close')
+    .in('ticker', tickers)
+    .order('date', { ascending: true });
+
+  if (!histError && historyData) {
+    const histByTicker: Record<string, { date: string, close: number }[]> = {};
+    historyData.forEach(row => {
+      if (!histByTicker[row.ticker]) histByTicker[row.ticker] = [];
+      histByTicker[row.ticker].push(row);
+    });
+
+    assets.forEach(asset => {
+      const h = histByTicker[asset.symbol] || [];
+      if (h.length < 2) {
+        asset.history = [];
+        asset.change = "0.00%";
+        asset.isUp = true;
+        return;
+      }
+      
+      const recentHist = h.slice(-7);
+      asset.history = recentHist.map(r => r.close);
+      
+      const first = recentHist[0].close;
+      const last = recentHist[recentHist.length - 1].close;
+      const changePct = ((last - first) / first) * 100;
+      
+      asset.change = (Math.abs(changePct)).toFixed(2) + "%";
+      asset.isUp = changePct >= 0;
+    });
+  }
+  return assets;
 }
