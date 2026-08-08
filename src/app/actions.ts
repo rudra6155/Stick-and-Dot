@@ -250,6 +250,7 @@ export async function fetchAssetsPaginated(params: {
   };
   const sortCol = sortMap[params.sortBy] ?? 'market_cap';
   query = query.order(sortCol, { ascending: params.sortDir === 'asc', nullsFirst: false });
+  query = query.order('ticker', { ascending: true });
 
   query = query.range(params.offset, params.offset + safeLimit - 1);
 

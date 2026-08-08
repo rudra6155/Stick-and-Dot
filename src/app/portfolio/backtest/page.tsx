@@ -49,11 +49,12 @@ export default function BacktestPage() {
     runBacktest(preset.filters);
   };
 
-  const avg = results.length
-    ? (results.reduce((s, r) => s + (r.return_pct || 0), 0) / results.length).toFixed(2)
+  const validResults = results.filter((r) => r.return_pct != null);
+  const avg = validResults.length
+    ? (validResults.reduce((s, r) => s + r.return_pct, 0) / validResults.length).toFixed(2)
     : null;
-  const best = results.length ? results[0] : null;
-  const worst = results.length ? results[results.length - 1] : null;
+  const best = validResults.length ? validResults[0] : null;
+  const worst = validResults.length ? validResults[validResults.length - 1] : null;
 
   return (
     <div className="bg-black text-white font-sans">

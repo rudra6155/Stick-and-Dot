@@ -269,7 +269,8 @@ export default function MyPortfolioPage() {
     { dependencies: [alignmentData] }
   );
 
-  const totalValue = picks.reduce((acc, p) => acc + Number(p.amount), 0);
+  const validPicks = picks.filter((p) => assets[p.ticker]);
+  const totalValue = validPicks.reduce((acc, p) => acc + (assets[p.ticker]?.price || 0) * Number(p.quantity), 0);
 
   // Determine effective highlight class (from ring hover or card hover)
   const effectiveHighlightClass = ringHoveredClass || hoveredPickClass;
@@ -291,19 +292,19 @@ export default function MyPortfolioPage() {
       <div className="relative" ref={dropdownRef}>
         <VaultHeader
           totalValue={totalValue}
-          picksCount={picks.length}
-          picks={picks}
+          picksCount={validPicks.length}
+          picks={validPicks}
           hoveredValue={hoveredPickValue}
           hoveredClass={effectiveHighlightClass}
           onAlignClick={() => setShowScenarioDropdown(!showScenarioDropdown)}
           onRingHover={(cls) => setRingHoveredClass(cls)}
           isAligning={!!aligningScenario}
-          hasPicks={picks.length > 0}
+          hasPicks={validPicks.length > 0}
         />
 
         {/* Scenario Dropdown */}
         <AnimatePresence>
-          {showScenarioDropdown && picks.length > 0 && (
+          {showScenarioDropdown && validPicks.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -334,9 +335,9 @@ export default function MyPortfolioPage() {
       </div>
 
       {/* ─── Performance Strip ────────────────── */}
-      {picks.length > 0 && (
+      {validPicks.length > 0 && (
         <div className="max-w-7xl mx-auto px-4 md:px-0">
-          <PortfolioPerformance picks={picks} assets={assets} totalValue={totalValue} />
+          <PortfolioPerformance picks={validPicks} assets={assets} totalValue={totalValue} />
         </div>
       )}
 
@@ -450,7 +451,7 @@ export default function MyPortfolioPage() {
       )}
 
       {/* ─── Picks Grid or Empty State ────────── */}
-      {picks.length === 0 ? (
+      {validPicks.length === 0 ? (
         <EmptyVault />
       ) : (
         <div className="max-w-7xl mx-auto px-4 md:px-0">
@@ -464,7 +465,7 @@ export default function MyPortfolioPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {picks.map((pick) => {
+            {validPicks.map((pick) => {
               const asset = assets[pick.ticker];
               if (!asset) return null;
 
