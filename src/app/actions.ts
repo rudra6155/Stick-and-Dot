@@ -273,16 +273,16 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
   return unstable_cache(
     async () => {
       const { data, error } = await supabase.rpc('get_asset_class_counts');
-      
+
       const counts: Record<string, number> = { All: 0 };
-      
+
       if (!error && data) {
         data.forEach((row: any) => {
           counts[row.asset_class] = row.count;
           counts['All'] += row.count;
         });
       }
-      
+
       return counts;
     },
     ['asset-class-counts'],
@@ -375,7 +375,7 @@ export async function fetchTickerTapeAssets(): Promise<Asset[]> {
 async function enrichAssetsWithHistory(assets: Asset[]) {
   if (assets.length === 0) return assets;
   const tickers = assets.map(a => a.symbol);
-  
+
   // price_history has RLS enabled with no public SELECT policy, so this must
   // go through supabaseAdmin (service role) rather than the anon `supabase` client.
   // Coverage isn't a uniform panel (some tickers have far more/less recent data
@@ -403,14 +403,14 @@ async function enrichAssetsWithHistory(assets: Asset[]) {
         asset.isUp = true;
         return;
       }
-      
+
       const recentHist = h.slice(-7);
       asset.history = recentHist.map(r => r.close);
-      
+
       const first = recentHist[0].close;
       const last = recentHist[recentHist.length - 1].close;
       const changePct = first !== 0 ? ((last - first) / first) * 100 : 0;
-      
+
       asset.change = (Math.abs(changePct)).toFixed(2) + "%";
       asset.isUp = changePct >= 0;
     });

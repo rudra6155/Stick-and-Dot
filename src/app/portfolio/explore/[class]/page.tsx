@@ -243,7 +243,11 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
         {totalCount !== null && assets.length < totalCount && (
           <div className="flex justify-center pt-8">
             <button
-              onClick={() => setOffset(prev => prev + 40)}
+              onClick={() => {
+                if (loading) return;
+                setLoading(true);
+                setOffset(prev => prev + 40);
+              }}
               disabled={loading}
               className="group relative px-8 py-3 bg-zinc-900 border border-zinc-800 rounded-full overflow-hidden transition-all hover:border-emerald-500/30 hover:bg-zinc-800 disabled:opacity-50"
             >

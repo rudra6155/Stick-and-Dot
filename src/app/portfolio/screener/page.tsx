@@ -131,6 +131,7 @@ export default function ScreenerPage() {
     setMinDiv(f.min_dividend_yield !== undefined ? String(f.min_dividend_yield * 100) : "");
     setMinRevGrowth(f.min_revenue_growth !== undefined ? String(f.min_revenue_growth * 100) : "");
     setMaxBeta(f.max_beta !== undefined ? String(f.max_beta) : "");
+    setMinRoe(f.min_roe !== undefined ? String(f.min_roe * 100) : "");
     fetchResults(f);
   };
 
@@ -310,6 +311,7 @@ export default function ScreenerPage() {
                     </td>
                     <td className="p-4 text-right font-mono text-xs text-zinc-400">{r.what_can_earn}</td>
                     <td className={`p-4 text-right font-mono text-xs ${
+                      r.beta == null ? 'text-zinc-600' :
                       r.beta < 1 ? 'text-emerald-400' : r.beta < 1.5 ? 'text-yellow-400' : 'text-rose-400'
                     }`}>{r.what_can_lose}</td>
                     <td className={`p-4 text-right font-mono text-xs ${

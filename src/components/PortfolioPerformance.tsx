@@ -24,6 +24,7 @@ export default function PortfolioPerformance({ picks, assets, totalValue }: Perf
     if (!picks || picks.length === 0) return null;
 
     let totalPnL = 0;
+    let totalInvested = 0;
     let bestPick = { ticker: "—", pnl: -Infinity };
     let worstPick = { ticker: "—", pnl: Infinity };
     let totalBeta = 0;
@@ -38,19 +39,20 @@ export default function PortfolioPerformance({ picks, assets, totalValue }: Perf
       const investedVal = Number(p.amount);
       const pnl = currentVal - investedVal;
       totalPnL += pnl;
+      totalInvested += investedVal;
 
       if (pnl > bestPick.pnl) bestPick = { ticker: p.ticker, pnl };
       if (pnl < worstPick.pnl) worstPick = { ticker: p.ticker, pnl };
 
       if (asset.beta) {
-        totalBeta += asset.beta * (investedVal / totalValue);
+        totalBeta += asset.beta * (currentVal / totalValue);
         betaCount++;
       }
 
       classSet.add(p.asset_class || "Stock");
     });
 
-    const pnlPct = totalValue > 0 ? (totalPnL / totalValue) * 100 : 0;
+    const pnlPct = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0;
 
     return {
       totalPnL,

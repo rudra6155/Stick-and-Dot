@@ -7,11 +7,15 @@ import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/utils/supabase/client";
 
 export default function Navbar() {
-  const { user, openAuthModal } = useAuth();
+  const { user, loading, openAuthModal } = useAuth();
   const supabase = createClient();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handlePortfolioClick = (e: React.MouseEvent) => {
+    if (loading) {
+      e.preventDefault();
+      return;
+    }
     if (!user) {
       e.preventDefault();
       openAuthModal("/portfolio");
@@ -43,7 +47,7 @@ export default function Navbar() {
               My Portfolio
             </Link>
 
-            {user && (
+            {!loading && user && (
               <div className="flex items-center gap-4 border-l border-zinc-800 pl-6">
                 <span className="text-xs text-zinc-500 font-mono flex items-center gap-2">
                   <User className="w-3 h-3" />
@@ -75,7 +79,7 @@ export default function Navbar() {
             My Portfolio
           </Link>
 
-          {user && (
+          {!loading && user && (
             <div className="pt-4 border-t border-zinc-800 flex flex-col gap-4">
               <span className="text-xs text-zinc-500 font-mono flex items-center gap-2">
                 <User className="w-4 h-4" />

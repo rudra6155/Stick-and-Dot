@@ -39,7 +39,9 @@ export async function POST(req: NextRequest) {
 
   if (search) {
     const q = search.trim().replace(/[%_]/g, '\\$&').replace(/[,().]/g, '');
-    query = query.or(`ticker.ilike.%${q}%,short_name.ilike.%${q}%`);
+    if (q) {
+      query = query.or(`ticker.ilike.%${q}%,short_name.ilike.%${q}%`);
+    }
   }
 
   if (asset_class) query = query.eq('asset_class', asset_class);

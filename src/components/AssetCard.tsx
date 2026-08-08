@@ -81,14 +81,17 @@ const AnimatedPrice = ({ price }: { price: number }) => {
   return <>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(displayPrice)}</>;
 };
 
-export const formatNumber = (num: number | undefined | null) => {
-  if (num == null) return "—";
-  if (num === 0) return "$0.00";
-  if (num >= 1e12) return "$" + (num / 1e12).toFixed(2) + "T";
-  if (num >= 1e9)  return "$" + (num / 1e9).toFixed(2) + "B";
-  if (num >= 1e6)  return "$" + (num / 1e6).toFixed(2) + "M";
-  if (num >= 1e3)  return "$" + (num / 1e3).toFixed(2) + "K";
-  return "$" + num.toFixed(2);
+export const formatNumber = (num: number | undefined | null | string) => {
+  if (num === null || num === undefined || num === "" || Number.isNaN(Number(num))) return "—";
+  const val = Number(num);
+  if (val === 0) return "$0.00";
+  const abs = Math.abs(val);
+  const sign = val < 0 ? "-" : "";
+  if (abs >= 1e12) return sign + "$" + (abs / 1e12).toFixed(2) + "T";
+  if (abs >= 1e9)  return sign + "$" + (abs / 1e9).toFixed(2) + "B";
+  if (abs >= 1e6)  return sign + "$" + (abs / 1e6).toFixed(2) + "M";
+  if (abs >= 1e3)  return sign + "$" + (abs / 1e3).toFixed(2) + "K";
+  return sign + "$" + abs.toFixed(2);
 };
 
 export const getMetric = (id: string, asset: any, customFormatNumber?: any) => {

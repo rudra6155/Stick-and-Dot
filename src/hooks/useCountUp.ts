@@ -6,6 +6,7 @@ export function useCountUp(target: number, duration: number = 800) {
   const startTimeRef = useRef<number | null>(null);
 
   useEffect(() => {
+    startTimeRef.current = null;
     const animate = (timestamp: number) => {
       if (!startTimeRef.current) startTimeRef.current = timestamp;
       const progress = timestamp - startTimeRef.current;

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useRef } from "react";
 import { motion, useSpring, AnimatePresence } from "framer-motion";
 
 type CursorState = 'default' | 'profit' | 'loss' | 'text';
@@ -40,9 +40,8 @@ interface Particle {
 function CustomCursor() {
   const [isTouchDevice, setIsTouchDevice] = useState(true);
   const { cursorState, setCursorState } = useCursor();
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [particles, setParticles] = useState<Particle[]>([]);
-  const [particleCounter, setParticleCounter] = useState(0);
+  const mousePosRef = useRef({ x: 0, y: 0 });
+  const particleCounterRef = useRef(0);
 
   // Smooth springs for cursor position
   const cursorX = useSpring(0, { stiffness: 400, damping: 25 });
@@ -60,7 +59,7 @@ function CustomCursor() {
     }
 
     const moveCursor = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
+      mousePosRef.current = { x: e.clientX, y: e.clientY };
       cursorX.set(e.clientX);
       cursorY.set(e.clientY);
     };
@@ -92,11 +91,10 @@ function CustomCursor() {
     const spawnInterval = setInterval(() => {
       setParticles(prev => {
         const newParticle = {
-          id: particleCounter,
-          x: mousePosition.x + (Math.random() * 40 - 20),
-          y: mousePosition.y + (Math.random() * 40 - 20)
+          id: particleCounterRef.current++,
+          x: mousePosRef.current.x + (Math.random() * 40 - 20),
+          y: mousePosRef.current.y + (Math.random() * 40 - 20)
         };
-        setParticleCounter(c => c + 1);
         const updated = [...prev, newParticle];
         if (updated.length > 5) updated.shift();
         return updated;
@@ -104,7 +102,7 @@ function CustomCursor() {
     }, 800);
 
     return () => clearInterval(spawnInterval);
-  }, [cursorState, mousePosition, particleCounter, isTouchDevice]);
+  }, [cursorState, isTouchDevice]);
 
   if (isTouchDevice) return null;
 

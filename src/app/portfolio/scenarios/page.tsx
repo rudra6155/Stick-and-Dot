@@ -90,7 +90,7 @@ export default function ScenariosPage() {
         )}
 
         {/* Results */}
-        {activeScenario && !loading && !error && (
+        {activeScenario && !error && (
           <div className="space-y-8">
             {/* Logic explanation */}
             <div className="bg-zinc-950 border border-emerald-900/30 rounded-2xl p-6">

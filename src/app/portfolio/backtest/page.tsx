@@ -75,11 +75,10 @@ export default function BacktestPage() {
               <button
                 key={p.label}
                 onClick={() => applyPreset(p)}
-                className={`p-4 rounded-2xl border text-left transition-all ${
-                  activePreset === p.label
+                className={`p-4 rounded-2xl border text-left transition-all ${activePreset === p.label
                     ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400"
                     : "bg-zinc-950 border-zinc-800 hover:border-zinc-600 text-zinc-300"
-                }`}
+                  }`}
               >
                 <div className="text-sm font-semibold leading-tight mb-1">{p.label}</div>
                 <div className="text-xs text-zinc-500">{p.desc}</div>
@@ -100,7 +99,7 @@ export default function BacktestPage() {
                 onChange={e => setFilters((f: any) => ({ ...f, asset_class: e.target.value !== "All" ? e.target.value : undefined }))}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100"
               >
-                {["All","Stock","ETF","REIT","Crypto","Commodity","Bond","Indian Stock","International","Forex","Index"].map(a => (
+                {["All", "Stock", "ETF", "REIT", "Crypto", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"].map(a => (
                   <option key={a} value={a}>{a}</option>
                 ))}
               </select>
@@ -113,7 +112,7 @@ export default function BacktestPage() {
                 onChange={e => setFilters((f: any) => ({ ...f, sector: e.target.value !== "All Sectors" ? e.target.value : undefined }))}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100"
               >
-                {["All Sectors","Technology","Healthcare","Financial Services","Energy","Industrials","Consumer Cyclical","Consumer Defensive","Basic Materials","Real Estate","Utilities","Communication Services"].map(s => (
+                {["All Sectors", "Technology", "Healthcare", "Financial Services", "Energy", "Industrials", "Consumer Cyclical", "Consumer Defensive", "Basic Materials", "Real Estate", "Utilities", "Communication Services"].map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
@@ -186,64 +185,62 @@ export default function BacktestPage() {
         {ran && (
           <div className="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden">
             <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-zinc-900/50 border-b border-zinc-800">
-                <tr>
-                  <th className="p-4 font-mono text-xs text-zinc-500 uppercase">#</th>
-                  <th className="p-4 font-mono text-xs text-zinc-500 uppercase">Ticker</th>
-                  <th className="p-4 font-mono text-xs text-zinc-500 uppercase">Name</th>
-                  <th className="p-4 font-mono text-xs text-zinc-500 uppercase">Class</th>
-                  <th className="p-4 font-mono text-xs text-zinc-500 uppercase text-right">Start Price</th>
-                  <th className="p-4 font-mono text-xs text-zinc-500 uppercase text-right">End Price</th>
-                  <th className="p-4 font-mono text-xs text-zinc-500 uppercase text-right">6M Return</th>
-                  <th className="p-4 font-mono text-xs text-zinc-500 uppercase text-right">Beta</th>
-                  <th className="p-4 font-mono text-xs text-zinc-500 uppercase text-right">Rev Growth</th>
-                  <th className="p-4 font-mono text-xs text-zinc-500 uppercase text-right">P/E</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/50">
-                {loading ? (
+              <table className="w-full text-sm text-left">
+                <thead className="bg-zinc-900/50 border-b border-zinc-800">
                   <tr>
-                    <td colSpan={10} className="p-12 text-center text-zinc-500 font-mono animate-pulse">
-                      Crunching 6 months of data...
-                    </td>
+                    <th className="p-4 font-mono text-xs text-zinc-500 uppercase">#</th>
+                    <th className="p-4 font-mono text-xs text-zinc-500 uppercase">Ticker</th>
+                    <th className="p-4 font-mono text-xs text-zinc-500 uppercase">Name</th>
+                    <th className="p-4 font-mono text-xs text-zinc-500 uppercase">Class</th>
+                    <th className="p-4 font-mono text-xs text-zinc-500 uppercase text-right">Start Price</th>
+                    <th className="p-4 font-mono text-xs text-zinc-500 uppercase text-right">End Price</th>
+                    <th className="p-4 font-mono text-xs text-zinc-500 uppercase text-right">6M Return</th>
+                    <th className="p-4 font-mono text-xs text-zinc-500 uppercase text-right">Beta</th>
+                    <th className="p-4 font-mono text-xs text-zinc-500 uppercase text-right">Rev Growth</th>
+                    <th className="p-4 font-mono text-xs text-zinc-500 uppercase text-right">P/E</th>
                   </tr>
-                ) : results.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="p-12 text-center text-zinc-500">
-                      No assets match these criteria. Try relaxing the filters.
-                    </td>
-                  </tr>
-                ) : (
-                  results.map((r, i) => (
-                    <tr key={r.ticker} className="hover:bg-zinc-900/30 transition-colors">
-                      <td className="p-4 text-zinc-600 font-mono">#{i + 1}</td>
-                      <td className="p-4 font-bold text-emerald-400 font-mono">{r.ticker}</td>
-                      <td className="p-4 text-zinc-300 truncate max-w-[160px]">{r.short_name || r.ticker}</td>
-                      <td className="p-4 text-zinc-500 text-xs">{r.asset_class}</td>
-                      <td className="p-4 text-right font-mono text-zinc-400">${r.start_price}</td>
-                      <td className="p-4 text-right font-mono text-zinc-400">${r.end_price}</td>
-                      <td className={`p-4 text-right font-mono font-bold ${
-                        r.return_pct === null ? 'text-zinc-600' :
-                        r.return_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                      }`}>
-                        {r.return_pct === null ? '—' : `${r.return_pct >= 0 ? '+' : ''}${r.return_pct}%`}
-                      </td>
-                      <td className={`p-4 text-right font-mono text-xs ${
-                        !r.beta ? 'text-zinc-600' :
-                        r.beta < 1 ? 'text-emerald-400' : r.beta < 1.5 ? 'text-yellow-400' : 'text-rose-400'
-                      }`}>{r.beta ? r.beta.toFixed(2) : '—'}</td>
-                      <td className="p-4 text-right font-mono text-xs text-zinc-400">
-                        {r.revenue_growth ? `${(r.revenue_growth * 100).toFixed(1)}%` : '—'}
-                      </td>
-                      <td className="p-4 text-right font-mono text-xs text-zinc-400">
-                        {r.pe_ratio ? r.pe_ratio.toFixed(1) : '—'}
+                </thead>
+                <tbody className="divide-y divide-zinc-800/50">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={10} className="p-12 text-center text-zinc-500 font-mono animate-pulse">
+                        Crunching 6 months of data...
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : results.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="p-12 text-center text-zinc-500">
+                        No assets match these criteria. Try relaxing the filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    results.map((r, i) => (
+                      <tr key={r.ticker} className="hover:bg-zinc-900/30 transition-colors">
+                        <td className="p-4 text-zinc-600 font-mono">#{i + 1}</td>
+                        <td className="p-4 font-bold text-emerald-400 font-mono">{r.ticker}</td>
+                        <td className="p-4 text-zinc-300 truncate max-w-[160px]">{r.short_name || r.ticker}</td>
+                        <td className="p-4 text-zinc-500 text-xs">{r.asset_class}</td>
+                        <td className="p-4 text-right font-mono text-zinc-400">${r.start_price}</td>
+                        <td className="p-4 text-right font-mono text-zinc-400">${r.end_price}</td>
+                        <td className={`p-4 text-right font-mono font-bold ${r.return_pct === null ? 'text-zinc-600' :
+                            r.return_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                          }`}>
+                          {r.return_pct === null ? '—' : `${r.return_pct >= 0 ? '+' : ''}${r.return_pct}%`}
+                        </td>
+                        <td className={`p-4 text-right font-mono text-xs ${!r.beta ? 'text-zinc-600' :
+                            r.beta < 1 ? 'text-emerald-400' : r.beta < 1.5 ? 'text-yellow-400' : 'text-rose-400'
+                          }`}>{r.beta ? r.beta.toFixed(2) : '—'}</td>
+                        <td className="p-4 text-right font-mono text-xs text-zinc-400">
+                          {r.revenue_growth ? `${(r.revenue_growth * 100).toFixed(1)}%` : '—'}
+                        </td>
+                        <td className="p-4 text-right font-mono text-xs text-zinc-400">
+                          {r.pe_ratio ? r.pe_ratio.toFixed(1) : '—'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
