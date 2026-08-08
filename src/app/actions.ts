@@ -1,6 +1,13 @@
 "use server";
 import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 import { unstable_cache } from "next/cache";
+
+// Service-role client for price_history (see enrichAssetsWithHistory below).
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export type Asset = {
   id: string;
@@ -349,18 +356,16 @@ async function enrichAssetsWithHistory(assets: Asset[]) {
   if (assets.length === 0) return assets;
   const tickers = assets.map(a => a.symbol);
   
-  const { data: historyData, error: histError } = await supabase
+  // price_history has RLS enabled with no public SELECT policy, so this must
+  // go through supabaseAdmin (service role) rather than the anon `supabase` client.
+  // Coverage isn't a uniform panel (some tickers have far more/less recent data
+  // than others), so we can't safely cap with a single global LIMIT — the
+  // .in('ticker', tickers) filter already bounds the result set per page,
+  // and we take the last 7 rows per ticker in JS below.
+  const { data: historyData, error: histError } = await supabaseAdmin
     .from('price_history')
     .select('ticker, date, close')
     .in('ticker', tickers)
-    // We can't use an absolute Date.now() filter because the DB data might be stale (e.g. from June 2026).
-    // Instead, we just order by date and we'll process the latest data in JS.
-    // We still want to avoid fetching the *entire* history, so ideally we would use a lateral join or RPC.
-    // For now, to ensure we get the latest 7 days without downloading 500 rows per ticker,
-    // we fetch a bounded amount of recent history (e.g. 6 months back from the max date in DB, or just fetch and limit).
-    // Given PostgREST limitations, we'll fetch a reasonable window. Let's just fetch everything and slice if we have to, 
-    // but the issue was the .gte filter was returning 0 rows.
-    // Let's remove the .gte filter for now to restore functionality, since we already slice(-7) in JS.
     .order('date', { ascending: true });
 
   if (!histError && historyData) {
