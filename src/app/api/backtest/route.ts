@@ -53,15 +53,20 @@ export async function POST(req: NextRequest) {
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-  const { data: history, error: histError } = await supabase
-    .from('price_history')
-    .select('ticker, date, close')
-    .in('ticker', tickers)
-    // Remove .gte filter because DB data is stale
-    .order('date', { ascending: false })
-    .limit(30000);
+  const historyPromises = tickers.map((ticker: string) => 
+    supabase
+      .from('price_history')
+      .select('ticker, date, close')
+      .eq('ticker', ticker)
+      .order('date', { ascending: false })
+      .limit(200)
+  );
 
+  const historyResults = await Promise.all(historyPromises);
+  const histError = historyResults.find(r => r.error);
   if (histError) return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+
+  const history = historyResults.flatMap(r => r.data || []);
 
   // Step 3 — compute performance per ticker
   const tickerHistory: Record<string, Array<{ date: string; close: number }>> = {};

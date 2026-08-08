@@ -36,13 +36,17 @@ export async function POST(req: NextRequest) {
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-  const { data: history } = await supabase
-    .from('price_history')
-    .select('ticker, date, close')
-    .in('ticker', tickers)
-    // Remove .gte filter because DB data is stale
-    .order('date', { ascending: false })
-    .limit(30000);
+  const historyPromises = tickers.map((ticker: string) => 
+    supabase
+      .from('price_history')
+      .select('ticker, date, close')
+      .eq('ticker', ticker)
+      .order('date', { ascending: false })
+      .limit(200)
+  );
+
+  const historyResults = await Promise.all(historyPromises);
+  const history = historyResults.flatMap(r => r.data || []);
 
   // Compute 6M return per asset
   const tickerHistory: Record<string, any[]> = {};
