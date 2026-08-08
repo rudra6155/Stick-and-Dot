@@ -42,6 +42,7 @@ function CustomCursor() {
   const { cursorState, setCursorState } = useCursor();
   const mousePosRef = useRef({ x: 0, y: 0 });
   const particleCounterRef = useRef(0);
+  const [particles, setParticles] = useState<Particle[]>([]);
 
   // Smooth springs for cursor position
   const cursorX = useSpring(0, { stiffness: 400, damping: 25 });
