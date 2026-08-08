@@ -42,7 +42,7 @@ export default function StatsSection({ assetClassCounts = {} }: { assetClassCoun
             { label: "REITs", count: assetClassCounts['REIT'] || 0, color: "bg-pink-500" },
             { label: "Bonds", count: assetClassCounts['Bond'] || 0, color: "bg-emerald-500" },
           ].map((item, i) => {
-            const maxCount = Math.max(1, assetClassCounts['International'] || 1); // max bar based on biggest class
+            const maxCount = Math.max(1, ...Object.values(assetClassCounts)); // max bar based on biggest class
             return (
             <div key={item.label} className="flex items-center gap-4">
               <span className="font-mono text-xs text-zinc-500 w-24 text-right shrink-0">{item.label}</span>

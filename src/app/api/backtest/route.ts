@@ -58,14 +58,14 @@ export async function POST(req: NextRequest) {
     .select('ticker, date, close')
     .in('ticker', tickers)
     // Remove .gte filter because DB data is stale
-    .order('date', { ascending: true })
+    .order('date', { ascending: false })
     .limit(30000);
 
   if (histError) return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
 
   // Step 3 — compute performance per ticker
   const tickerHistory: Record<string, Array<{ date: string; close: number }>> = {};
-  (history || []).forEach((row: any) => {
+  (history || []).reverse().forEach((row: any) => {
     if (!tickerHistory[row.ticker]) tickerHistory[row.ticker] = [];
     tickerHistory[row.ticker].push({ date: row.date, close: row.close });
   });

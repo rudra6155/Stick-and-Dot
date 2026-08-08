@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Crosshair, ChevronDown, Sparkles, ArrowRight, Vault } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { fetchAssetsByTickers } from "@/app/actions";
 import { PickItem } from "@/components/PickItem";
 import VaultHeader from "@/components/VaultHeader";
 import PortfolioPerformance from "@/components/PortfolioPerformance";
@@ -166,28 +167,11 @@ export default function MyPortfolioPage() {
 
       if (userPicks && userPicks.length > 0) {
         const tickers = userPicks.map((p) => p.ticker);
-        const { data: assetData, error: assetError } = await supabase
-          .from("asset_snapshots")
-          .select("*")
-          .in("ticker", tickers);
-
-        if (assetError) throw assetError;
+        const assetList = await fetchAssetsByTickers(tickers);
 
         const assetMap: Record<string, any> = {};
-        (assetData || []).forEach((row) => {
-          assetMap[row.ticker] = {
-            ...row,
-            symbol: row.ticker,
-            name: row.short_name || row.ticker,
-            assetClass: row.asset_class,
-            price: row.price || 0,
-            change: "0.00%",
-            isUp: true,
-            history: [],
-            marketCap: row.market_cap || 0,
-            peRatio: row.pe_ratio || 0,
-            dividendYield: row.dividend_yield || 0,
-          };
+        assetList.forEach((asset) => {
+          assetMap[asset.symbol] = asset;
         });
         setAssets(assetMap);
       }
@@ -219,13 +203,24 @@ export default function MyPortfolioPage() {
   }, [showScenarioDropdown]);
 
   const handleRemove = async (id: string) => {
+    const removedPick = picks.find((p) => p.id === id);
+
+    // Optimistic removal
+    setPicks((prev) => prev.filter((p) => p.id !== id));
+
     try {
-      // Optimistic removal
-      setPicks((prev) => prev.filter((p) => p.id !== id));
-      await supabase.from("user_picks").delete().eq("id", id);
-    } catch (e) {
+      const { error: deleteError } = await supabase.from("user_picks").delete().eq("id", id);
+      if (deleteError) throw deleteError;
+    } catch (e: any) {
       console.error(e);
-      loadPortfolio(); // Reload on error
+      setError(e.message || "Failed to remove pick. Please try again.");
+      if (removedPick) {
+        setPicks((prev) =>
+          [...prev, removedPick].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          )
+        );
+      }
     }
   };
 

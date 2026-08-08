@@ -41,12 +41,12 @@ export async function POST(req: NextRequest) {
     .select('ticker, date, close')
     .in('ticker', tickers)
     // Remove .gte filter because DB data is stale
-    .order('date', { ascending: true })
+    .order('date', { ascending: false })
     .limit(30000);
 
   // Compute 6M return per asset
   const tickerHistory: Record<string, any[]> = {};
-  (history || []).forEach((row: any) => {
+  (history || []).reverse().forEach((row: any) => {
     if (!tickerHistory[row.ticker]) tickerHistory[row.ticker] = [];
     tickerHistory[row.ticker].push(row);
   });
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
   // Stress tests
   const stress_tests = Object.entries(SCENARIO_IMPACTS).map(([scenario, impacts]) => {
     const scenario_return = assetDetails.reduce((s: number, a: any) => {
-      const impact = impacts[a.asset_class] || -0.1;
+      const impact = impacts[a.asset_class] !== undefined ? impacts[a.asset_class] : -0.1;
       return s + impact * weight * 100;
     }, 0);
     const labels: Record<string, string> = {

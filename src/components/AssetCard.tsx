@@ -66,6 +66,14 @@ export const AVAILABLE_METRICS = [
   { id: "targetMeanPrice",         label: "Price Target" },
   { id: "trailingEps",             label: "EPS" },
   { id: "forwardEps",              label: "Fwd EPS" },
+  { id: "volume",                  label: "Volume" },
+  { id: "avgVolume",               label: "Avg Volume" },
+  { id: "dayHigh",                 label: "Day High" },
+  { id: "dayLow",                  label: "Day Low" },
+  { id: "currency",                label: "Currency" },
+  { id: "allTimeHigh",             label: "All Time High" },
+  { id: "allTimeLow",              label: "All Time Low" },
+  { id: "sharesOutstanding",       label: "Shares Out" },
 ];
 
 const AnimatedPrice = ({ price }: { price: number }) => {

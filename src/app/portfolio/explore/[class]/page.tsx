@@ -13,7 +13,10 @@ const sortOptions = ["Market Cap", "Price", "Volume", "P/E", "Div Yield", "52W H
 
 export default function AssetClassPage({ params }: { params: Promise<{ class: string }> }) {
   const { class: encodedClass } = use(params);
-  const assetClass = decodeURIComponent(encodedClass);
+  let assetClass = encodedClass;
+  try {
+    assetClass = decodeURIComponent(encodedClass);
+  } catch (e) {}
   
   const [assets, setAssets] = useState<Asset[]>([]);
   const [searchQuery, setSearchQuery] = useState("");

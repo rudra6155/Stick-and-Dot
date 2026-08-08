@@ -155,7 +155,7 @@ export function PickItem({
 
           if (active) {
             if (!riskData.error) setRiskResult(riskData);
-            if (!btData.error) setBacktestResult(btData);
+            if (!btData.error) setBacktestResult(btData.results?.[0] ?? null);
             setLoadingExtras(false);
           }
         } catch (e) {
@@ -166,7 +166,8 @@ export function PickItem({
       fetchExtras();
       return () => { active = false; };
     }
-  }, [isExpanded, asset.symbol, riskResult, backtestResult]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isExpanded, asset.symbol]);
 
   // Delete confirmation timer
   useEffect(() => {

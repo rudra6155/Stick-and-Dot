@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 const GRADE_COLORS: Record<string, string> = {
   A: "text-emerald-400", B: "text-blue-400",
@@ -24,6 +24,7 @@ export default function RiskScorePage() {
 
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const searchAssets = async (query: string) => {
     if (query.trim().length < 1) {
@@ -58,19 +59,26 @@ export default function RiskScorePage() {
     setLoading(true);
     setError("");
     setResult(null);
+
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
+
     try {
       const res = await fetch("/api/risk-score", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ticker: query }),
+        signal: abortControllerRef.current.signal,
       });
       const data = await res.json();
       if (data.error) { setError(data.error); }
       else { setResult(data); }
     } catch (err: any) {
+      if (err.name === 'AbortError') return;
       setError(err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

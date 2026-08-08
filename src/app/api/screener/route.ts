@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     .limit(limit);
 
   if (search) {
-    const q = search.trim().replace(/[%_]/g, '\\$&');
+    const q = search.trim().replace(/[%_]/g, '\\$&').replace(/[,().]/g, '');
     query = query.or(`ticker.ilike.%${q}%,short_name.ilike.%${q}%`);
   }
 
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     const earn_score = Math.min((r.revenue_growth || 0) * 100, 40);
     const lose_score = Math.max(40 - (r.beta || 1) * 20, 0);
     const exit_score = Math.min((r.market_cap || 0) / 1e11, 10);
-    const value_score = r.pe_ratio && r.pe_ratio < 30 ? 10 : 0;
+    const value_score = r.pe_ratio && r.pe_ratio > 0 && r.pe_ratio < 30 ? 10 : 0;
     const total_score = earn_score + lose_score + exit_score + value_score;
     return {
       ...r,

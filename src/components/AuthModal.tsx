@@ -11,7 +11,8 @@ export function AuthModal({ redirectUrl, onClose }: { redirectUrl?: string, onCl
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  
+  const [message, setMessage] = useState("");
+
   const supabase = createClient();
   const router = useRouter();
 
@@ -19,6 +20,7 @@ export function AuthModal({ redirectUrl, onClose }: { redirectUrl?: string, onCl
     e.preventDefault();
     setLoading(true);
     setError("");
+    setMessage("");
 
     try {
       if (isLogin) {
@@ -27,8 +29,15 @@ export function AuthModal({ redirectUrl, onClose }: { redirectUrl?: string, onCl
           password,
         });
         if (signInError) throw signInError;
+        
+        onClose();
+        if (redirectUrl) {
+          router.push(redirectUrl);
+        } else {
+          router.push("/portfolio");
+        }
       } else {
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -36,13 +45,17 @@ export function AuthModal({ redirectUrl, onClose }: { redirectUrl?: string, onCl
           },
         });
         if (signUpError) throw signUpError;
-      }
-      
-      onClose();
-      if (redirectUrl) {
-        router.push(redirectUrl);
-      } else {
-        router.push("/portfolio");
+
+        if (signUpData?.session) {
+          onClose();
+          if (redirectUrl) {
+            router.push(redirectUrl);
+          } else {
+            router.push("/portfolio");
+          }
+        } else {
+          setMessage("Check your email to verify your account.");
+        }
       }
     } catch (err: any) {
       setError(err.message || "An error occurred during authentication");
@@ -88,6 +101,12 @@ export function AuthModal({ redirectUrl, onClose }: { redirectUrl?: string, onCl
         {error && (
           <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm font-mono">
             {error}
+          </div>
+        )}
+
+        {message && (
+          <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-mono">
+            {message}
           </div>
         )}
 

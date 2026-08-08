@@ -10,8 +10,12 @@ import { createClient } from "@/utils/supabase/client";
 
 export default function AssetDetailPage({ params }: { params: Promise<{ class: string, ticker: string }> }) {
   const { class: encodedClass, ticker: encodedTicker } = use(params);
-  const assetClass = decodeURIComponent(encodedClass);
-  const ticker = decodeURIComponent(encodedTicker);
+  let assetClass = encodedClass;
+  let ticker = encodedTicker;
+  try {
+    assetClass = decodeURIComponent(encodedClass);
+    ticker = decodeURIComponent(encodedTicker);
+  } catch (e) {}
 
   const [asset, setAsset] = useState<any>(null);
   const [riskResult, setRiskResult] = useState<any>(null);
@@ -36,6 +40,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
           .from('asset_snapshots')
           .select('*')
           .eq('ticker', ticker)
+          .eq('asset_class', assetClass)
           .single();
 
         if (assetErr) throw new Error("Asset not found");

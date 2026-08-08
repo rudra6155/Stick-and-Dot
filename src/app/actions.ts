@@ -129,6 +129,90 @@ const normalizeClass = (raw: string | undefined): string => {
   return map[raw.toLowerCase()] ?? raw;
 };
 
+const mapRowToAsset = (row: any) => ({
+  id: `trad_${row.id || row.ticker}`,
+  name: row.short_name || row.ticker,
+  symbol: row.ticker,
+  assetClass: normalizeClass(row.asset_class),
+  price: row.price || 0,
+  open: row.open || 0,
+  dayHigh: row.day_high || 0,
+  dayLow: row.day_low || 0,
+  volume: row.volume || 0,
+  avgVolume: row.avg_volume || 0,
+  marketCap: row.market_cap || 0,
+  peRatio: row.pe_ratio ?? null,
+  forwardPe: row.forward_pe ?? null,
+  priceToBook: row.price_to_book ?? null,
+  priceToSales: row.price_to_sales ?? null,
+  evToEbitda: row.ev_to_ebitda ?? null,
+  dividendYield: row.dividend_yield ?? null,
+  earningsGrowth: row.earnings_growth ?? null,
+  revenueGrowth: row.revenue_growth ?? null,
+  profitMargins: row.profit_margins ?? null,
+  high52Week: row.high_52_week || 0,
+  low52Week: row.low_52_week || 0,
+  ma50Day: row.ma_50_day || 0,
+  ma200Day: row.ma_200_day || 0,
+  beta: row.beta ?? null,
+  history: [],
+  change: "0.00%",
+  isUp: true,
+  sector: row.sector || '',
+  industry: row.industry || '',
+  country: row.country || '',
+  exchange: row.exchange || '',
+  shortName: row.short_name || '',
+  longName: row.long_name || '',
+  previousClose: row.previous_close || 0,
+  enterpriseValue: row.enterprise_value || 0,
+  pegRatio: row.peg_ratio ?? null,
+  dividendRate: row.dividend_rate ?? null,
+  payoutRatio: row.payout_ratio ?? null,
+  fiveYearAvgDividendYield: row.five_year_avg_dividend_yield ?? null,
+  grossMargins: row.gross_margins ?? null,
+  operatingMargins: row.operating_margins ?? null,
+  returnOnEquity: row.return_on_equity ?? null,
+  returnOnAssets: row.return_on_assets ?? null,
+  totalRevenue: row.total_revenue || 0,
+  ebitda: row.ebitda || 0,
+  totalDebt: row.total_debt || 0,
+  freeCashflow: row.free_cashflow || 0,
+  allTimeHigh: row.all_time_high || 0,
+  allTimeLow: row.all_time_low || 0,
+  sharesOutstanding: row.shares_outstanding || 0,
+  floatShares: row.float_shares || 0,
+  sharesShort: row.shares_short || 0,
+  heldPercentInsiders: row.held_percent_insiders || 0,
+  heldPercentInstitutions: row.held_percent_institutions || 0,
+  recommendationMean: row.recommendation_mean || 0,
+  targetMeanPrice: row.target_mean_price || 0,
+  targetHighPrice: row.target_high_price || 0,
+  trailingEps: row.trailing_eps || 0,
+  forwardEps: row.forward_eps || 0,
+  currency: row.currency || '',
+  website: row.website || '',
+  longBusinessSummary: row.long_business_summary || '',
+});
+
+export async function fetchAssetsByTickers(tickers: string[]): Promise<Asset[]> {
+  if (!tickers || tickers.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('asset_snapshots')
+    .select('*')
+    .in('ticker', tickers);
+
+  if (error) {
+    console.error('Supabase query error:', error);
+    throw new Error(error.message);
+  }
+
+  const mappedAssets: Asset[] = (data || []).map(mapRowToAsset);
+  await enrichAssetsWithHistory(mappedAssets);
+  return mappedAssets;
+}
+
 export async function fetchAssetsPaginated(params: {
   limit: number;
   offset: number;
@@ -175,71 +259,7 @@ export async function fetchAssetsPaginated(params: {
     throw new Error(error.message);
   }
 
-  const mappedAssets: Asset[] = (data || []).map((row: any) => ({
-    id: `trad_${row.id || row.ticker}`,
-    name: row.short_name || row.ticker,
-    symbol: row.ticker,
-    assetClass: normalizeClass(row.asset_class),
-    price: row.price || 0,
-    open: row.open || 0,
-    dayHigh: row.day_high || 0,
-    dayLow: row.day_low || 0,
-    volume: row.volume || 0,
-    avgVolume: row.avg_volume || 0,
-    marketCap: row.market_cap || 0,
-    peRatio: row.pe_ratio ?? null,
-    forwardPe: row.forward_pe ?? null,
-    priceToBook: row.price_to_book ?? null,
-    priceToSales: row.price_to_sales ?? null,
-    evToEbitda: row.ev_to_ebitda ?? null,
-    dividendYield: row.dividend_yield ?? null,
-    earningsGrowth: row.earnings_growth ?? null,
-    revenueGrowth: row.revenue_growth ?? null,
-    profitMargins: row.profit_margins ?? null,
-    high52Week: row.high_52_week || 0,
-    low52Week: row.low_52_week || 0,
-    ma50Day: row.ma_50_day || 0,
-    ma200Day: row.ma_200_day || 0,
-    beta: row.beta ?? null,
-    history: [],
-    change: "0.00%",
-    isUp: true,
-    sector: row.sector || '',
-    industry: row.industry || '',
-    country: row.country || '',
-    exchange: row.exchange || '',
-    shortName: row.short_name || '',
-    longName: row.long_name || '',
-    previousClose: row.previous_close || 0,
-    enterpriseValue: row.enterprise_value || 0,
-    pegRatio: row.peg_ratio ?? null,
-    dividendRate: row.dividend_rate ?? null,
-    payoutRatio: row.payout_ratio ?? null,
-    fiveYearAvgDividendYield: row.five_year_avg_dividend_yield ?? null,
-    grossMargins: row.gross_margins ?? null,
-    operatingMargins: row.operating_margins ?? null,
-    returnOnEquity: row.return_on_equity ?? null,
-    returnOnAssets: row.return_on_assets ?? null,
-    totalRevenue: row.total_revenue || 0,
-    ebitda: row.ebitda || 0,
-    totalDebt: row.total_debt || 0,
-    freeCashflow: row.free_cashflow || 0,
-    allTimeHigh: row.all_time_high || 0,
-    allTimeLow: row.all_time_low || 0,
-    sharesOutstanding: row.shares_outstanding || 0,
-    floatShares: row.float_shares || 0,
-    sharesShort: row.shares_short || 0,
-    heldPercentInsiders: row.held_percent_insiders || 0,
-    heldPercentInstitutions: row.held_percent_institutions || 0,
-    recommendationMean: row.recommendation_mean || 0,
-    targetMeanPrice: row.target_mean_price || 0,
-    targetHighPrice: row.target_high_price || 0,
-    trailingEps: row.trailing_eps || 0,
-    forwardEps: row.forward_eps || 0,
-    currency: row.currency || '',
-    website: row.website || '',
-    longBusinessSummary: row.long_business_summary || '',
-  }));
+  const mappedAssets: Asset[] = (data || []).map(mapRowToAsset);
 
   await enrichAssetsWithHistory(mappedAssets);
 

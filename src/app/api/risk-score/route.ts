@@ -21,7 +21,7 @@ function scoreAsset(r: any) {
   const exit_score = cap > 1e12 ? 25 : cap > 1e11 ? 20 : cap > 1e10 ? 15 : cap > 1e9 ? 10 : 5;
 
   // VALUE score (0-25): P/E, profit margins, ROE
-  const pe_score = r.pe_ratio && r.pe_ratio < 15 ? 10 : r.pe_ratio && r.pe_ratio < 25 ? 7 : r.pe_ratio && r.pe_ratio < 40 ? 4 : 0;
+  const pe_score = r.pe_ratio && r.pe_ratio > 0 && r.pe_ratio < 15 ? 10 : r.pe_ratio && r.pe_ratio > 0 && r.pe_ratio < 25 ? 7 : r.pe_ratio && r.pe_ratio > 0 && r.pe_ratio < 40 ? 4 : 0;
   const margin_score = r.profit_margins > 0.2 ? 8 : r.profit_margins > 0.1 ? 5 : r.profit_margins > 0 ? 2 : 0;
   const roe_score = r.return_on_equity > 0.2 ? 7 : r.return_on_equity > 0.1 ? 4 : 2;
   const value_score = Math.min(pe_score + margin_score + roe_score, 25);
@@ -43,7 +43,7 @@ function scoreAsset(r: any) {
   if (r.revenue_growth > 0.2) opportunities.push(`Strong revenue growth at ${(r.revenue_growth * 100).toFixed(1)}%`);
   if (r.dividend_yield > 0.03) opportunities.push(`Attractive dividend yield of ${(r.dividend_yield * 100).toFixed(1)}%`);
   if (r.return_on_equity > 0.2) opportunities.push(`High ROE of ${(r.return_on_equity * 100).toFixed(1)}% — efficient use of capital`);
-  if (r.pe_ratio && r.pe_ratio < 15 && r.revenue_growth > 0.05) opportunities.push('Potentially undervalued with solid growth');
+  if (r.pe_ratio && r.pe_ratio > 0 && r.pe_ratio < 15 && r.revenue_growth > 0.05) opportunities.push('Potentially undervalued with solid growth');
   if (r.recommendation_mean && r.recommendation_mean < 2) opportunities.push('Strong analyst consensus — buy rating');
   if (r.target_mean_price && r.price && r.target_mean_price > r.price * 1.15) opportunities.push(`Analyst price target ${((r.target_mean_price / r.price - 1) * 100).toFixed(0)}% above current price`);
 
