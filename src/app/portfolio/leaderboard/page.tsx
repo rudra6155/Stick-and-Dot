@@ -68,7 +68,7 @@ export default async function LeaderboardPage({
 
   validPicks.forEach(pick => {
     const currentPrice = currentPrices[pick.ticker];
-    if (currentPrice !== undefined && pick.picked_at_price) {
+    if (currentPrice !== undefined && currentPrice !== 0 && pick.picked_at_price) {
       const roi = ((currentPrice - pick.picked_at_price) / pick.picked_at_price) * 100;
       
       if (!userStats[pick.user_id]) {

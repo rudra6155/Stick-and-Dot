@@ -23,7 +23,9 @@ const CLASS_COLORS: Record<string, string> = {
 };
 
 function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const time = new Date(dateStr).getTime();
+  if (!dateStr || isNaN(time)) return "—";
+  const diff = Date.now() - time;
   const mins = Math.floor(diff / 60000);
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
@@ -54,11 +56,13 @@ export default function NewsPage() {
       const data = await res.json();
       if (data.articles) setArticles(data.articles);
     } catch (e: any) {
-      if (e.name === 'AbortError') return;
-      console.error(e);
-      setError(e.message || 'Something went wrong');
+      if (e.name !== 'AbortError') {
+        console.error(e);
+        setError(e.message || 'Something went wrong');
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {

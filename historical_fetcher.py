@@ -112,24 +112,51 @@ def push_historical_data():
 
     # Query Supabase for already-synced tickers and skip them
     try:
-        print("Querying existing tickers from Supabase...")
+        print("Querying existing tickers from price_history...")
         existing_tickers = set()
         start = 0
         limit = 1000
         while True:
-            res = supabase.table('asset_snapshots').select('ticker').range(start, start + limit - 1).execute()
-            if not res.data:
-                break
-            for row in res.data:
-                if row.get('ticker'):
-                    existing_tickers.add(row['ticker'])
-            if len(res.data) < limit:
-                break
-            start += limit
-        print(f"Already in Supabase: {len(existing_tickers)}")
+            res = supabase.rpc('get_distinct_price_history_tickers', {}).execute()
+            if res.data:
+                for row in res.data:
+                    if row.get('ticker'):
+                        existing_tickers.add(row['ticker'])
+            break
+        if not existing_tickers:
+            # Fallback: paginate price_history directly
+            start = 0
+            while True:
+                res = supabase.table('price_history').select('ticker').range(start, start + limit - 1).execute()
+                if not res.data:
+                    break
+                for row in res.data:
+                    if row.get('ticker'):
+                        existing_tickers.add(row['ticker'])
+                if len(res.data) < limit:
+                    break
+                start += limit
+        print(f"Already have history for: {len(existing_tickers)} tickers")
     except Exception as e:
-        print(f"Error querying existing tickers from Supabase: {e}")
+        print(f"Error querying existing tickers from price_history: {e}")
+        # Fallback: paginate price_history directly
         existing_tickers = set()
+        try:
+            start = 0
+            while True:
+                res = supabase.table('price_history').select('ticker').range(start, start + limit - 1).execute()
+                if not res.data:
+                    break
+                for row in res.data:
+                    if row.get('ticker'):
+                        existing_tickers.add(row['ticker'])
+                if len(res.data) < limit:
+                    break
+                start += limit
+            print(f"Fallback: Already have history for: {len(existing_tickers)} tickers")
+        except Exception as e2:
+            print(f"Fallback also failed: {e2}")
+            existing_tickers = set()
 
     # Filter the list to only fetch what's missing
     rows_to_fetch = [r for r in rows if r[0] not in existing_tickers]
@@ -145,12 +172,11 @@ def push_historical_data():
             try:
                 t = yf.Ticker(ticker)
                 info = t.info
-                
-                # Skipping price_history entirely for this run - skip history query
-                # hist = t.history(period="6mo")
-                # if hist.empty:
-                #     print("No history")
-                #     continue
+
+                hist = t.history(period="6mo")
+                if hist.empty:
+                    print("No history")
+                    continue
 
                 price = info.get('currentPrice') or info.get('regularMarketPrice')
                 if not price:
@@ -201,38 +227,38 @@ def push_historical_data():
                     'country': info.get('country'),
                 }, on_conflict='ticker,asset_class,coin_id').execute()
 
-                # Insert price history rows - commented out for this run
-                # rows_hist = []
-                # for date, row in hist.iterrows():
-                #     rows_hist.append({
-                #         'ticker': ticker,
-                #         'asset_class': asset_class,
-                #         'date': str(date.date()),
-                #         'open': float(row['Open']),
-                #         'high': float(row['High']),
-                #         'low': float(row['Low']),
-                #         'close': float(row['Close']),
-                #         'volume': float(row['Volume']),
-                #     })
+                # Insert price history rows
+                rows_hist = []
+                for date, row in hist.iterrows():
+                    rows_hist.append({
+                        'ticker': ticker,
+                        'asset_class': asset_class,
+                        'date': str(date.date()),
+                        'open': float(row['Open']),
+                        'high': float(row['High']),
+                        'low': float(row['Low']),
+                        'close': float(row['Close']),
+                        'volume': float(row['Volume']),
+                    })
 
                 # Batch insert in chunks of 100
-                # for i in range(0, len(rows_hist), 100):
-                #     supabase.table('price_history').upsert(
-                #         rows_hist[i:i+100], on_conflict='ticker,date'
-                #     ).execute()
+                for i in range(0, len(rows_hist), 100):
+                    supabase.table('price_history').upsert(
+                        rows_hist[i:i+100], on_conflict='ticker,date'
+                    ).execute()
 
-                print("OK")
+                print(f"OK ({len(rows_hist)} rows)")
                 consecutive_rate_limits = 0
 
             except Exception as e:
                 err_str = str(e)
                 if "Too Many Requests" in err_str or "429" in err_str:
                     consecutive_rate_limits += 1
-                    print(f"\nRate limited on {ticker}. Consecutive: {consecutive_rate_limits}/3. Backing off 60s...")
-                    if consecutive_rate_limits >= 3:
+                    print(f"\nRate limited on {ticker}. Consecutive: {consecutive_rate_limits}/5. Backing off 90s...")
+                    if consecutive_rate_limits >= 5:
                         print("Too many consecutive rate limits, stopping this run.")
                         break
-                    time.sleep(60)
+                    time.sleep(90)
                     continue
                 print(f"Failed ({e})")
                 continue

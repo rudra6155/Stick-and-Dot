@@ -42,10 +42,13 @@ export async function POST(req: NextRequest) {
   }
   const topic = body.topic || 'finance';
 
-  const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(topic)}&lang=en&country=us&max=10&apikey=${GNEWS_API_KEY}`;
+  const url = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(topic)}&newsCount=10`;
 
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { 
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      signal: AbortSignal.timeout(10000) 
+    });
     let data;
     try {
       data = await res.json();
@@ -53,16 +56,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid JSON response from news API' }, { status: 500 });
     }
 
-    if (!data.articles) {
+    if (!data.news) {
       return NextResponse.json({ error: 'No articles returned' }, { status: 500 });
     }
 
-    const articles = data.articles.map((article: any) => {
-      const combined = `${article.title || ''} ${article.description || ''}`;
+    const articles = data.news.map((item: any) => {
+      const combined = `${item.title || ''}`;
       return {
-        ...article,
+        title: item.title,
+        description: "",
+        url: item.link,
+        source: { name: item.publisher || 'Yahoo Finance' },
+        publishedAt: item.providerPublishTime ? new Date(item.providerPublishTime * 1000).toISOString() : new Date().toISOString(),
         related_classes: getRelatedClasses(combined),
-        sentiment: getSentiment(article.title || ''),
+        sentiment: getSentiment(item.title || ''),
       };
     });
 

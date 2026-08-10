@@ -36,12 +36,12 @@ export async function POST(req: NextRequest) {
   } else {
     if (asset_class) query = query.eq('asset_class', asset_class);
     if (sector) query = query.eq('sector', sector);
-    if (max_pe) query = query.lte('pe_ratio', max_pe).gt('pe_ratio', 0);
-    if (min_dividend_yield) query = query.gte('dividend_yield', min_dividend_yield);
-    if (min_revenue_growth) query = query.gte('revenue_growth', min_revenue_growth);
-    if (max_beta) query = query.lte('beta', max_beta);
-    if (min_roe) query = query.gte('return_on_equity', min_roe);
-    if (min_market_cap) query = query.gte('market_cap', min_market_cap);
+    if (max_pe !== undefined) query = query.lte('pe_ratio', max_pe).gt('pe_ratio', 0);
+    if (min_dividend_yield !== undefined) query = query.gte('dividend_yield', min_dividend_yield);
+    if (min_revenue_growth !== undefined) query = query.gte('revenue_growth', min_revenue_growth);
+    if (max_beta !== undefined) query = query.lte('beta', max_beta);
+    if (min_roe !== undefined) query = query.gte('return_on_equity', min_roe);
+    if (min_market_cap !== undefined) query = query.gte('market_cap', min_market_cap);
   }
 
   const { data: assets, error: assetError } = await query;
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     const months = Object.keys(monthly).sort();
     const monthly_returns = months.slice(1).map((m, i) => ({
       month: m,
-      return_pct: ((monthly[m] - monthly[months[i]]) / monthly[months[i]]) * 100,
+      return_pct: monthly[months[i]] !== 0 ? ((monthly[m] - monthly[months[i]]) / monthly[months[i]]) * 100 : 0,
     }));
 
     return {

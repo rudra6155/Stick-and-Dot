@@ -44,7 +44,7 @@ export default function PortfolioPerformance({ picks, assets, totalValue }: Perf
       if (pnl > bestPick.pnl) bestPick = { ticker: p.ticker, pnl };
       if (pnl < worstPick.pnl) worstPick = { ticker: p.ticker, pnl };
 
-      if (asset.beta) {
+      if (asset.beta && totalValue > 0) {
         totalBeta += asset.beta * (currentVal / totalValue);
         betaCount++;
       }

@@ -110,11 +110,13 @@ export default function ScreenerPage() {
       const data = await res.json();
       if (data.results) setResults(data.results);
     } catch (e: any) {
-      if (e.name === 'AbortError') return;
-      console.error(e);
-      setError(e.message || 'Something went wrong');
+      if (e.name !== 'AbortError') {
+        console.error(e);
+        setError(e.message || 'Something went wrong');
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => { fetchResults(); }, []);

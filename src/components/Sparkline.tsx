@@ -44,13 +44,19 @@ export default function Sparkline({ data, isUp, width = 400, height = 120 }: { d
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "0px" });
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const reactId = useId();
+
+  if (!data || data.length === 0) {
+    return (
+      <div style={{ height }} className="w-full flex items-center justify-center">
+        <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-600">No historical data</span>
+      </div>
+    );
+  }
 
   const color = isUp ? "#10b981" : "#f43f5e"; // emerald-500 or rose-500
-  // Handle case where range is 0 or data is missing
-  const safeData = data && data.length > 0 ? data : [0,0,0,0,0,0,0];
-  const path = generatePath(safeData, width, height);
-  const areaPath = generateAreaPath(safeData, width, height);
-  const reactId = useId();
+  const path = generatePath(data, width, height);
+  const areaPath = generateAreaPath(data, width, height);
   const filterId = `glow-${isUp ? 'up' : 'down'}-${reactId}`;
 
   return (

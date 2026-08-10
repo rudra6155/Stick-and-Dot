@@ -16,6 +16,7 @@ type FloatingTicker = {
   vy: number;
   pulseTimer: number;
   isPulsing: boolean;
+  pulseFramesLeft: number;
 };
 
 export default function TickerHeartbeat({ assets }: TickerHeartbeatProps) {
@@ -50,7 +51,8 @@ export default function TickerHeartbeat({ assets }: TickerHeartbeatProps) {
       vx: (Math.random() - 0.5) * 0.4,
       vy: (Math.random() - 0.5) * 0.4,
       pulseTimer: Math.random() * 500, // random start time for pulsing
-      isPulsing: false
+      isPulsing: false,
+      pulseFramesLeft: 0
     }));
 
     let nodes: HTMLElement[] = [];
@@ -84,11 +86,14 @@ export default function TickerHeartbeat({ assets }: TickerHeartbeatProps) {
         if (t.pulseTimer <= 0) {
           t.isPulsing = true;
           t.pulseTimer = 300 + Math.random() * 500; // Reset timer
+          t.pulseFramesLeft = 60; // Let it pulse for 60 frames (1 second), computed once
         }
-        
-        // Let it pulse for 60 frames (1 second)
-        if (t.isPulsing && t.pulseTimer < (300 + Math.random() * 500) - 60) {
-           t.isPulsing = false;
+
+        if (t.isPulsing) {
+          t.pulseFramesLeft--;
+          if (t.pulseFramesLeft <= 0) {
+            t.isPulsing = false;
+          }
         }
 
         // Apply transforms via DOM for performance (bypassing React state)

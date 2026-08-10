@@ -23,7 +23,7 @@ function DigitRoller({ char, index }: { char: string; index: number }) {
     const digit = parseInt(char, 10);
     // Animate to the correct digit position
     gsap.to(innerRef.current, {
-      y: -(digit * 1), // em units
+      y: `-${digit}em`,
       duration: 0.8 + index * 0.05,
       ease: "power3.out",
       delay: index * 0.04,

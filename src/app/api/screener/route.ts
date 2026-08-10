@@ -6,6 +6,14 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const SORTABLE_COLUMNS = new Set([
+  'ticker', 'price', 'market_cap', 'pe_ratio', 'forward_pe', 'price_to_book',
+  'price_to_sales', 'ev_to_ebitda', 'dividend_yield', 'earnings_growth',
+  'revenue_growth', 'profit_margins', 'high_52_week', 'low_52_week',
+  'ma_50_day', 'ma_200_day', 'beta', 'volume', 'avg_volume',
+  'return_on_equity', 'return_on_assets',
+]);
+
 export async function POST(req: NextRequest) {
   let body;
   try {
@@ -20,7 +28,7 @@ export async function POST(req: NextRequest) {
   const {
     asset_class,
     sector,
-    sort_by = 'revenue_growth',
+    sort_by: rawSortBy = 'revenue_growth',
     sort_dir = 'desc',
     min_market_cap,
     max_pe,
@@ -31,6 +39,8 @@ export async function POST(req: NextRequest) {
     min_roe,
   } = body;
 
+  const sort_by = SORTABLE_COLUMNS.has(rawSortBy) ? rawSortBy : 'revenue_growth';
+
   let query = supabase
     .from('asset_snapshots')
     .select('*')
@@ -38,7 +48,7 @@ export async function POST(req: NextRequest) {
     .limit(limit);
 
   if (search) {
-    const q = search.trim().replace(/[%_]/g, '\\$&').replace(/[,().]/g, '');
+    const q = search.trim().replace(/[%_]/g, '\\$&').replace(/[,()]/g, '');
     if (q) {
       query = query.or(`ticker.ilike.%${q}%,short_name.ilike.%${q}%`);
     }
@@ -46,13 +56,13 @@ export async function POST(req: NextRequest) {
 
   if (asset_class) query = query.eq('asset_class', asset_class);
   if (sector) query = query.eq('sector', sector);
-  if (min_market_cap) query = query.gte('market_cap', min_market_cap);
-  if (max_pe) query = query.lte('pe_ratio', max_pe).gt('pe_ratio', 0);
-  if (min_dividend_yield) query = query.gte('dividend_yield', min_dividend_yield);
-  if (min_revenue_growth) query = query.gte('revenue_growth', min_revenue_growth);
-  if (min_profit_margins) query = query.gte('profit_margins', min_profit_margins);
-  if (max_beta) query = query.lte('beta', max_beta);
-  if (min_roe) query = query.gte('return_on_equity', min_roe);
+  if (min_market_cap !== undefined) query = query.gte('market_cap', min_market_cap);
+  if (max_pe !== undefined) query = query.lte('pe_ratio', max_pe).gt('pe_ratio', 0);
+  if (min_dividend_yield !== undefined) query = query.gte('dividend_yield', min_dividend_yield);
+  if (min_revenue_growth !== undefined) query = query.gte('revenue_growth', min_revenue_growth);
+  if (min_profit_margins !== undefined) query = query.gte('profit_margins', min_profit_margins);
+  if (max_beta !== undefined) query = query.lte('beta', max_beta);
+  if (min_roe !== undefined) query = query.gte('return_on_equity', min_roe);
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

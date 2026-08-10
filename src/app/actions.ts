@@ -235,7 +235,7 @@ export async function fetchAssetsPaginated(params: {
   }
 
   if (params.searchQuery.trim() !== '') {
-    const q = params.searchQuery.trim().replace(/[%_]/g, '\\$&').replace(/[,().]/g, '');
+    const q = params.searchQuery.trim().replace(/[%_]/g, '\\$&').replace(/[,()]/g, '');
     query = query.or(`ticker.ilike.%${q}%,short_name.ilike.%${q}%`, { referencedTable: undefined });
   }
 

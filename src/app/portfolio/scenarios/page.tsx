@@ -32,7 +32,8 @@ export default function ScenariosPage() {
     setError("");
     setActiveScenario(scenario);
     setGroups([]);
-    
+    setLogic("");
+
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
 
@@ -48,10 +49,10 @@ export default function ScenariosPage() {
       if (data.groups) setGroups(data.groups);
       if (data.logic) setLogic(data.logic);
     } catch (e: any) {
-      if (e.name === 'AbortError') return;
-      setError("Failed to fetch scenario analysis");
+      if (e.name !== 'AbortError') setError("Failed to fetch scenario analysis");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -132,7 +133,7 @@ export default function ScenariosPage() {
                             <td className="p-4 text-right font-mono text-zinc-400">{formatVal(r.dividend_yield, "dividend_yield")}</td>
                             <td className="p-4 text-right font-mono text-zinc-400">{formatVal(r.market_cap, "market_cap")}</td>
                             <td className={`p-4 text-right font-mono ${r.beta < 1 ? 'text-emerald-400' : r.beta < 1.5 ? 'text-yellow-400' : 'text-rose-400'}`}>
-                              {r.beta ? r.beta.toFixed(2) : "—"}
+                              {r.beta != null ? r.beta.toFixed(2) : "—"}
                             </td>
                           </tr>
                         ))}

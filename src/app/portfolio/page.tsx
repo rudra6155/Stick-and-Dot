@@ -237,9 +237,10 @@ export default function MyPortfolioPage() {
         body: JSON.stringify({ scenario_key: scenarioId, user_holdings: userHoldings }),
       });
       const data = await res.json();
-      if (data.alignment) {
-        setAlignmentData(data);
+      if (!res.ok || !data.alignment) {
+        throw new Error(data.error || "Failed to align portfolio with this scenario.");
       }
+      setAlignmentData(data);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'Something went wrong');

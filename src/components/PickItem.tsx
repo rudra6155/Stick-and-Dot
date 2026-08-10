@@ -55,7 +55,7 @@ export function PickItem({
   const itemRef = useRef<HTMLDivElement>(null);
   const tiltRef = useRef<HTMLDivElement>(null);
   const amountRef = useRef<HTMLSpanElement>(null);
-  const pickAmount = Number(pick.amount);
+  const pickAmount = Number(pick.amount) || 0;
   const pickClass = pick.asset_class || "Stock";
   const classStyle = getClassStyle(pickClass);
 

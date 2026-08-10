@@ -74,10 +74,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid ticker' }, { status: 400 });
   }
 
+  const escapedTicker = ticker.trim().replace(/[%_]/g, '\\$&');
+
   const { data, error } = await supabase
     .from('asset_snapshots')
     .select('*')
-    .ilike('ticker', ticker.trim())
+    .ilike('ticker', escapedTicker)
     .limit(1)
     .single();
 
