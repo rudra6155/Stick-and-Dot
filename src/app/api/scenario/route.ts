@@ -21,54 +21,54 @@ const SCENARIOS: Record<string, {
     description: "US-China tensions rising — rotate to domestic US, gold, defense",
     logic: "In US-China tension scenarios, defense contractors and domestic manufacturers outperform. Gold acts as a safe haven. Avoid tech with heavy China exposure.",
     queries: [
-      { label: "Defense & Industrials", filters: { asset_class: "Stock", sector: "Industrials" }, sort_by: "revenue_growth", limit: 5 },
-      { label: "Safe Haven ETFs", filters: { asset_class: "ETF" }, sort_by: "dividend_yield", limit: 5 },
-      { label: "Commodities", filters: { asset_class: "Commodity" }, sort_by: "price", limit: 5 },
+      { label: "Defense & Industrials", filters: { asset_class: "Stock", sector: "Industrials" }, sort_by: "revenue_growth", limit: 15 },
+      { label: "Safe Haven ETFs", filters: { asset_class: "ETF" }, sort_by: "dividend_yield", limit: 15 },
+      { label: "Commodities", filters: { asset_class: "Commodity" }, sort_by: "price", limit: 15 },
     ]
   },
   inflation_high: {
     description: "High inflation — commodities, REITs, dividend stocks outperform",
     logic: "High inflation erodes cash. Hard assets like commodities and real estate historically preserve value. Dividend stocks provide income above inflation.",
     queries: [
-      { label: "Commodities", filters: { asset_class: "Commodity" }, sort_by: "price", limit: 5 },
-      { label: "REITs", filters: { asset_class: "REIT" }, sort_by: "dividend_yield", limit: 5 },
-      { label: "High Dividend Stocks", filters: { asset_class: "Stock" }, sort_by: "dividend_yield", limit: 5 },
+      { label: "Commodities", filters: { asset_class: "Commodity" }, sort_by: "price", limit: 15 },
+      { label: "REITs", filters: { asset_class: "REIT" }, sort_by: "dividend_yield", limit: 15 },
+      { label: "High Dividend Stocks", filters: { asset_class: "Stock" }, sort_by: "dividend_yield", limit: 15 },
     ]
   },
   rate_hike: {
     description: "Rate hike cycle — financials gain, growth stocks drop",
     logic: "Rising rates boost bank margins. Avoid high-PE growth stocks — their future earnings are worth less. Short-duration bonds outperform long-duration.",
     queries: [
-      { label: "Financial Services", filters: { asset_class: "Stock", sector: "Financial Services" }, sort_by: "return_on_equity", limit: 5 },
-      { label: "Short Duration Bonds", filters: { asset_class: "Bond" }, sort_by: "dividend_yield", limit: 5 },
-      { label: "Value Stocks", filters: { asset_class: "Stock" }, sort_by: "pe_ratio", sort_dir: "asc", limit: 5 },
+      { label: "Financial Services", filters: { asset_class: "Stock", sector: "Financial Services" }, sort_by: "return_on_equity", limit: 15 },
+      { label: "Short Duration Bonds", filters: { asset_class: "Bond" }, sort_by: "dividend_yield", limit: 15 },
+      { label: "Value Stocks", filters: { asset_class: "Stock" }, sort_by: "pe_ratio", sort_dir: "asc", limit: 15 },
     ]
   },
   recession_fear: {
     description: "Recession fears — defensive sectors, bonds, gold",
     logic: "Recessions hit cyclical stocks hard. Consumer staples, utilities, and healthcare hold up because demand is inelastic. Bonds and gold act as flight-to-safety assets.",
     queries: [
-      { label: "Defensive Stocks", filters: { asset_class: "Stock", sector: "Consumer Defensive" }, sort_by: "dividend_yield", limit: 5 },
-      { label: "Bonds", filters: { asset_class: "Bond" }, sort_by: "dividend_yield", limit: 5 },
-      { label: "Healthcare", filters: { asset_class: "Stock", sector: "Healthcare" }, sort_by: "profit_margins", limit: 5 },
+      { label: "Defensive Stocks", filters: { asset_class: "Stock", sector: "Consumer Defensive" }, sort_by: "dividend_yield", limit: 15 },
+      { label: "Bonds", filters: { asset_class: "Bond" }, sort_by: "dividend_yield", limit: 15 },
+      { label: "Healthcare", filters: { asset_class: "Stock", sector: "Healthcare" }, sort_by: "profit_margins", limit: 15 },
     ]
   },
   ai_boom: {
     description: "AI boom — semiconductors, cloud, data infrastructure",
     logic: "AI capex is flowing into chips, cloud compute, and data centers. Companies enabling AI infrastructure are growing revenues faster than end-use AI apps.",
     queries: [
-      { label: "Technology Leaders", filters: { asset_class: "Stock", sector: "Technology" }, sort_by: "revenue_growth", limit: 5 },
-      { label: "Tech ETFs", filters: { asset_class: "ETF" }, sort_by: "market_cap", limit: 5 },
-      { label: "International Tech", filters: { asset_class: "International" }, sort_by: "revenue_growth", limit: 5 },
+      { label: "Technology Leaders", filters: { asset_class: "Stock", sector: "Technology" }, sort_by: "revenue_growth", limit: 15 },
+      { label: "Tech ETFs", filters: { asset_class: "ETF" }, sort_by: "market_cap", limit: 15 },
+      { label: "International Tech", filters: { asset_class: "International" }, sort_by: "revenue_growth", limit: 15 },
     ]
   },
   india_growth: {
     description: "India growth story — Indian equities, infrastructure, banking",
     logic: "India is the fastest growing major economy. Demographics, digital adoption, and infrastructure spending are secular tailwinds. Banking and consumption are key beneficiaries.",
     queries: [
-      { label: "Indian Stocks", filters: { asset_class: "Indian Stock" }, sort_by: "revenue_growth", limit: 8 },
-      { label: "Indian Banking", filters: { asset_class: "Indian Stock", sector: "Financial Services" }, sort_by: "return_on_equity", limit: 4 },
-      { label: "Emerging Market ETFs", filters: { asset_class: "ETF" }, sort_by: "market_cap", limit: 3 },
+      { label: "Indian Stocks", filters: { asset_class: "Indian Stock" }, sort_by: "revenue_growth", limit: 15 },
+      { label: "Indian Banking", filters: { asset_class: "Indian Stock", sector: "Financial Services" }, sort_by: "return_on_equity", limit: 10 },
+      { label: "Emerging Market ETFs", filters: { asset_class: "ETF" }, sort_by: "market_cap", limit: 10 },
     ]
   },
 };
