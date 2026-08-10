@@ -4,8 +4,9 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { fetchAssetsPaginated, fetchAssetClassCounts } from "@/app/actions";
 import { createClient } from "@/utils/supabase/client";
-import { Search, Filter, ArrowUp, ArrowDown, ArrowLeft } from "lucide-react";
-import { AssetCard } from "@/components/AssetCard";
+import { Search, Filter, ArrowUp, ArrowDown, ArrowLeft, Settings2, Check, ChevronDown } from "lucide-react";
+import { AssetCard, AVAILABLE_METRICS } from "@/components/AssetCard";
+import { motion, AnimatePresence } from "framer-motion";
 
 type Asset = any;
 
@@ -24,6 +25,16 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
   const [sortBy, setSortBy] = useState("Market Cap");
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
   const [isSortOpen, setIsSortOpen] = useState(false);
+  const [isMetricsOpen, setIsMetricsOpen] = useState(false);
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>([
+    "marketCap", "volume", "peRatio", "dividendYield"
+  ]);
+
+  const toggleMetric = (id: string) => {
+    setSelectedMetrics(prev =>
+      prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+    );
+  };
   
   const [offset, setOffset] = useState(0);
   const [totalCount, setTotalCount] = useState<number | null>(null);
@@ -37,8 +48,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
   const [requestStatus, setRequestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const supabase = createClient();
   
-  // Basic metrics for all cards on this page
-  const selectedMetrics = ["marketCap", "volume", "peRatio", "dividendYield"];
+  // We use selectedMetrics from state now
 
   useEffect(() => {
     fetchAssetClassCounts().catch(() => ({})).then(counts => {
@@ -165,10 +175,51 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
 
           {/* Controls */}
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {/* Metrics Dropdown */}
+            <div className="relative shrink-0">
+              <button 
+                onClick={() => { setIsMetricsOpen(!isMetricsOpen); setIsSortOpen(false); }}
+                aria-expanded={isMetricsOpen}
+                aria-label="Toggle metrics menu"
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-900/50 border border-zinc-800 rounded-xl text-sm hover:bg-zinc-800 transition-colors"
+              >
+                <Settings2 className="w-4 h-4 text-zinc-400" />
+                <span className="hidden sm:inline text-zinc-400">Metrics</span>
+                <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${isMetricsOpen ? "rotate-180" : ""}`} />
+              </button>
+              <AnimatePresence>
+                {isMetricsOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-72 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl z-50 p-2 grid grid-cols-2 gap-1"
+                  >
+                    {AVAILABLE_METRICS.map(metric => {
+                      const isSelected = selectedMetrics.includes(metric.id);
+                      return (
+                        <button
+                          key={metric.id}
+                          onClick={() => toggleMetric(metric.id)}
+                          className={`flex items-center gap-1.5 px-2 py-2 rounded-xl text-[11px] font-medium transition-colors ${isSelected ? "bg-emerald-500/10 text-emerald-400" : "hover:bg-zinc-800 text-zinc-400"}`}
+                        >
+                          <div className={`w-3 h-3 rounded flex items-center justify-center shrink-0 border transition-colors ${isSelected ? "border-emerald-500 bg-emerald-500/20" : "border-zinc-700"}`}>
+                            {isSelected && <Check size={8} className="text-emerald-400" />}
+                          </div>
+                          {metric.label}
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Sort Dropdown */}
             {/* Sort Dropdown */}
             <div className="relative shrink-0">
               <button 
-                onClick={() => setIsSortOpen(!isSortOpen)}
+                onClick={() => { setIsSortOpen(!isSortOpen); setIsMetricsOpen(false); }}
                 aria-expanded={isSortOpen}
                 aria-label="Toggle sort menu"
                 className="flex items-center gap-2 px-4 py-2 bg-zinc-900/50 border border-zinc-800 rounded-xl text-sm hover:bg-zinc-800 transition-colors"
@@ -231,9 +282,9 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {assets.map(asset => (
-              <Link key={asset.symbol} href={`/portfolio/explore/${encodeURIComponent(assetClass)}/${encodeURIComponent(asset.symbol)}`}>
-                <AssetCard asset={asset} selectedMetrics={selectedMetrics} index={0} />
+            {assets.map((asset, index) => (
+              <Link key={asset.symbol} href={`/portfolio/explore/${encodeURIComponent(assetClass)}/${encodeURIComponent(asset.symbol)}`} className="block">
+                <AssetCard asset={asset} selectedMetrics={selectedMetrics} index={index} />
               </Link>
             ))}
           </div>
