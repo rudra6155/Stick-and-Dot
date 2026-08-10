@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
 
   const search = typeof body.search === 'string' ? body.search : '';
   const limit = Math.min(body.limit || 50, 500);
+  const offset = Math.max(Number(body.offset) || 0, 0);
 
   const {
     asset_class,
@@ -43,9 +44,10 @@ export async function POST(req: NextRequest) {
 
   let query = supabase
     .from('asset_snapshots')
-    .select('*')
+    .select('*', { count: 'exact' })
     .order(sort_by, { ascending: sort_dir === 'asc' })
-    .limit(limit);
+    .order('ticker', { ascending: true })
+    .range(offset, offset + limit - 1);
 
   if (search) {
     const q = search.trim().replace(/[%_]/g, '\\$&').replace(/[,()]/g, '');
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest) {
   if (max_beta !== undefined) query = query.lte('beta', max_beta);
   if (min_roe !== undefined) query = query.gte('return_on_equity', min_roe);
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
 
   // Compute investment scores for each result
@@ -83,5 +85,5 @@ export async function POST(req: NextRequest) {
     };
   });
 
-  return NextResponse.json({ results: scored });
+  return NextResponse.json({ results: scored, total: count || 0, offset, limit });
 }

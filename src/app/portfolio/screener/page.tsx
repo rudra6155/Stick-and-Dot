@@ -76,7 +76,9 @@ export default function ScreenerPage() {
   const [maxBeta, setMaxBeta] = useState("");
   const [minRoe, setMinRoe] = useState("");
   const [results, setResults] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -103,12 +105,15 @@ export default function ScreenerPage() {
       const res = await fetch("/api/screener", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ limit: 200, ...(overrideFilters || buildFilters()) }),
+        body: JSON.stringify({ limit: 200, offset: 0, ...(overrideFilters || buildFilters()) }),
         signal: abortControllerRef.current.signal,
       });
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
-      if (data.results) setResults(data.results);
+      if (data.results) {
+        setResults(data.results);
+        setTotalCount(data.total ?? data.results.length);
+      }
     } catch (e: any) {
       if (e.name !== 'AbortError') {
         console.error(e);
@@ -116,6 +121,32 @@ export default function ScreenerPage() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMoreResults = async () => {
+    if (loadingMore || loading || (totalCount !== null && results.length >= totalCount)) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetch("/api/screener", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limit: 200, offset: results.length, ...(buildFilters()) }),
+      });
+      if (!res.ok) throw new Error("Failed to fetch more");
+      const data = await res.json();
+      if (data.results) {
+        setResults((prev) => {
+          const existingTickers = new Set(prev.map(r => r.ticker));
+          const newRows = data.results.filter((r: any) => !existingTickers.has(r.ticker));
+          return [...prev, ...newRows];
+        });
+        if (data.total !== undefined) setTotalCount(data.total);
+      }
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -251,10 +282,15 @@ export default function ScreenerPage() {
         </div>
 
         {/* Results count */}
-        {results.length > 0 && (
-          <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest">
-            {results.length} assets matched
-          </p>
+        {totalCount !== null && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 font-mono text-xs text-zinc-500 uppercase tracking-widest">
+            <span>
+              Showing top {results.length.toLocaleString()} of {totalCount.toLocaleString()} matching assets
+            </span>
+            <span className="text-zinc-600">
+              Database: 36,000+ assets screened
+            </span>
+          </div>
         )}
 
         {/* Results Table */}
@@ -337,6 +373,26 @@ export default function ScreenerPage() {
           </table>
           )}
           </div>
+
+          {/* Load More Button */}
+          {results.length > 0 && totalCount !== null && results.length < totalCount && (
+            <div className="flex justify-center p-6 border-t border-zinc-800/80 bg-zinc-950/80">
+              <button
+                onClick={fetchMoreResults}
+                disabled={loadingMore}
+                className="px-8 py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-emerald-400 font-mono text-xs font-bold rounded-xl transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              >
+                {loadingMore ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                    <span>Loading next 200 assets…</span>
+                  </>
+                ) : (
+                  <span>Load More Assets ({results.length.toLocaleString()} of {totalCount.toLocaleString()})</span>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
