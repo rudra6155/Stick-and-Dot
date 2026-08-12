@@ -7,7 +7,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });
 
 const GNEWS_API_KEY = process.env.GNEWS_API_KEY!;
 
@@ -118,6 +117,8 @@ IMPORTANT:
 - watch_asset_classes has 1-2 entries per scenario
 - projected_return_pct is a NUMBER, not a string
 - Pick the 3 events with the HIGHEST profit potential and clearest thesis`;
+
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '' });
 
   const completion = await groq.chat.completions.create({
     model: 'llama-3.3-70b-versatile',
