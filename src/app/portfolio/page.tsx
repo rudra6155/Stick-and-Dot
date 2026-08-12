@@ -142,6 +142,23 @@ export default function MyPortfolioPage() {
 
   const supabase = createClient();
 
+  const [topDynamicScenario, setTopDynamicScenario] = useState<any>(null);
+
+  useEffect(() => {
+    async function fetchTopDynamicScenario() {
+      try {
+        const res = await fetch("/api/dynamic-scenarios");
+        const data = await res.json();
+        if (data.scenarios && data.scenarios.length > 0) {
+          setTopDynamicScenario(data.scenarios[0]);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    fetchTopDynamicScenario();
+  }, []);
+
   const loadPortfolio = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -291,6 +308,36 @@ export default function MyPortfolioPage() {
     <div className="space-y-8 pb-32">
       {/* ─── Vault Header ─────────────────────── */}
       <div className="relative" ref={dropdownRef}>
+        {/* Dynamic Scenario Banner */}
+        {topDynamicScenario && (
+          <div className="mb-6 max-w-7xl mx-auto px-4 md:px-0">
+            <div className="relative bg-zinc-950 border border-emerald-500/30 rounded-2xl p-4 overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent opacity-50 pointer-events-none" />
+              <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
+                    <span className="text-xl">{topDynamicScenario.emoji}</span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400">Trending Now</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    </div>
+                    <h3 className="text-white font-bold">{topDynamicScenario.title}</h3>
+                    <p className="text-sm text-zinc-400 line-clamp-1">{topDynamicScenario.summary}</p>
+                  </div>
+                </div>
+                <Link
+                  href="/portfolio/scenarios"
+                  className="shrink-0 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-sm text-white font-medium transition-colors flex items-center gap-2"
+                >
+                  View Preset <span className="text-emerald-400">→</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         <VaultHeader
           totalValue={totalValue}
           picksCount={validPicks.length}

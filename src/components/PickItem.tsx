@@ -264,7 +264,7 @@ export function PickItem({
               {/* Mini sparkline */}
               <div className="opacity-40 group-hover:opacity-80 transition-opacity duration-500 hidden sm:block w-20">
                 <Sparkline
-                  data={asset.history?.length > 0 ? asset.history : [0, 1, 0.5, 0.8, 0.3, 0.9, 0.7]}
+                  data={asset.history}
                   isUp={isProfit}
                   height={28}
                 />

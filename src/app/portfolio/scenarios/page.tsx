@@ -1,5 +1,6 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import DynamicScenarioCard from "@/components/DynamicScenarioCard";
 
 const SCENARIOS = [
   { key: "us_china_tension", title: "🇺🇸🇨🇳 US-China Tensions", desc: "Rotate to domestic US, gold, defense" },
@@ -24,6 +25,29 @@ export default function ScenariosPage() {
   const [activeScenario, setActiveScenario] = useState<any>(null);
   const [logic, setLogic] = useState("");
   const [error, setError] = useState("");
+
+  const [dynamicScenarios, setDynamicScenarios] = useState<any[]>([]);
+  const [loadingDynamic, setLoadingDynamic] = useState(true);
+  const [dynamicError, setDynamicError] = useState("");
+
+  useEffect(() => {
+    async function fetchDynamicScenarios() {
+      try {
+        const res = await fetch("/api/dynamic-scenarios");
+        const data = await res.json();
+        if (data.scenarios) {
+          setDynamicScenarios(data.scenarios);
+        } else {
+          setDynamicError("Failed to load dynamic scenarios");
+        }
+      } catch {
+        setDynamicError("Network error loading dynamic scenarios");
+      } finally {
+        setLoadingDynamic(false);
+      }
+    }
+    fetchDynamicScenarios();
+  }, []);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -63,6 +87,42 @@ export default function ScenariosPage() {
         <div className="text-center">
           <h1 className="text-5xl font-black tracking-tight">Scenario Engine</h1>
           <p className="text-emerald-400 mt-2 font-mono text-sm uppercase tracking-widest">Pick a macro scenario, get asset recommendations</p>
+        </div>
+
+        {/* Trending Now (Dynamic) */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <h2 className="text-2xl font-bold tracking-tight">Trending Now</h2>
+            <div className="h-px bg-zinc-800 flex-1"></div>
+          </div>
+          
+          {loadingDynamic ? (
+            <div className="py-12 text-center text-zinc-500 font-mono animate-pulse">
+              Analyzing latest news events...
+            </div>
+          ) : dynamicError ? (
+            <div className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-6 text-rose-400 font-mono text-sm text-center">
+              {dynamicError}
+            </div>
+          ) : dynamicScenarios.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {dynamicScenarios.map((scenario) => (
+                <div key={scenario.id} className="min-w-0">
+                  <DynamicScenarioCard scenario={scenario} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-zinc-500 font-mono py-8 bg-zinc-950 border border-zinc-800 rounded-2xl">
+              No active events right now.
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="h-px bg-zinc-800 flex-1"></div>
+          <h2 className="text-sm font-mono text-zinc-500 uppercase tracking-widest text-center whitespace-nowrap">Evergreen Strategies</h2>
+          <div className="h-px bg-zinc-800 flex-1"></div>
         </div>
 
         {/* Scenario Cards */}
