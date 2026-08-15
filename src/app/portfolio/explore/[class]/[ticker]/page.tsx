@@ -7,6 +7,7 @@ import { AssetRiskPanel } from "@/components/AssetRiskPanel";
 import { AssetBacktestPanel } from "@/components/AssetBacktestPanel";
 import { PickModal } from "@/components/PickModal";
 import { createClient } from "@/utils/supabase/client";
+import RelatedMarketsPanel from "@/components/RelatedMarketsPanel";
 
 export default function AssetDetailPage({ params }: { params: Promise<{ class: string, ticker: string }> }) {
   const { class: encodedClass, ticker: encodedTicker } = use(params);
@@ -176,6 +177,12 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
                 </span>
               </div>
             )}
+          </div>
+
+          {/* Related Markets */}
+          <div>
+            <h2 className="text-xl font-bold mb-6">Related Markets</h2>
+            <RelatedMarketsPanel ticker={ticker} />
           </div>
         </div>
       </div>

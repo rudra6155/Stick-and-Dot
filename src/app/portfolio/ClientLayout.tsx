@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Compass, LineChart, BarChart3, TestTube, Newspaper, ShieldAlert, Target, Trophy } from "lucide-react";
+import { LayoutDashboard, Compass, LineChart, BarChart3, TestTube, Newspaper, ShieldAlert, Target, Trophy, GitCompareArrows } from "lucide-react";
 
 const sidebarLinks = [
   { href: "/portfolio", label: "My Picks", icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const sidebarLinks = [
   { href: "/portfolio/explore", label: "Explore Markets", icon: Compass },
   { href: "/portfolio/screener", label: "Screener", icon: BarChart3 },
   { href: "/portfolio/scenarios", label: "Scenarios", icon: LineChart },
+  { href: "/portfolio/relativity", label: "Relativity", icon: GitCompareArrows },
   { href: "/portfolio/backtest", label: "Backtest", icon: TestTube },
   { href: "/portfolio/opportunities", label: "Opportunities", icon: Target },
   { href: "/portfolio/risk-score", label: "Risk Score", icon: ShieldAlert },
