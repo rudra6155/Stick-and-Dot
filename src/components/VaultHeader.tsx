@@ -202,9 +202,10 @@ export default function VaultHeader({
 
         <AmbientParticles />
 
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8 pointer-events-none">
           {/* Left: Value & Stats */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 pointer-events-auto">
             {/* Title */}
             <h1
               ref={titleRef}
@@ -261,7 +262,7 @@ export default function VaultHeader({
 
           {/* Right: Allocation Ring */}
           {hasPicks && (
-            <div className="shrink-0 w-full lg:w-auto lg:max-w-[280px]">
+            <div className="shrink-0 w-full lg:w-auto lg:max-w-[280px] pointer-events-auto relative z-10">
               <PortfolioRing
                 picks={picks}
                 totalValue={totalValue}

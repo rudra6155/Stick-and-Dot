@@ -3,7 +3,8 @@ import { useState, useRef } from "react";
 
 const GRADE_COLORS: Record<string, string> = {
   A: "text-emerald-400", B: "text-blue-400",
-  C: "text-yellow-400", D: "text-orange-400", F: "text-rose-400"
+  C: "text-yellow-400", D: "text-orange-400", F: "text-rose-400",
+  default: "text-zinc-400"
 };
 
 const GRADE_BG: Record<string, string> = {
@@ -11,7 +12,16 @@ const GRADE_BG: Record<string, string> = {
   B: "bg-blue-500/10 border-blue-500/30",
   C: "bg-yellow-500/10 border-yellow-500/30",
   D: "bg-orange-500/10 border-orange-500/30",
-  F: "bg-rose-500/10 border-rose-500/30"
+  F: "bg-rose-500/10 border-rose-500/30",
+  default: "bg-zinc-500/10 border-zinc-500/30"
+};
+
+const formatMarketCap = (cap: number | null | undefined) => {
+  if (cap == null || cap <= 0) return "—";
+  if (cap > 1e12) return `$${(cap / 1e12).toFixed(1)}T`;
+  if (cap > 1e9) return `$${(cap / 1e9).toFixed(1)}B`;
+  if (cap > 1e6) return `$${(cap / 1e6).toFixed(1)}M`;
+  return `$${(cap / 1e3).toFixed(1)}K`;
 };
 
 const POPULAR = ["AAPL", "NVDA", "TSLA", "BTC-USD", "RELIANCE.NS", "QQQ", "GC=F", "AMZN"];
@@ -173,15 +183,15 @@ export default function RiskScorePage() {
           <div className="space-y-6">
 
             {/* Asset header + grade */}
-            <div className={`border rounded-2xl p-8 flex items-center justify-between ${GRADE_BG[result.score.grade]}`}>
+            <div className={`border rounded-2xl p-8 flex items-center justify-between ${GRADE_BG[result.score.grade] ?? GRADE_BG.default}`}>
               <div>
                 <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest mb-1">{result.asset.asset_class} · {result.asset.sector || "—"}</p>
                 <h2 className="text-3xl font-black">{result.asset.ticker}</h2>
                 <p className="text-zinc-400 mt-1">{result.asset.short_name}</p>
-                <p className="text-2xl font-mono font-bold mt-2">${(result.asset.price || 0).toFixed(2)}</p>
+                <p className="text-2xl font-mono font-bold mt-2">{result.asset.price != null ? `$${result.asset.price.toFixed(2)}` : "—"}</p>
               </div>
               <div className="text-center">
-                <div className={`text-8xl font-black ${GRADE_COLORS[result.score.grade]}`}>
+                <div className={`text-8xl font-black ${GRADE_COLORS[result.score.grade] ?? GRADE_COLORS.default}`}>
                   {result.score.grade}
                 </div>
                 <div className="text-zinc-500 font-mono text-xs mt-1">{result.score.total_score}/100</div>
@@ -205,7 +215,7 @@ export default function RiskScorePage() {
                   <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden mb-3">
                     <div
                       className="h-full bg-emerald-500 rounded-full transition-all duration-700"
-                      style={{ width: `${(item.score / item.max) * 100}%` }}
+                      style={{ width: `${item.max ? Math.min(100, Math.max(0, (item.score / item.max) * 100)) : 0}%` }}
                     />
                   </div>
                   <span className="text-xs font-mono text-zinc-400">{item.tag}</span>
@@ -216,14 +226,14 @@ export default function RiskScorePage() {
             {/* Key metrics */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: "Market Cap", value: result.asset.market_cap > 1e12 ? `$${(result.asset.market_cap/1e12).toFixed(1)}T` : result.asset.market_cap > 1e9 ? `$${(result.asset.market_cap/1e9).toFixed(1)}B` : "—" },
-                { label: "P/E Ratio", value: result.asset.pe_ratio ? result.asset.pe_ratio.toFixed(1) : "—" },
-                { label: "Revenue Growth", value: result.asset.revenue_growth ? `${(result.asset.revenue_growth*100).toFixed(1)}%` : "—" },
-                { label: "Beta", value: result.asset.beta ? result.asset.beta.toFixed(2) : "—" },
-                { label: "Dividend Yield", value: result.asset.dividend_yield ? `${(result.asset.dividend_yield*100).toFixed(1)}%` : "—" },
-                { label: "Profit Margin", value: result.asset.profit_margins ? `${(result.asset.profit_margins*100).toFixed(1)}%` : "—" },
-                { label: "ROE", value: result.asset.return_on_equity ? `${(result.asset.return_on_equity*100).toFixed(1)}%` : "—" },
-                { label: "Analyst Target", value: result.asset.target_mean_price ? `$${result.asset.target_mean_price.toFixed(2)}` : "—" },
+                { label: "Market Cap", value: formatMarketCap(result.asset.market_cap) },
+                { label: "P/E Ratio", value: result.asset.pe_ratio != null ? result.asset.pe_ratio.toFixed(1) : "—" },
+                { label: "Revenue Growth", value: result.asset.revenue_growth != null ? `${(result.asset.revenue_growth*100).toFixed(1)}%` : "—" },
+                { label: "Beta", value: result.asset.beta != null ? result.asset.beta.toFixed(2) : "—" },
+                { label: "Dividend Yield", value: result.asset.dividend_yield != null ? `${(result.asset.dividend_yield*100).toFixed(1)}%` : "—" },
+                { label: "Profit Margin", value: result.asset.profit_margins != null ? `${(result.asset.profit_margins*100).toFixed(1)}%` : "—" },
+                { label: "ROE", value: result.asset.return_on_equity != null ? `${(result.asset.return_on_equity*100).toFixed(1)}%` : "—" },
+                { label: "Analyst Target", value: result.asset.target_mean_price != null ? `$${result.asset.target_mean_price.toFixed(2)}` : "—" },
               ].map(m => (
                 <div key={m.label} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
                   <p className="text-xs text-zinc-500 font-mono uppercase tracking-wider mb-1">{m.label}</p>

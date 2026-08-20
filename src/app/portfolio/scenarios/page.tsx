@@ -15,7 +15,12 @@ const formatVal = (val: any, key: string) => {
   if (val === null || val === undefined || val === 0) return "—";
   if (["revenue_growth","earnings_growth","profit_margins","dividend_yield","return_on_equity"].includes(key))
     return (val * 100).toFixed(1) + "%";
-  if (key === "market_cap") return val > 1e12 ? `$${(val/1e12).toFixed(1)}T` : `$${(val/1e9).toFixed(1)}B`;
+  if (key === "market_cap") {
+    if (val > 1e12) return `$${(val/1e12).toFixed(1)}T`;
+    if (val > 1e9) return `$${(val/1e9).toFixed(1)}B`;
+    if (val > 1e6) return `$${(val/1e6).toFixed(1)}M`;
+    return `$${(val/1e3).toFixed(1)}K`;
+  }
   return typeof val === "number" ? val.toFixed(2) : val;
 };
 
@@ -188,11 +193,13 @@ export default function ScenariosPage() {
                             <td className="p-4 text-zinc-600 font-mono">#{i+1}</td>
                             <td className="p-4 font-bold text-emerald-400 font-mono">{r.ticker}</td>
                             <td className="p-4 text-zinc-300 truncate max-w-[200px]">{r.short_name || r.ticker}</td>
-                            <td className="p-4 text-right font-mono">${(r.price||0).toFixed(2)}</td>
-                            <td className="p-4 text-right font-mono text-emerald-400">{formatVal(r.revenue_growth, "revenue_growth")}</td>
+                            <td className="p-4 text-right font-mono">{r.price != null ? `$${r.price.toFixed(2)}` : "—"}</td>
+                            <td className={`p-4 text-right font-mono ${
+                              r.revenue_growth > 0 ? 'text-emerald-400' : r.revenue_growth < 0 ? 'text-rose-400' : 'text-zinc-400'
+                            }`}>{formatVal(r.revenue_growth, "revenue_growth")}</td>
                             <td className="p-4 text-right font-mono text-zinc-400">{formatVal(r.dividend_yield, "dividend_yield")}</td>
                             <td className="p-4 text-right font-mono text-zinc-400">{formatVal(r.market_cap, "market_cap")}</td>
-                            <td className={`p-4 text-right font-mono ${r.beta < 1 ? 'text-emerald-400' : r.beta < 1.5 ? 'text-yellow-400' : 'text-rose-400'}`}>
+                            <td className={`p-4 text-right font-mono ${r.beta == null ? 'text-zinc-600' : r.beta < 1 ? 'text-emerald-400' : r.beta < 1.5 ? 'text-yellow-400' : 'text-rose-400'}`}>
                               {r.beta != null ? r.beta.toFixed(2) : "—"}
                             </td>
                           </tr>

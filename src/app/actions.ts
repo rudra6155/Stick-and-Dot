@@ -1,12 +1,12 @@
 "use server";
-import { supabase } from "@/lib/supabase";
+import { supabase, requireEnv } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
 import { unstable_cache } from "next/cache";
 
 // Service-role client for price_history (see enrichAssetsWithHistory below).
 const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
+  requireEnv('SUPABASE_SERVICE_ROLE_KEY')
 );
 
 export type Asset = {
@@ -111,8 +111,11 @@ export type Asset = {
   communityRedditSubscribers: number;
 };
 
-const normalizeClass = (raw: string | undefined): string => {
+const normalizeClass = (raw: unknown): string => {
   if (!raw) return 'Stock';
+  // DB rows are typed `any`, so a non-string value (number/boolean) could
+  // reach here — coerce before calling string methods to avoid a crash.
+  const str = typeof raw === 'string' ? raw : String(raw);
   const map: Record<string, string> = {
     'stock': 'Stock', 'stocks': 'Stock',
     'us tech': 'Stock', 'us blue chip': 'Stock',
@@ -126,7 +129,7 @@ const normalizeClass = (raw: string | undefined): string => {
     'forex': 'Forex',
     'index': 'Index', 'indices': 'Index',
   };
-  return map[raw.toLowerCase()] ?? raw;
+  return map[str.toLowerCase()] ?? str;
 };
 
 const mapRowToAsset = (row: any) => ({
@@ -223,6 +226,7 @@ export async function fetchAssetsPaginated(params: {
   sortDir?: 'asc' | 'desc';
 }): Promise<{ assets: Asset[]; totalCount: number }> {
   const safeLimit = Math.min(Math.max(params.limit, 1), 100);
+  const safeOffset = Math.max(Number(params.offset) || 0, 0);
   let query = supabase
     .from('asset_snapshots')
     .select('*', { count: 'exact' });
@@ -234,7 +238,7 @@ export async function fetchAssetsPaginated(params: {
     query = query.eq('sector', params.activeSector);
   }
 
-  if (params.searchQuery.trim() !== '') {
+  if (typeof params.searchQuery === 'string' && params.searchQuery.trim() !== '') {
     const q = params.searchQuery.trim().replace(/[%_]/g, '\\$&').replace(/[,()]/g, '');
     query = query.or(`ticker.ilike.%${q}%,short_name.ilike.%${q}%`, { referencedTable: undefined });
   }
@@ -252,7 +256,7 @@ export async function fetchAssetsPaginated(params: {
   query = query.order(sortCol, { ascending: params.sortDir === 'asc', nullsFirst: false });
   query = query.order('ticker', { ascending: true });
 
-  query = query.range(params.offset, params.offset + safeLimit - 1);
+  query = query.range(safeOffset, safeOffset + safeLimit - 1);
 
   const { data, count, error } = await query;
   if (error) {
@@ -271,24 +275,32 @@ export async function fetchAssetsPaginated(params: {
 }
 
 export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
-  return unstable_cache(
-    async () => {
-      const { data, error } = await supabase.rpc('get_asset_class_counts');
+  try {
+    return await unstable_cache(
+      async () => {
+        const { data, error } = await supabase.rpc('get_asset_class_counts');
 
-      const counts: Record<string, number> = { All: 0 };
+        if (error) {
+          // Throwing (instead of returning a fallback) keeps unstable_cache from
+          // persisting a broken `{ All: 0 }` result for the full revalidate window.
+          throw error;
+        }
 
-      if (!error && data) {
-        data.forEach((row: any) => {
+        const counts: Record<string, number> = { All: 0 };
+        (data || []).forEach((row: any) => {
           counts[row.asset_class] = row.count;
           counts['All'] += row.count;
         });
-      }
 
-      return counts;
-    },
-    ['asset-class-counts'],
-    { revalidate: 3600 } // Cache for 1 hour
-  )();
+        return counts;
+      },
+      ['asset-class-counts'],
+      { revalidate: 3600 } // Cache for 1 hour
+    )();
+  } catch (error) {
+    console.error('fetchAssetClassCounts: get_asset_class_counts RPC failed:', error);
+    return { All: 0 };
+  }
 }
 
 export async function fetchTickerTapeAssets(): Promise<Asset[]> {
@@ -383,13 +395,28 @@ async function enrichAssetsWithHistory(assets: Asset[]) {
   // than others), so we can't safely cap with a single global LIMIT — the
   // .in('ticker', tickers) filter already bounds the result set per page,
   // and we take the last 7 rows per ticker in JS below.
-  const { data: historyData, error: histError } = await supabaseAdmin
-    .from('price_history')
-    .select('ticker, date, close')
-    .in('ticker', tickers)
-    .order('date', { ascending: true });
+  let historyData: { ticker: string; date: string; close: number }[] | null = null;
+  let histError: any = null;
+  try {
+    const res = await supabaseAdmin
+      .from('price_history')
+      .select('ticker, date, close')
+      .in('ticker', tickers)
+      .order('date', { ascending: true });
+    historyData = res.data;
+    histError = res.error;
+  } catch (err) {
+    // A network/timeout failure throws instead of resolving with { error } —
+    // catch it here so it doesn't become an unhandled promise rejection.
+    console.error('enrichAssetsWithHistory: supabaseAdmin price_history query threw:', err);
+    return assets;
+  }
 
-  if (!histError && historyData) {
+  if (histError) {
+    console.error('enrichAssetsWithHistory: price_history query error:', histError);
+  }
+
+  if (historyData) {
     const histByTicker: Record<string, { date: string, close: number }[]> = {};
     historyData.forEach(row => {
       if (!histByTicker[row.ticker]) histByTicker[row.ticker] = [];
@@ -410,7 +437,7 @@ async function enrichAssetsWithHistory(assets: Asset[]) {
 
       const first = recentHist[0].close;
       const last = recentHist[recentHist.length - 1].close;
-      const changePct = first !== 0 ? ((last - first) / first) * 100 : 0;
+      const changePct = (first != null && first !== 0) ? ((last - first) / first) * 100 : 0;
 
       asset.change = (Math.abs(changePct)).toFixed(2) + "%";
       asset.isUp = changePct >= 0;

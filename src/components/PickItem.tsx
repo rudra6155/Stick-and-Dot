@@ -223,10 +223,19 @@ export function PickItem({
 
         {/* Summary Row */}
         <div
-          className="flex flex-col sm:flex-row cursor-pointer relative z-10"
+          className="flex flex-col sm:flex-row cursor-pointer relative z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-inset"
           onClick={() => {
             setIsExpanded(!isExpanded);
           }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setIsExpanded(!isExpanded);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-expanded={isExpanded}
         >
           {/* Asset Info */}
           <div className="flex-1 p-5">
@@ -262,9 +271,9 @@ export function PickItem({
               </div>
 
               {/* Mini sparkline */}
-              <div className="opacity-40 group-hover:opacity-80 transition-opacity duration-500 hidden sm:block w-20">
+              <div className="opacity-40 group-hover:opacity-80 transition-opacity duration-500 hidden sm:block w-20 h-7">
                 <Sparkline
-                  data={asset.history}
+                  data={asset.history || []}
                   isUp={isProfit}
                   height={28}
                 />
@@ -364,9 +373,10 @@ export function PickItem({
                   </div>
                 </div>
 
-                {/* Panels */}
+                {/* Panels — min-h keeps the loading and loaded states close in size so
+                    the expanded row doesn't violently jump when data arrives. */}
                 {loadingExtras && (!riskResult || !backtestResult) ? (
-                  <div className="flex justify-center py-12">
+                  <div className="min-h-[320px] flex items-center justify-center py-12">
                     <div className="flex items-center gap-3">
                       <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                       <span className="text-emerald-500 font-mono text-xs uppercase tracking-widest">
@@ -375,7 +385,7 @@ export function PickItem({
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="min-h-[320px] grid grid-cols-1 md:grid-cols-2 gap-6">
                     {riskResult ? (
                       <AssetRiskPanel result={riskResult} />
                     ) : (

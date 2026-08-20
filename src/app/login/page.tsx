@@ -118,7 +118,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans flex items-center justify-center p-4">
+    <main className="min-h-screen bg-black text-white font-sans flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-3xl p-8 relative overflow-hidden">
         
         {/* Glow effect */}
@@ -131,13 +131,13 @@ export default function LoginPage() {
           <div className="flex bg-zinc-900 p-1 rounded-xl mb-8">
             <button
               onClick={() => { setMode("email"); setError(""); setMessage(""); }}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${mode === "email" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${mode === "email" ? "bg-zinc-800 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
             >
               Email
             </button>
             <button
               onClick={() => { setMode("phone"); setError(""); setMessage(""); }}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${mode === "phone" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${mode === "phone" ? "bg-zinc-800 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
             >
               Phone OTP
             </button>
@@ -190,7 +190,7 @@ export default function LoginPage() {
                 <button 
                   type="button" 
                   onClick={() => setIsLogin(!isLogin)}
-                  className="text-xs text-zinc-500 hover:text-emerald-400 transition-colors"
+                  className="text-xs text-zinc-400 hover:text-emerald-400 transition-colors"
                 >
                   {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
                 </button>
@@ -201,7 +201,7 @@ export default function LoginPage() {
                   <div className="w-full border-t border-zinc-800"></div>
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="bg-zinc-950 px-2 text-zinc-500 uppercase tracking-widest">Or continue with</span>
+                  <span className="bg-zinc-950 px-2 text-zinc-400 uppercase tracking-widest">Or continue with</span>
                 </div>
               </div>
 
@@ -315,6 +315,6 @@ export default function LoginPage() {
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

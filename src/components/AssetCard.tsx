@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useRef } from "react";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -145,10 +145,9 @@ export const getMetric = (id: string, asset: any, customFormatNumber?: any) => {
 };
 
 function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propFormatNumber, hideHoverGlow }: any) {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [isHovered, setIsHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const rectRef = useRef<DOMRect | null>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
   const { setCursorState } = useCursor();
 
   const getMetricLocal = (id: string) => getMetric(id, asset, propFormatNumber || formatNumber);
@@ -161,26 +160,31 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ type: "spring", stiffness: 300, damping: 25 }}
       onMouseMove={(e) => {
-        if (!rectRef.current) return;
-        setMousePosition({ x: e.clientX - rectRef.current.left, y: e.clientY - rectRef.current.top });
+        // Drive the glow position via a CSS custom property set directly on the
+        // node instead of React state, so hovering doesn't re-render the card
+        // tree on every pixel of mouse movement.
+        if (!rectRef.current || !glowRef.current) return;
+        const x = e.clientX - rectRef.current.left;
+        const y = e.clientY - rectRef.current.top;
+        glowRef.current.style.setProperty('--glow-x', `${x}px`);
+        glowRef.current.style.setProperty('--glow-y', `${y}px`);
       }}
       onMouseEnter={() => {
-        setIsHovered(true);
         if (cardRef.current) {
           rectRef.current = cardRef.current.getBoundingClientRect();
         }
         setCursorState(asset.isUp ? 'profit' : 'loss');
       }}
       onMouseLeave={() => {
-        setIsHovered(false);
         setCursorState('default');
       }}
       className="group relative bg-zinc-950/90 md:bg-white/[0.04] md:backdrop-blur-md border border-white/10 rounded-3xl p-6 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/30 hover:shadow-[0_20px_60px_rgba(16,185,129,0.08)] will-change-transform"
     >
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+      <div
+        ref={glowRef}
+        className="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-300 [@media(hover:hover)]:group-hover:opacity-100"
         style={{
-          background: `radial-gradient(circle 200px at ${mousePosition.x}px ${mousePosition.y}px, rgba(16, 185, 129, 0.08), transparent)`
+          background: `radial-gradient(circle 200px at var(--glow-x, 50%) var(--glow-y, 50%), rgba(16, 185, 129, 0.08), transparent)`
         }}
       />
       <div className="flex justify-between items-start mb-6 relative z-10">
@@ -190,7 +194,7 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
           </div>
           <div>
             <h2 className="text-lg font-bold tracking-tight text-white/90 truncate max-w-[140px]">{asset.name}</h2>
-            <div className="text-zinc-500 text-xs font-mono">{asset.symbol}/USD</div>
+            <div className="text-zinc-400 text-xs font-mono">{asset.symbol}/USD</div>
           </div>
         </div>
         
@@ -200,7 +204,7 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
           </span>
           <div className="flex items-center gap-1.5">
             <div className={`w-1.5 h-1.5 rounded-full ${asset.isUp ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"} animate-pulse`} />
-            <span className="text-[10px] font-medium font-mono text-zinc-500 uppercase">Live</span>
+            <span className="text-[10px] font-medium font-mono text-zinc-400 uppercase">Live</span>
           </div>
         </div>
       </div>
@@ -211,12 +215,12 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
             <AnimatedPrice price={asset.price} />
           </span>
           <span className={`flex items-center gap-1 font-mono text-xs font-bold ${asset.isUp ? "text-emerald-400" : "text-rose-400"}`}>
-            {asset.isUp ? '▲' : '▼'} {asset.change.replace('-','')}
+            {asset.isUp ? '▲' : '▼'} {(asset.change ?? '').replace('-','')}
           </span>
         </div>
-        
-        <div className="absolute right-0 bottom-2 pointer-events-none transition-opacity duration-300 opacity-60 group-hover:opacity-100">
-          <Sparkline data={asset.history} isUp={asset.isUp} width={100} height={35} />
+
+        <div className="absolute right-0 bottom-2 w-[100px] h-[35px] pointer-events-none transition-opacity duration-300 opacity-60 group-hover:opacity-100">
+          <Sparkline data={asset.history || []} isUp={asset.isUp} width={100} height={35} />
         </div>
       </div>
 
@@ -227,7 +231,7 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
             if (!metric) return null;
             return (
               <div key={metricId} className="flex flex-col">
-                <p className="text-zinc-600 text-[10px] font-medium font-mono uppercase tracking-widest mb-1">{metric.label}</p>
+                <p className="text-zinc-400 text-[10px] font-medium font-mono uppercase tracking-widest mb-1">{metric.label}</p>
                 <p className="font-mono text-xs text-zinc-300 font-medium truncate">{getMetricLocal(metricId)}</p>
               </div>
             );

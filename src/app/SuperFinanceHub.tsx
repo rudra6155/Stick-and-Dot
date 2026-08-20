@@ -8,9 +8,24 @@ import dynamic from 'next/dynamic';
 import { useCountUp } from "@/hooks/useCountUp";
 import { AssetCard } from "@/components/AssetCard";
 
-const DollarParticles = dynamic(() => import('@/components/DollarParticles'), { ssr: false });
+const DollarParticles = dynamic(() => import('@/components/DollarParticles'), { ssr: false, loading: () => null });
 const TickerHeartbeat = dynamic(() => import('@/components/TickerHeartbeat'), { ssr: false });
-const StatsSection = dynamic(() => import('@/components/StatsSection'), { ssr: false });
+const StatsSection = dynamic(() => import('@/components/StatsSection'), {
+  ssr: false,
+  loading: () => (
+    <section className="relative z-10 py-32 px-4 md:px-8 max-w-7xl mx-auto">
+      <div className="animate-pulse flex flex-col items-center gap-8">
+        <div className="h-10 w-2/3 max-w-xl bg-white/5 rounded-lg" />
+        <div className="w-32 h-[1px] bg-white/10" />
+        <div className="w-full max-w-2xl flex flex-col gap-3 mt-16">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-2 w-full bg-white/5 rounded-full" />
+          ))}
+        </div>
+      </div>
+    </section>
+  ),
+});
 
 const AVAILABLE_METRICS = [
   { id: "volume",         label: "Volume" },
@@ -87,7 +102,12 @@ const AnimatedStat = ({ value, label, suffix = "" }: { value: number; label: str
   
   useGSAP(() => {
     if (!numRef.current) return;
-    
+
+    // The span's text content is owned entirely by GSAP (see empty JSX below) so
+    // React re-renders never have DOM text to reconcile against and can't wipe
+    // out this imperative mutation.
+    numRef.current.textContent = "0";
+
     // We animate a dummy object and push its value to the DOM
     const counter = { val: 0 };
     gsap.to(counter, {
@@ -100,7 +120,7 @@ const AnimatedStat = ({ value, label, suffix = "" }: { value: number; label: str
       },
       onUpdate: () => {
         if (numRef.current) {
-          numRef.current.innerText = Math.floor(counter.val).toString();
+          numRef.current.textContent = Math.floor(counter.val).toString();
         }
       }
     });
@@ -109,7 +129,8 @@ const AnimatedStat = ({ value, label, suffix = "" }: { value: number; label: str
   return (
     <div className="flex flex-col items-center">
       <div className="text-4xl md:text-5xl font-mono text-emerald-400 font-bold tracking-tighter">
-        <span ref={numRef}>0</span>{suffix}
+        {/* No JSX text children on purpose — GSAP owns this node's textContent exclusively. */}
+        <span ref={numRef} />{suffix}
       </div>
       <div className="text-zinc-500 font-mono text-xs uppercase tracking-widest mt-2">{label}</div>
     </div>
@@ -118,16 +139,39 @@ const AnimatedStat = ({ value, label, suffix = "" }: { value: number; label: str
 
 const TickerTape = ({ assets }: { assets: Asset[] }) => {
   const tapeAssets = assets.slice(0, 30);
+  const tapeRef = useRef<HTMLDivElement>(null);
+
+  // Publish the banner's real rendered height as a CSS variable so other fixed
+  // elements (e.g. the Navbar) can offset themselves correctly instead of relying
+  // on a hardcoded pixel guess that breaks if this banner wraps or is absent.
+  useEffect(() => {
+    const el = tapeRef.current;
+    if (!el) {
+      document.documentElement.style.setProperty('--banner-height', '0px');
+      return;
+    }
+    const updateHeight = () => {
+      document.documentElement.style.setProperty('--banner-height', `${el.offsetHeight}px`);
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.setProperty('--banner-height', '0px');
+    };
+  }, [tapeAssets.length]);
+
   if (tapeAssets.length === 0) return null;
   return (
-    <div className="w-full overflow-hidden bg-black/40 border-b border-white/5 py-2 relative z-50 backdrop-blur-md">
+    <div ref={tapeRef} className="w-full overflow-hidden bg-black/40 border-b border-white/5 py-2 relative z-50 backdrop-blur-md">
       <div className="animate-ticker whitespace-nowrap flex items-center font-mono text-xs tracking-wider text-zinc-400">
         {[...tapeAssets, ...tapeAssets].map((asset, i) => (
           <div key={i} className="inline-flex items-center gap-2 mx-6">
             <span className="text-white font-bold">{asset.symbol}</span>
-            <span>${asset.price?.toFixed(2) || '0.00'}</span>
+            <span>${(asset.price ?? 0).toFixed(2)}</span>
             <span className={asset.isUp ? "text-emerald-500" : "text-rose-500"}>
-              {asset.isUp ? '▲' : '▼'}{asset.change.replace('-', '')}
+              {asset.isUp ? '▲' : '▼'}{(asset.change ?? '').replace('-', '')}
             </span>
             <span className="text-zinc-700 mx-2">·</span>
           </div>
@@ -139,13 +183,23 @@ const TickerTape = ({ assets }: { assets: Asset[] }) => {
 
 function LiveClock() {
   const [time, setTime] = useState("--:--:--");
+  const [isLive, setIsLive] = useState(false);
   useEffect(() => {
-    const update = () => setTime(new Date().toLocaleTimeString('en-US', { hour12: false }));
+    const update = () => {
+      setTime(new Date().toLocaleTimeString('en-US', { hour12: false }));
+      setIsLive(true);
+    };
     update();
     const int = setInterval(update, 1000);
     return () => clearInterval(int);
   }, []);
-  return <div>{time} UTC</div>;
+  // Fade in once the real time replaces the "--:--:--" placeholder so hydration
+  // doesn't read as an abrupt flash.
+  return (
+    <div className={`transition-opacity duration-500 ${isLive ? "opacity-100" : "opacity-60"}`}>
+      {time} UTC
+    </div>
+  );
 }
 
 import { useRouter } from "next/navigation";
@@ -165,7 +219,19 @@ function AssetCardWrapper({ asset, index, selectedMetrics, formatNumber }: any) 
   };
 
   return (
-    <div onClick={handleClick} className="cursor-pointer">
+    <div
+      onClick={handleClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`View details for ${asset.symbol}`}
+      className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black rounded-3xl"
+    >
       <AssetCard asset={asset} index={index} selectedMetrics={selectedMetrics} formatNumber={formatNumber} />
     </div>
   );
@@ -245,7 +311,6 @@ export default function SuperFinanceHub({
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      console.log("debouncedSearchQuery updated:", searchQuery);
       setDebouncedSearchQuery(searchQuery);
     }, 400);
     return () => clearTimeout(timer);
@@ -253,8 +318,13 @@ export default function SuperFinanceHub({
 
   useEffect(() => {
     setOffset(0);
+    // fetchAssetsPaginated is a Server Action rather than a raw fetch(), so its
+    // network call itself can't be cancelled — but we still guard against
+    // out-of-order responses: the controller is aborted on cleanup whenever the
+    // deps change again, and any response for an aborted request is discarded
+    // instead of overwriting newer results.
+    const controller = new AbortController();
     const run = async () => {
-      console.log('fetching with query:', debouncedSearchQuery);
       setIsRefreshing(true);
       setError(null);
       try {
@@ -266,16 +336,19 @@ export default function SuperFinanceHub({
           activeSector,
           sortBy
         });
+        if (controller.signal.aborted) return;
         setAssets(res.assets);
         setTotalCount(res.totalCount);
       } catch (e: any) {
+        if (controller.signal.aborted) return;
         console.error("Failed to load assets", e);
         setError(e.message || 'Something went wrong');
       } finally {
-        setIsRefreshing(false);
+        if (!controller.signal.aborted) setIsRefreshing(false);
       }
     };
     run();
+    return () => controller.abort();
   }, [debouncedSearchQuery, activeClass, activeSector, sortBy]);
 
   const handleLoadMore = () => {
@@ -304,17 +377,20 @@ export default function SuperFinanceHub({
   const visibleAssets = assets;
 
   useEffect(() => {
+    // Debounced: only fire once layout has settled after the asset list changes,
+    // instead of dispatching a global resize (which forces every listener on the
+    // page, including GSAP ScrollTriggers, to recompute) on every intermediate update.
     const timer = setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
-    }, 150);
+    }, 200);
     return () => clearTimeout(timer);
-  }, [assets.length, totalCount]);
+  }, [assets.length]);
 
   const assetClasses = ["All", "Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
   const sortOptions = ["Market Cap", "Price", "Volume", "P/E", "Div Yield", "52W High", "Beta"];
 
   return (
-    <div className="relative min-h-screen bg-black text-white font-sans selection:bg-emerald-500/30">
+    <main className="relative min-h-screen bg-black text-white font-sans selection:bg-emerald-500/30">
 
       {/* Global Backgrounds */}
       <div className="fixed inset-0 pointer-events-none z-0 bg-gradient-to-b from-[#000000] to-[#050508]" />
@@ -404,7 +480,7 @@ export default function SuperFinanceHub({
                 </button>
               )}
               {searchQuery && (
-                <p className="absolute -bottom-6 left-0 text-xs text-zinc-500 font-mono">
+                <p className="absolute -bottom-6 left-0 min-w-[110px] text-xs text-zinc-500 font-mono">
                   {isRefreshing ? "Searching..." : `${totalCount.toLocaleString()} results`}
                 </p>
               )}
@@ -438,7 +514,7 @@ export default function SuperFinanceHub({
                   onClick={() => { setIsMetricsOpen(!isMetricsOpen); setIsSortOpen(false); }}
                   aria-expanded={isMetricsOpen}
                   aria-label="Toggle metrics menu"
-                  className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white/5 border border-white/5 hover:border-white/20 rounded-2xl transition-all"
+                  className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white/5 border border-white/5 hover:border-white/20 rounded-2xl transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                 >
                   <div className="flex items-center gap-2">
                     <Settings2 className="w-4 h-4 text-zinc-400" />
@@ -460,7 +536,7 @@ export default function SuperFinanceHub({
                           <button
                             key={metric.id}
                             onClick={() => toggleMetric(metric.id)}
-                            className={`flex items-center gap-1.5 px-2 py-2 rounded-xl text-[11px] font-medium transition-colors ${isSelected ? "bg-emerald-500/10 text-emerald-400" : "hover:bg-white/5 text-zinc-400"}`}
+                            className={`flex items-center gap-1.5 px-2 py-2 rounded-xl text-[11px] font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 ${isSelected ? "bg-emerald-500/10 text-emerald-400" : "hover:bg-white/5 text-zinc-400"}`}
                           >
                             <div className={`w-3 h-3 rounded flex items-center justify-center shrink-0 border transition-colors ${isSelected ? "border-emerald-500 bg-emerald-500/20" : "border-zinc-700"}`}>
                               {isSelected && <Check size={8} className="text-emerald-400" />}
@@ -479,8 +555,8 @@ export default function SuperFinanceHub({
                 <button
                   onClick={() => { setIsSortOpen(!isSortOpen); setIsMetricsOpen(false); }}
                   aria-expanded={isSortOpen}
-                  aria-label="Toggle sort menu"
-                  className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white/5 border border-white/5 hover:border-white/20 rounded-2xl transition-all"
+                  aria-label={`Toggle sort menu, currently sorted by ${sortBy}`}
+                  className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-white/5 border border-white/5 hover:border-white/20 rounded-2xl transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                 >
                   <div className="flex items-center gap-2">
                     <Filter className="w-4 h-4 text-zinc-400" />
@@ -500,7 +576,7 @@ export default function SuperFinanceHub({
                         <button
                           key={opt}
                           onClick={() => { setSortBy(opt); setIsSortOpen(false); }}
-                          className={`w-full text-left px-4 py-3 text-sm transition-colors ${sortBy === opt ? "bg-white/10 text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"}`}
+                          className={`w-full text-left px-4 py-3 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500/70 ${sortBy === opt ? "bg-white/10 text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"}`}
                         >
                           {opt}
                         </button>
@@ -599,6 +675,6 @@ export default function SuperFinanceHub({
         @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .animate-ticker { animation: ticker 40s linear infinite; }
       `}} />
-    </div>
+    </main>
   );
 }

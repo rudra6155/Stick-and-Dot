@@ -10,7 +10,9 @@
       "Bash(node scratch_verify_history.mjs)",
       "Bash(git stash *)",
       "Bash(npx tsc *)",
-      "Bash(echo \"started with pid $!\")"
+      "Bash(echo \"started with pid $!\")",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(grep -n '\"@/\\\\*\"' tsconfig.json -A1 -B3)"
     ]
   }
 }

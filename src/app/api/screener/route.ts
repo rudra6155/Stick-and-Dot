@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireEnv } from '@/lib/supabase';
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
+  requireEnv('SUPABASE_SERVICE_ROLE_KEY')
 );
 
 const SORTABLE_COLUMNS = new Set([
@@ -23,7 +24,8 @@ export async function POST(req: NextRequest) {
   }
 
   const search = typeof body.search === 'string' ? body.search : '';
-  const limit = Math.min(body.limit || 50, 500);
+  const parsedLimit = Number(body.limit);
+  const limit = Math.min(Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 50, 500);
   const offset = Math.max(Number(body.offset) || 0, 0);
 
   const {
@@ -67,7 +69,10 @@ export async function POST(req: NextRequest) {
   if (min_roe !== undefined) query = query.gte('return_on_equity', min_roe);
 
   const { data, error, count } = await query;
-  if (error) return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  if (error) {
+    console.error('api/screener: asset_snapshots query error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 
   // Compute investment scores for each result
   const scored = (data || []).map((r: any) => {

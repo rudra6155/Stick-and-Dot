@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Crosshair, ChevronDown, Sparkles, ArrowRight, Vault } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { fetchAssetsByTickers } from "@/app/actions";
@@ -117,6 +118,7 @@ function EmptyVault() {
 
 /* ─── Main Portfolio Page ────────────────────────── */
 export default function MyPortfolioPage() {
+  const router = useRouter();
   const [picks, setPicks] = useState<any[]>([]);
   const [assets, setAssets] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
@@ -143,17 +145,24 @@ export default function MyPortfolioPage() {
   const supabase = createClient();
 
   const [topDynamicScenario, setTopDynamicScenario] = useState<any>(null);
+  const [loadingDynamicScenario, setLoadingDynamicScenario] = useState(true);
 
   useEffect(() => {
     async function fetchTopDynamicScenario() {
       try {
         const res = await fetch("/api/dynamic-scenarios");
+        if (!res.ok) {
+          console.error("Failed to fetch dynamic scenarios", res.status);
+          return;
+        }
         const data = await res.json();
         if (data.scenarios && data.scenarios.length > 0) {
           setTopDynamicScenario(data.scenarios[0]);
         }
       } catch (e) {
         console.error(e);
+      } finally {
+        setLoadingDynamicScenario(false);
       }
     }
     fetchTopDynamicScenario();
@@ -168,7 +177,7 @@ export default function MyPortfolioPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        window.location.href = "/login";
+        router.push("/login");
         return;
       }
 
@@ -288,7 +297,10 @@ export default function MyPortfolioPage() {
   );
 
   const validPicks = picks.filter((p) => assets[p.ticker]);
-  const totalValue = validPicks.reduce((acc, p) => acc + (assets[p.ticker]?.price || 0) * Number(p.quantity), 0);
+  const totalValue = validPicks.reduce((acc, p) => {
+    const qty = Number(p.quantity);
+    return acc + (assets[p.ticker]?.price || 0) * (Number.isFinite(qty) ? qty : 0);
+  }, 0);
 
   // Determine effective highlight class (from ring hover or card hover)
   const effectiveHighlightClass = ringHoveredClass || hoveredPickClass;
@@ -308,8 +320,22 @@ export default function MyPortfolioPage() {
     <div className="space-y-8 pb-32">
       {/* ─── Vault Header ─────────────────────── */}
       <div className="relative" ref={dropdownRef}>
-        {/* Dynamic Scenario Banner */}
-        {topDynamicScenario && (
+        {/* Dynamic Scenario Banner — a skeleton reserves the banner's footprint while
+            it loads so VaultHeader below doesn't jump down once it resolves. */}
+        {loadingDynamicScenario ? (
+          <div className="mb-6 max-w-7xl mx-auto px-4 md:px-0">
+            <div className="relative bg-zinc-950 border border-white/5 rounded-2xl p-4 overflow-hidden animate-pulse">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/5 shrink-0" />
+                <div className="flex-1 space-y-2 py-1">
+                  <div className="h-2.5 w-24 bg-white/5 rounded" />
+                  <div className="h-4 w-48 bg-white/5 rounded" />
+                  <div className="h-3 w-64 max-w-full bg-white/5 rounded" />
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : topDynamicScenario && (
           <div className="mb-6 max-w-7xl mx-auto px-4 md:px-0">
             <div className="relative bg-zinc-950 border border-emerald-500/30 rounded-2xl p-4 overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent opacity-50 pointer-events-none" />

@@ -343,7 +343,7 @@ export default function ScreenerPage() {
                       {r.sector && <span className="text-zinc-700 mx-1">·</span>}
                       {r.sector && <span>{r.sector}</span>}
                     </td>
-                    <td className="p-4 text-right font-mono">${(r.price || 0).toFixed(2)}</td>
+                    <td className="p-4 text-right font-mono">{r.price != null ? `$${r.price.toFixed(2)}` : "—"}</td>
                     <td className="p-4 text-right font-mono text-emerald-400">
                       {formatMetric(r[sortBy], sortBy)}
                     </td>

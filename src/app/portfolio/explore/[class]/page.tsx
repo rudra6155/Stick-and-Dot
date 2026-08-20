@@ -221,7 +221,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
               <button 
                 onClick={() => { setIsSortOpen(!isSortOpen); setIsMetricsOpen(false); }}
                 aria-expanded={isSortOpen}
-                aria-label="Toggle sort menu"
+                aria-label={`Toggle sort menu, currently sorted by ${sortBy}`}
                 className="flex items-center gap-2 px-4 py-2 bg-zinc-900/50 border border-zinc-800 rounded-xl text-sm hover:bg-zinc-800 transition-colors"
               >
                 <Filter className="w-4 h-4 text-zinc-400" />
