@@ -1,180 +1,119 @@
 "use client";
 
-import React, { useRef, useState } from "react";
-import { motion } from "framer-motion";
-import { Trophy, Target, TrendingUp, TrendingDown, Swords, Star } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown, Trophy, TrendingUp, TrendingDown, Target } from "lucide-react";
 
 interface BettorProfileCardProps {
   name: string;
-  rank: string; // e.g., "Grandmaster", "Oracle", "Novice"
-  winRate: number; // percentage
-  roi: number; // percentage
+  rank: string;
+  winRate: number;
+  roi: number;
   totalBets: number;
-  overallRating: number; // e.g., 94 like FIFA
-  avatarUrl?: string;
+  overallRating: number;
 }
 
-export default function BettorProfileCard({
-  name,
-  rank,
-  winRate,
-  roi,
-  totalBets,
-  overallRating,
-}: BettorProfileCardProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [rotateX, setRotateX] = useState(0);
-  const [rotateY, setRotateY] = useState(0);
-  const [glarePosition, setGlarePosition] = useState({ x: 50, y: 50 });
+// Compact profile chip for the command bar — expands into a small popover on click.
+// Deliberately not a full trading-card layout; the founder flagged that as too heavy.
+export default function BettorProfileCard({ name, rank, winRate, roi, totalBets, overallRating }: BettorProfileCardProps) {
+  const [open, setOpen] = useState(false);
+  const initial = name.trim().charAt(0).toUpperCase() || "?";
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+  const closeRef = useRef(() => setOpen(false));
+  useEffect(() => {
+    closeRef.current = () => setOpen(false);
+  });
 
-    // Calculate rotation (-15 to 15 degrees)
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    
-    const rotateXValue = ((y - centerY) / centerY) * -15;
-    const rotateYValue = ((x - centerX) / centerX) * 15;
-
-    setRotateX(rotateXValue);
-    setRotateY(rotateYValue);
-    
-    // Glare position percentage
-    setGlarePosition({
-      x: (x / rect.width) * 100,
-      y: (y / rect.height) * 100,
-    });
-  };
-
-  const handleMouseLeave = () => {
-    setRotateX(0);
-    setRotateY(0);
-    setGlarePosition({ x: 50, y: 50 });
-  };
-
-  // Determine card base theme based on rating
-  const getCardTheme = () => {
-    if (overallRating >= 90) return {
-      bg: "from-amber-400 via-yellow-200 to-amber-600 border-amber-300 shadow-amber-500/20",
-      text: "from-amber-400 via-yellow-200 to-amber-600",
-      star: "text-amber-400"
-    };
-    if (overallRating >= 80) return {
-      bg: "from-zinc-300 via-white to-zinc-400 border-zinc-200 shadow-white/20",
-      text: "from-zinc-300 via-white to-zinc-400",
-      star: "text-zinc-300"
-    };
-    return {
-      bg: "from-orange-400 via-orange-300 to-amber-600 border-orange-300 shadow-orange-500/20",
-      text: "from-orange-400 via-orange-300 to-amber-600",
-      star: "text-orange-400"
-    };
-  };
-
-  const theme = getCardTheme();
+  useEffect(() => {
+    if (!open) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") closeRef.current();
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [open]);
 
   return (
-    <motion.div
-      className="[perspective:1000px] group cursor-pointer"
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5, type: "spring", bounce: 0.4 }}
-    >
-      <div
-        ref={cardRef}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        className={`relative w-[280px] h-[400px] rounded-3xl border bg-gradient-to-br ${theme.bg} shadow-2xl overflow-hidden transition-all duration-100 ease-out mx-auto`}
-        style={{
-          transform: `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`,
-          transformStyle: "preserve-3d",
-        }}
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-label="View trader profile"
+        className="flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-full bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 transition-colors"
       >
-        {/* Dynamic Glare Effect */}
-        <div 
-          className="absolute inset-0 z-50 pointer-events-none opacity-0 group-hover:opacity-40 transition-opacity duration-300"
-          style={{
-            background: `radial-gradient(circle at ${glarePosition.x}% ${glarePosition.y}%, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 60%)`,
-            mixBlendMode: "overlay"
-          }}
-        />
+        <span className="w-6 h-6 rounded-full bg-gradient-to-br from-zinc-800 to-black border border-zinc-700 flex items-center justify-center text-[10px] font-black text-zinc-400">
+          {initial}
+        </span>
+        <span className="hidden sm:flex flex-col items-start leading-none gap-0.5">
+          <span className="text-xs font-bold text-white">{name}</span>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-400/80">{rank}</span>
+        </span>
+        <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
 
-        {/* Inner Card Background (Darker inset) */}
-        <div className="absolute inset-1 rounded-[22px] bg-black/90 m-[1px] flex flex-col p-4 overflow-hidden">
-          {/* Subtle grid pattern background */}
-          <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:14px_24px]"></div>
-          
-          {/* Top Section: Rating & Position */}
-          <div className="flex justify-between items-start z-10 relative">
-            <div className="flex flex-col items-center">
-              <span className={`text-4xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b ${theme.text}`}>
-                {overallRating}
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">OVR</span>
-            </div>
-            
-            <div className="flex flex-col items-end">
-              <div className="p-1.5 rounded-full bg-zinc-800/50 backdrop-blur-sm border border-zinc-700">
-                <Star className={`w-4 h-4 ${theme.star}`} fill="currentColor" />
+      <AnimatePresence>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <motion.div
+              initial={{ opacity: 0, y: -6, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6, scale: 0.97 }}
+              transition={{ duration: 0.15 }}
+              className="absolute left-0 top-full mt-2 z-50 w-72 rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl p-5"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <span className="w-11 h-11 rounded-full bg-gradient-to-br from-zinc-800 to-black border border-zinc-700 flex items-center justify-center text-sm font-black text-zinc-300">
+                  {initial}
+                </span>
+                <div className="min-w-0">
+                  <div className="text-sm font-black text-white truncate">{name}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">{rank}</div>
+                </div>
+                <div className="ml-auto text-right shrink-0">
+                  <div className="text-xl font-black text-white font-mono leading-none">
+                    {totalBets > 0 ? overallRating : "—"}
+                  </div>
+                  <div className="text-[8px] font-bold uppercase tracking-widest text-zinc-600">Rating</div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Avatar Area */}
-          <div className="flex-1 flex flex-col items-center justify-center relative z-10 mt-2 mb-2">
-            <div className="w-24 h-24 rounded-full border-2 border-zinc-800 p-1 relative overflow-hidden bg-zinc-900 shadow-inner">
-               <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-black rounded-full flex items-center justify-center">
-                 <UserAvatarIcon />
-               </div>
-            </div>
-            <h2 className="mt-3 text-lg font-black tracking-tight text-white uppercase">{name}</h2>
-            <span className={`text-[10px] font-bold uppercase tracking-widest bg-clip-text text-transparent bg-gradient-to-r ${theme.text}`}>
-              {rank}
-            </span>
-          </div>
+              <div className="h-px w-full bg-zinc-800 mb-4" />
 
-          {/* Divider */}
-          <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-zinc-700 to-transparent my-2 z-10 relative" />
-
-          {/* Stats Grid (Like FIFA PAC, SHO, PAS, DRI, DEF, PHY) */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 z-10 relative mt-2 mb-1 px-1">
-            <StatRow label="WIN" value={`${winRate}%`} icon={<Trophy className="w-3 h-3 text-zinc-400" />} />
-            <StatRow label="ROI" value={`${roi > 0 ? '+' : ''}${roi}%`} icon={roi >= 0 ? <TrendingUp className="w-3 h-3 text-emerald-400" /> : <TrendingDown className="w-3 h-3 text-rose-400" />} />
-            <StatRow label="VOL" value={totalBets.toString()} icon={<Target className="w-3 h-3 text-zinc-400" />} />
-            <StatRow label="BTL" value={(totalBets * (winRate/100)).toFixed(0)} icon={<Swords className="w-3 h-3 text-zinc-400" />} />
-          </div>
-
-          {/* Bottom badge */}
-          <div className="mt-auto flex justify-center z-10 relative">
-             <div className="h-1 w-12 rounded-full bg-zinc-800"></div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function StatRow({ label, value, icon }: { label: string, value: string | number, icon: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between group">
-      <div className="flex items-center gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity">
-        {icon}
-        <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{label}</span>
-      </div>
-      <span className="text-sm font-black text-white">{value}</span>
+              <div className="grid grid-cols-3 gap-3">
+                <Stat icon={<Trophy className="w-3.5 h-3.5 text-zinc-500" />} label="Win Rate" value={`${winRate}%`} />
+                <Stat
+                  icon={
+                    roi >= 0 ? (
+                      <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                    ) : (
+                      <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
+                    )
+                  }
+                  label="ROI"
+                  value={`${roi > 0 ? "+" : ""}${roi}%`}
+                  valueClass={roi > 0 ? "text-emerald-400" : roi < 0 ? "text-rose-400" : "text-white"}
+                />
+                <Stat icon={<Target className="w-3.5 h-3.5 text-zinc-500" />} label="Bets" value={totalBets.toString()} />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function UserAvatarIcon() {
+function Stat({ icon, label, value, valueClass }: { icon: React.ReactNode; label: string; value: string; valueClass?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 text-zinc-600">
-      <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1">
+        {icon}
+        <span className="text-[8px] font-bold uppercase tracking-widest text-zinc-600">{label}</span>
+      </div>
+      <span className={`text-sm font-black font-mono ${valueClass || "text-white"}`}>{value}</span>
+    </div>
   );
 }
