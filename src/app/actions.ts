@@ -1,13 +1,24 @@
 "use server";
-import { supabase, requireEnv } from "@/lib/supabase";
+import { requireEnv } from "@/lib/supabase";
 import { createClient } from "@supabase/supabase-js";
 import { unstable_cache } from "next/cache";
 
-// Service-role client for price_history (see enrichAssetsWithHistory below).
+// Service-role client — used for ALL server-side queries in this file.
+// This intentionally has NO user session; it bypasses RLS via the service
+// role key.  Every table queried here (asset_snapshots, price_history) is
+// public read-only data, so RLS bypass is safe and necessary.
+//
+// ⚠️  NEVER create a per-module singleton with the anon key on the server.
+//     The vanilla `createClient` stores tokens in-memory, which leaks one
+//     user's session to the next request that hits the same process.
 const supabaseAdmin = createClient(
   requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
   requireEnv('SUPABASE_SERVICE_ROLE_KEY')
 );
+
+// Alias for readability — all queries below go through the admin client.
+const supabase = supabaseAdmin;
+
 
 export type Asset = {
   id: string;
