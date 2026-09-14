@@ -7,7 +7,7 @@ type CursorState = 'default' | 'profit' | 'loss' | 'text';
 
 interface CursorContextType {
   cursorState: CursorState;
-  setCursorState: (state: CursorState) => void;
+  setCursorState: React.Dispatch<React.SetStateAction<CursorState>>;
 }
 
 const CursorContext = createContext<CursorContextType | undefined>(undefined);

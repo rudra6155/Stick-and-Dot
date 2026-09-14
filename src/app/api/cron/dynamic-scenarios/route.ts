@@ -193,12 +193,16 @@ async function validateAndEnrichScenarios(scenarios: any[]) {
 
 // ── Main handler ────────────────────────────────────
 async function handler(req: NextRequest) {
-  // Verify cron secret in production
-  if (process.env.CRON_SECRET) {
-    const authHeader = req.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // ⚠️  Security: ALWAYS require the cron secret — even if the env var is not
+  // set. An absent CRON_SECRET is a misconfiguration, not a "skip auth" signal.
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error('api/cron/dynamic-scenarios: CRON_SECRET env var is not set — rejecting request to prevent open access');
+    return NextResponse.json({ error: 'Server misconfiguration: cron secret not configured' }, { status: 500 });
+  }
+  const authHeader = req.headers.get('authorization');
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {

@@ -3,21 +3,24 @@ import { NextRequest, NextResponse } from 'next/server';
 const GNEWS_API_KEY = process.env.GNEWS_API_KEY;
 
 const CLASS_KEYWORDS: { keywords: string[]; label: string }[] = [
-  { keywords: ['crypto', 'bitcoin', 'ethereum'], label: 'Crypto' },
-  { keywords: ['stock', 'equity', 'earnings', 'nasdaq', 's&p'], label: 'Stock' },
-  { keywords: ['gold', 'oil', 'commodity', 'wheat', 'silver'], label: 'Commodity' },
-  { keywords: ['bond', 'yield', 'treasury', 'fed', 'rate'], label: 'Bond' },
-  { keywords: ['india', 'nse', 'sensex', 'nifty'], label: 'Indian Stock' },
-  { keywords: ['reit', 'real estate', 'property'], label: 'REIT' },
-  { keywords: ['etf', 'fund', 'vanguard', 'blackrock'], label: 'ETF' },
+  { keywords: ['crypto', 'bitcoin', 'ethereum', 'blockchain', 'defi', 'nft'], label: 'Crypto' },
+  { keywords: ['stock', 'equity', 'earnings', 'nasdaq', 's&p', 'wall street', 'shares', 'ipo'], label: 'Stock' },
+  { keywords: ['gold', 'oil', 'commodity', 'wheat', 'silver', 'crude', 'metals'], label: 'Commodity' },
+  { keywords: ['bond', 'yield', 'treasury', 'fed', 'rate', 'federal reserve', 'interest'], label: 'Bond' },
+  { keywords: ['india', 'nse', 'sensex', 'nifty', 'sebi', 'bse', 'rupee', 'rbi'], label: 'Indian Stock' },
+  { keywords: ['reit', 'real estate', 'property', 'housing', 'mortgage'], label: 'REIT' },
+  { keywords: ['etf', 'fund', 'vanguard', 'blackrock', 'fidelity', 'ishares'], label: 'ETF' },
+  { keywords: ['startup', 'unicorn', 'venture', 'funding', 'series a', 'series b', 'valuation'], label: 'Startup' },
 ];
 
-const POSITIVE_WORDS = ['surge', 'gain', 'rise', 'high', 'growth', 'rally', 'up', 'bull'];
-const NEGATIVE_WORDS = ['fall', 'drop', 'crash', 'low', 'bear', 'down', 'sell', 'risk'];
+const POSITIVE_WORDS = ['surge', 'gain', 'rise', 'high', 'growth', 'rally', 'up', 'bull', 'soar', 'jump', 'boost', 'record'];
+const NEGATIVE_WORDS = ['fall', 'drop', 'crash', 'low', 'bear', 'down', 'sell', 'risk', 'plunge', 'slump', 'decline', 'tumble'];
 
-// Simple in-memory TTL cache so repeated requests for the same topic don't
-// hit Yahoo Finance every time — that risked rate limiting / IP bans.
-const NEWS_CACHE_TTL_MS = 60_000;
+// In-memory TTL cache — note: on serverless this only persists for the
+// lifetime of a single warm function instance. It still prevents duplicate
+// calls within the same invocation and throttles API usage during development
+// where instances stay warm for several minutes.
+const NEWS_CACHE_TTL_MS = 90_000; // 1.5 minutes
 const newsCache = new Map<string, { articles: any[]; expiresAt: number }>();
 
 function getRelatedClasses(text: string): string[] {
@@ -47,48 +50,53 @@ export async function POST(req: NextRequest) {
   }
   const topic = typeof body.topic === 'string' && body.topic.trim() !== '' ? body.topic.trim() : 'finance';
 
+  // Check cache first
   const cached = newsCache.get(topic);
   if (cached && cached.expiresAt > Date.now()) {
     return NextResponse.json({ articles: cached.articles });
   }
 
-  const url = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(topic)}&newsCount=10`;
+  // Require GNews API key — return empty gracefully if not configured
+  if (!GNEWS_API_KEY) {
+    console.error('api/news: GNEWS_API_KEY is not set — returning empty article list');
+    return NextResponse.json({ articles: [] });
+  }
 
   try {
+    const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(topic)}&lang=en&max=10&sortby=publishedAt&apikey=${GNEWS_API_KEY}`;
+
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!res.ok) {
-      console.error(`api/news: Yahoo Finance search request failed: ${res.status} ${res.statusText}`);
-      return NextResponse.json(
-        { error: `News provider returned an error (status ${res.status})` },
-        { status: res.status === 429 ? 429 : 502 }
-      );
+      const errorText = await res.text().catch(() => '');
+      console.error(`api/news: GNews request failed: HTTP ${res.status} — ${errorText.slice(0, 200)}`);
+      // Return empty gracefully — news is supplementary, not critical to the UI
+      return NextResponse.json({ articles: [] });
     }
 
     let data;
     try {
       data = await res.json();
     } catch (parseErr) {
-      console.error('api/news: failed to parse Yahoo Finance response as JSON:', parseErr);
-      return NextResponse.json({ error: 'Invalid JSON response from news API' }, { status: 502 });
+      console.error('api/news: Failed to parse GNews response as JSON:', parseErr);
+      return NextResponse.json({ articles: [] });
     }
 
-    if (!data.news) {
-      console.error('api/news: Yahoo Finance response missing `news` field:', data);
-      return NextResponse.json({ error: 'No articles returned' }, { status: 502 });
+    if (!data.articles || !Array.isArray(data.articles)) {
+      console.error('api/news: GNews response missing articles array. Keys:', Object.keys(data));
+      return NextResponse.json({ articles: [] });
     }
 
-    const articles = data.news.map((item: any) => {
-      const combined = `${item.title || ''}`;
+    const articles = data.articles.map((item: any) => {
+      const combined = `${item.title || ''} ${item.description || ''}`;
       return {
         title: item.title,
-        description: "",
-        url: item.link,
-        source: { name: item.publisher || 'Yahoo Finance' },
-        publishedAt: item.providerPublishTime ? new Date(item.providerPublishTime * 1000).toISOString() : new Date().toISOString(),
+        description: item.description || '',
+        url: item.url,
+        source: { name: item.source?.name || 'GNews' },
+        publishedAt: item.publishedAt || new Date().toISOString(),
         related_classes: getRelatedClasses(combined),
         sentiment: getSentiment(item.title || ''),
       };
@@ -98,7 +106,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ articles });
   } catch (err: any) {
-    console.error('api/news: unexpected error fetching news:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    // Network timeout or unexpected error — return empty gracefully
+    console.error('api/news: Unexpected error fetching news:', err?.message || err);
+    return NextResponse.json({ articles: [] });
   }
 }
+

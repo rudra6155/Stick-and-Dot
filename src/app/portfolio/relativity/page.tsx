@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Search, Plus, X, ArrowUpRight, ArrowDownRight, Minus, MousePointer2 } from "lucide-react";
+import { Search, Plus, X, ArrowUpRight, ArrowDownRight, Minus, MousePointer2, Shield, TrendingUp, Eye, ChevronDown, AlertTriangle } from "lucide-react";
 
 // ── Types ───────────────────────────────────────────────
 interface MatrixEntry {
@@ -221,7 +221,12 @@ function InteractiveChart({ charts, tickers }: { charts: Record<string, ChartPoi
     return [...new Set(tickers.flatMap(t => (charts[t] || []).map(p => p.date)))].sort();
   }, [tickers, charts]);
 
-  const allPoints = tickers.flatMap(t => (charts[t] || []).map(p => p.value));
+  // Memoize min/max computation so it doesn't re-run on every mouse move.
+  // allPoints only needs recalculating when tickers or charts data changes.
+  const allPoints = useMemo(
+    () => tickers.flatMap(t => (charts[t] || []).map(p => p.value)),
+    [tickers, charts]
+  );
   if (allPoints.length === 0) {
     return <div className="flex items-center justify-center h-full text-zinc-600 font-mono text-sm">No price history available</div>;
   }
@@ -406,6 +411,8 @@ function InteractiveChart({ charts, tickers }: { charts: Record<string, ChartPoi
 // ── Main Page ───────────────────────────────────────────
 export default function RelativityPage() {
   const [activeTab, setActiveTab] = useState<"matrix" | "compare">("matrix");
+  const [proMatrixOpen, setProMatrixOpen] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
 
   // Matrix state
   const [matrixLabels, setMatrixLabels] = useState<LabelInfo[]>([]);
@@ -444,6 +451,10 @@ export default function RelativityPage() {
         setMatrixLabels(data.labels || []);
         setMatrixData(data.matrix || []);
         setInsights(data.insights || []);
+        // Default selected asset to first label
+        if (data.labels && data.labels.length > 0) {
+          setSelectedAsset(data.labels[0].key);
+        }
       } catch {
         setMatrixError("Failed to load correlation matrix");
       } finally {
@@ -533,7 +544,7 @@ export default function RelativityPage() {
                   />
                 )}
                 <span className={`relative z-10 ${isActive ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "text-zinc-500 hover:text-zinc-300"}`}>
-                  {tab === "matrix" ? "Cross-Market Matrix" : "Custom Scenarios"}
+                  {tab === "matrix" ? "Market Intelligence" : "Custom Scenarios"}
                 </span>
               </button>
             );
@@ -563,26 +574,259 @@ export default function RelativityPage() {
               </div>
             ) : (
               <>
-                {/* Heatmap Grid */}
-                <div className="bg-zinc-950/50 backdrop-blur-3xl border border-zinc-800/50 rounded-3xl p-8 shadow-2xl overflow-hidden group">
-                  <div className="flex items-center justify-between mb-8">
-                    <div>
-                      <p className="text-sm font-mono text-emerald-400 uppercase tracking-widest font-bold">
-                        Global Asset Correlation Map
-                      </p>
-                      <p className="text-xs text-zinc-500 font-mono mt-1">Hover over any cell to track row/column relationships</p>
+                {/* ══ SECTION 1: Hedge Finder — Plain-English Intelligence ══════════ */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                      <Shield className="w-4 h-4 text-emerald-400" />
                     </div>
-                    <div className="flex items-center gap-4 bg-black/40 rounded-full px-4 py-2 border border-zinc-800">
-                      <span className="text-[10px] font-mono text-rose-400">Inverse (-1)</span>
-                      <div className="w-24 h-1.5 rounded-full bg-gradient-to-r from-rose-500 via-zinc-800 to-emerald-500" />
-                      <span className="text-[10px] font-mono text-emerald-400">Correlated (+1)</span>
+                    <div>
+                      <p className="text-sm font-black text-white uppercase tracking-widest">Hedge Finder</p>
+                      <p className="text-xs text-zinc-500 font-mono">Historical asset relationships in plain English — no maths required</p>
                     </div>
                   </div>
-                  
-                  <MatrixGrid labels={matrixLabels} data={matrixData} />
+
+                  {/* Derive top insights from live matrix data */}
+                  {(() => {
+                    if (matrixData.length === 0 || matrixLabels.length === 0) return null;
+
+                    // Find strongest inverse pairs (best hedges)
+                    const pairs = matrixData
+                      .filter(m => m.row !== m.col)
+                      .reduce((acc, m) => {
+                        const key = [m.row, m.col].sort().join('|');
+                        if (!acc.find(x => x.key === key)) acc.push({ ...m, key });
+                        return acc;
+                      }, [] as (MatrixEntry & { key: string })[]);
+
+                    const topHedge = pairs.sort((a, b) => a.value - b.value)[0];
+                    const topCorrelated = pairs.sort((a, b) => b.value - a.value)[0];
+                    const mostUncorrelated = pairs.reduce((best, p) =>
+                      Math.abs(p.value) < Math.abs(best.value) ? p : best
+                    );
+
+                    // Hidden risk: strongest positive correlation between different-sounding assets
+                    const hiddenRisk = [...pairs]
+                      .filter(p => p.value > 0.7)
+                      .sort((a, b) => b.value - a.value)[0];
+
+                    const cards = [
+                      topHedge && {
+                        icon: <Shield className="w-5 h-5" />,
+                        color: "emerald",
+                        label: "Top Hedge Pair",
+                        headline: `${topHedge.rowLabel} ↔ ${topHedge.colLabel}`,
+                        body: `These two assets move in opposite directions ${Math.abs(topHedge.value * 100).toFixed(0)}% of the time (correlation: ${topHedge.value.toFixed(2)}). Holding both reduces your portfolio volatility significantly.`,
+                        stat: topHedge.value.toFixed(2),
+                        statColor: "text-emerald-400",
+                      },
+                      hiddenRisk && {
+                        icon: <AlertTriangle className="w-5 h-5" />,
+                        color: "amber",
+                        label: "Hidden Concentration Risk",
+                        headline: `${hiddenRisk.rowLabel} ↔ ${hiddenRisk.colLabel}`,
+                        body: `These two move together ${(hiddenRisk.value * 100).toFixed(0)}% of the time (correlation: +${hiddenRisk.value.toFixed(2)}). If you hold both thinking you're diversified, you're not — you have doubled exposure to the same risk factor.`,
+                        stat: `+${hiddenRisk.value.toFixed(2)}`,
+                        statColor: "text-amber-400",
+                      },
+                      mostUncorrelated && {
+                        icon: <Eye className="w-5 h-5" />,
+                        color: "sky",
+                        label: "True Diversifier",
+                        headline: `${mostUncorrelated.rowLabel} ↔ ${mostUncorrelated.colLabel}`,
+                        body: `Near-zero correlation (${mostUncorrelated.value.toFixed(2)}) means these two assets move almost independently. Adding one to a portfolio of the other genuinely reduces risk — this is real diversification.`,
+                        stat: mostUncorrelated.value.toFixed(2),
+                        statColor: "text-sky-400",
+                      },
+                      topCorrelated && topCorrelated !== hiddenRisk && {
+                        icon: <TrendingUp className="w-5 h-5" />,
+                        color: "violet",
+                        label: "Momentum Pair",
+                        headline: `${topCorrelated.rowLabel} ↔ ${topCorrelated.colLabel}`,
+                        body: `Strong co-movement (+${topCorrelated.value.toFixed(2)}). When one surges, the other tends to follow. Useful for sector momentum strategies — but dangerous when the trend reverses.`,
+                        stat: `+${topCorrelated.value.toFixed(2)}`,
+                        statColor: "text-violet-400",
+                      },
+                    ].filter(Boolean);
+
+                    const colorMap: Record<string, string> = {
+                      emerald: "border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10",
+                      amber: "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10",
+                      sky: "border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10",
+                      violet: "border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/10",
+                    };
+                    const iconColorMap: Record<string, string> = {
+                      emerald: "text-emerald-400",
+                      amber: "text-amber-400",
+                      sky: "text-sky-400",
+                      violet: "text-violet-400",
+                    };
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {cards.map((card, i) => card && (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.08 }}
+                            className={`rounded-2xl border p-5 transition-colors cursor-default ${colorMap[card.color]}`}
+                          >
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                              <div className="flex items-center gap-2">
+                                <div className={iconColorMap[card.color]}>{card.icon}</div>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{card.label}</span>
+                              </div>
+                              <span className={`text-xl font-black font-mono ${card.statColor}`}>{card.stat}</span>
+                            </div>
+                            <p className="text-sm font-bold text-white mb-1.5 leading-snug">{card.headline}</p>
+                            <p className="text-xs text-zinc-400 leading-relaxed">{card.body}</p>
+                          </motion.div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
 
-                {/* Insights Section */}
+                {/* ══ SECTION 2: Asset Radar — Pick an Asset, See Its World ══════ */}
+                <div className="bg-zinc-950/50 backdrop-blur-3xl border border-zinc-800/50 rounded-3xl p-8 shadow-2xl">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                      <TrendingUp className="w-4 h-4 text-violet-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-white uppercase tracking-widest">Asset Radar</p>
+                      <p className="text-xs text-zinc-500 font-mono">Select any asset to see what moves with it, against it, and independently</p>
+                    </div>
+                  </div>
+
+                  {/* Asset picker */}
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {matrixLabels.map(label => (
+                      <button
+                        key={label.key}
+                        onClick={() => setSelectedAsset(label.key)}
+                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+                          selectedAsset === label.key
+                            ? 'bg-violet-500 text-white shadow-[0_0_15px_rgba(139,92,246,0.4)]'
+                            : 'bg-zinc-800/60 text-zinc-400 hover:bg-zinc-700/60 hover:text-zinc-200 border border-zinc-700/50'
+                        }`}
+                      >
+                        {label.label}
+                        <span className="ml-1.5 font-mono opacity-60 text-[9px]">{label.ticker}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Radar view */}
+                  {selectedAsset && (() => {
+                    const rows = matrixData.filter(m => m.row === selectedAsset && m.col !== selectedAsset);
+                    const sympathetic = rows.filter(r => r.value >= 0.3).sort((a, b) => b.value - a.value);
+                    const hedges = rows.filter(r => r.value < -0.1).sort((a, b) => a.value - b.value);
+                    const uncorrelated = rows.filter(r => r.value >= -0.1 && r.value < 0.3).sort((a, b) => Math.abs(a.value) - Math.abs(b.value));
+                    const selectedLabel = matrixLabels.find(l => l.key === selectedAsset);
+
+                    return (
+                      <div className="space-y-5">
+                        <p className="text-xs text-zinc-500 font-mono">
+                          Showing correlations for <span className="text-violet-400 font-bold">{selectedLabel?.label || selectedAsset}</span> ({selectedLabel?.ticker})
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* Moves with */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                              <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Moves Together</span>
+                            </div>
+                            {sympathetic.length === 0 ? (
+                              <p className="text-xs text-zinc-600 italic">No strong positive correlations</p>
+                            ) : sympathetic.map(r => (
+                              <div key={r.col} className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                                <span className="text-xs font-bold text-zinc-300">{r.colLabel}</span>
+                                <span className="text-xs font-mono font-black text-emerald-400">+{r.value.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                          {/* Hedges */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-2 h-2 rounded-full bg-rose-400" />
+                              <span className="text-xs font-bold text-rose-400 uppercase tracking-widest">Natural Hedges</span>
+                            </div>
+                            {hedges.length === 0 ? (
+                              <p className="text-xs text-zinc-600 italic">No inverse correlations found</p>
+                            ) : hedges.map(r => (
+                              <div key={r.col} className="flex items-center justify-between p-3 rounded-xl bg-rose-500/5 border border-rose-500/10">
+                                <span className="text-xs font-bold text-zinc-300">{r.colLabel}</span>
+                                <span className="text-xs font-mono font-black text-rose-400">{r.value.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                          {/* Uncorrelated */}
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-2 h-2 rounded-full bg-zinc-400" />
+                              <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Uncorrelated</span>
+                            </div>
+                            {uncorrelated.length === 0 ? (
+                              <p className="text-xs text-zinc-600 italic">No uncorrelated assets</p>
+                            ) : uncorrelated.map(r => (
+                              <div key={r.col} className="flex items-center justify-between p-3 rounded-xl bg-zinc-800/30 border border-zinc-700/30">
+                                <span className="text-xs font-bold text-zinc-400">{r.colLabel}</span>
+                                <span className="text-xs font-mono font-black text-zinc-500">{r.value.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* ══ SECTION 3: Pro Quant Matrix (collapsible) ══════════════════ */}
+                <div className="bg-zinc-950/50 backdrop-blur-3xl border border-zinc-800/50 rounded-3xl overflow-hidden shadow-2xl">
+                  <button
+                    onClick={() => setProMatrixOpen(prev => !prev)}
+                    className="w-full flex items-center justify-between p-8 hover:bg-white/[0.02] transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-mono text-emerald-400 uppercase tracking-widest font-bold">Pro Quant Matrix</p>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">Advanced</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs text-zinc-500 font-mono hidden md:block">Full {matrixLabels.length}×{matrixLabels.length} correlation heatmap</p>
+                      <ChevronDown className={`w-5 h-5 text-zinc-500 transition-transform duration-300 ${proMatrixOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+
+                  <AnimatePresence initial={false}>
+                    {proMatrixOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.35, ease: 'easeInOut' }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-8 pb-8 space-y-6">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-zinc-500 font-mono">Hover over any cell to track row/column relationships</p>
+                            <div className="flex items-center gap-4 bg-black/40 rounded-full px-4 py-2 border border-zinc-800">
+                              <span className="text-[10px] font-mono text-rose-400">Inverse (-1)</span>
+                              <div className="w-24 h-1.5 rounded-full bg-gradient-to-r from-rose-500 via-zinc-800 to-emerald-500" />
+                              <span className="text-[10px] font-mono text-emerald-400">Correlated (+1)</span>
+                            </div>
+                          </div>
+                          <MatrixGrid labels={matrixLabels} data={matrixData} />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* AI Insights Section (unchanged) */}
                 {insights.length > 0 && (
                   <div className="bg-zinc-950/50 backdrop-blur-xl border border-zinc-800/50 rounded-3xl p-8 shadow-xl">
                     <p className="text-sm font-mono text-yellow-500 uppercase tracking-widest font-bold mb-6 flex items-center gap-2">

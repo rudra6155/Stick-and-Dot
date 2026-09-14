@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Plus, LayoutGrid, Activity, Rocket, Coins, Briefcase, TrendingUp,
   DollarSign, Eye, Target, Search, ChevronDown, Lock, BarChart3, ArrowRight,
-  AlertTriangle, RefreshCw,
+  AlertTriangle, RefreshCw, Building2, MapPin,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,6 +14,313 @@ import CreatePredictionModal from "@/components/predictions/CreatePredictionModa
 import BetSlipSidebar from "@/components/predictions/BetSlipSidebar";
 import { fetchLiveMarkets, PredictionEvent } from "@/utils/sportsData";
 import { useBetting, ActiveBet } from "@/context/BettingContext";
+
+interface StartupData {
+  id: string;
+  name: string;
+  sector: string;
+  region: string;
+  valuation: number;
+  lastRound: string;
+  lastRoundAmount: number;
+  leadVCs: string[];
+  founded: number;
+  ipoOutlook: string;
+  ipoNotes: string;
+  description: string;
+  tags: string[];
+  predictionEventId?: string;
+}
+
+const IPO_COLORS: Record<string, string> = {
+  'Soon': 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
+  '2026': 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
+  '2027': 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
+  '2028+': 'text-zinc-400 bg-zinc-400/10 border-zinc-400/20',
+  'Unknown': 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20',
+  'Listed': 'text-sky-400 bg-sky-400/10 border-sky-400/20',
+};
+
+const REGION_COLORS: Record<string, string> = {
+  'India': 'text-orange-400',
+  'US': 'text-blue-400',
+  'Europe': 'text-violet-400',
+  'Global': 'text-emerald-400',
+};
+
+function formatValuation(val: number): string {
+  if (val >= 100) return `$${val}B`;
+  if (val >= 10) return `$${val}B`;
+  return `$${val}B`;
+}
+
+function formatRoundAmount(amt: number): string {
+  if (amt === 0) return 'Bootstrapped';
+  if (amt >= 1000) return `$${(amt / 1000).toFixed(1)}B`;
+  return `$${amt}M`;
+}
+
+function StartupIntelHub({ markets = [], searchQuery = "" }: { markets?: PredictionEvent[]; searchQuery?: string }) {
+  const [startups, setStartups] = React.useState<StartupData[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [regionFilter, setRegionFilter] = React.useState<string>('All');
+  const [expanded, setExpanded] = React.useState<string | null>(null);
+  const { openBetSlip } = useBetting();
+
+  React.useEffect(() => {
+    fetch('/api/startups')
+      .then(r => r.json())
+      .then(d => { setStartups(d.startups || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const regions = ['All', 'India', 'US', 'Europe', 'Global'];
+  const filtered = React.useMemo(() => {
+    let list = regionFilter === 'All' ? startups : startups.filter(s => s.region === regionFilter);
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(s =>
+        s.name.toLowerCase().includes(q) ||
+        s.sector.toLowerCase().includes(q) ||
+        s.tags.some(t => t.toLowerCase().includes(q)) ||
+        s.leadVCs.some(vc => vc.toLowerCase().includes(q)) ||
+        s.region.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [startups, regionFilter, searchQuery]);
+
+  // Helper to find matching prediction market for each startup
+  const getMarketForStartup = (s: StartupData): PredictionEvent | undefined => {
+    if (s.predictionEventId) {
+      const byId = markets.find(m => m.id === s.predictionEventId);
+      if (byId) return byId;
+    }
+    return markets.find(m => m.title.toLowerCase().includes(s.name.toLowerCase()));
+  };
+
+  const handlePlaceBet = (market: PredictionEvent, outcome: PredictionEvent['outcomes'][0]) => {
+    openBetSlip({
+      eventId: market.id,
+      eventTitle: market.title,
+      outcome,
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="mb-6 rounded-2xl border border-zinc-800/50 bg-zinc-950/50 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <Building2 className="w-5 h-5 text-violet-400" />
+          <span className="text-sm font-black uppercase tracking-widest text-white">Startup Intelligence Hub</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-32 rounded-xl bg-zinc-900/60 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6 rounded-2xl border border-violet-500/10 bg-zinc-950/50 backdrop-blur-xl p-6 shadow-2xl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+            <Building2 className="w-5 h-5 text-violet-400" />
+          </div>
+          <div>
+            <p className="text-sm font-black uppercase tracking-widest text-white">Startup Intelligence Hub</p>
+            <p className="text-xs text-zinc-500 font-mono">{filtered.length} unicorns · Real funding data · IPO outlook</p>
+          </div>
+        </div>
+        {/* Region filter */}
+        <div className="flex gap-1.5 overflow-x-auto">
+          {regions.map(r => (
+            <button
+              key={r}
+              onClick={() => setRegionFilter(r)}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                regionFilter === r
+                  ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/25'
+                  : 'bg-zinc-800/80 text-zinc-500 hover:text-zinc-300 border border-zinc-700/50'
+              }`}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Cards grid */}
+      {filtered.length === 0 ? (
+        <div className="py-8 text-center border border-dashed border-zinc-800/80 rounded-xl">
+          <p className="text-zinc-500 text-xs font-mono">No startups match your search or filter.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        {filtered.map((s, i) => {
+          const market = getMarketForStartup(s);
+          const isExpanded = expanded === s.id;
+
+          return (
+            <motion.div
+              key={s.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className="rounded-xl border border-zinc-800/50 bg-zinc-900/40 hover:bg-zinc-900/70 hover:border-zinc-700/60 transition-all cursor-pointer group flex flex-col justify-between"
+              onClick={() => setExpanded(isExpanded ? null : s.id)}
+            >
+              <div className="p-4">
+                {/* Top row */}
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p className="font-black text-white text-sm group-hover:text-violet-300 transition-colors">{s.name}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">{s.sector}</p>
+                  </div>
+                  <div className="text-right flex items-center gap-2">
+                    <div>
+                      <p className="text-lg font-black font-mono text-violet-400">{formatValuation(s.valuation)}</p>
+                      <p className="text-[10px] text-zinc-600 font-mono">valuation</p>
+                    </div>
+                    <ChevronDown
+                      className={`w-4 h-4 text-zinc-600 transition-transform duration-200 ${
+                        isExpanded ? "rotate-180 text-violet-400" : "group-hover:text-zinc-400"
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Funding row */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-zinc-300">{s.lastRound}</span>
+                    <span className="text-zinc-600">·</span>
+                    <span className="text-xs font-mono text-zinc-400">{formatRoundAmount(s.lastRoundAmount)}</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${IPO_COLORS[s.ipoOutlook] || IPO_COLORS['Unknown']}`}>
+                    IPO {s.ipoOutlook}
+                  </span>
+                </div>
+
+                {/* VCs */}
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {s.leadVCs.slice(0, 3).map(vc => (
+                    <span key={vc} className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-zinc-800/80 text-zinc-400">{vc}</span>
+                  ))}
+                  {s.leadVCs.length > 3 && (
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-zinc-800/80 text-zinc-600">+{s.leadVCs.length - 3}</span>
+                  )}
+                </div>
+
+                {/* Region + Direct Quick Bet Buttons */}
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-zinc-600" />
+                    <span className={`text-xs font-bold ${REGION_COLORS[s.region] || 'text-zinc-400'}`}>{s.region}</span>
+                    <span className="text-zinc-700 text-xs ml-1">· Est. {s.founded}</span>
+                  </div>
+
+                  {market && market.outcomes.length > 0 ? (
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      {market.outcomes.slice(0, 2).map((outcome, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handlePlaceBet(market, outcome)}
+                          className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1 active:scale-95 ${
+                            idx === 0
+                              ? "bg-emerald-500/15 hover:bg-emerald-500 hover:text-black border-emerald-500/30 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.12)]"
+                              : "bg-zinc-800/80 hover:bg-zinc-700 hover:text-white border-zinc-700/60 text-zinc-400"
+                          }`}
+                          title={`Bet ${outcome.label} (${outcome.odds.toFixed(2)}x) on "${market.title}"`}
+                        >
+                          {idx === 0 && <TrendingUp className="w-3 h-3" />}
+                          <span>{outcome.label}</span>
+                          <span className="font-black">{outcome.odds.toFixed(2)}x</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-zinc-600 font-mono italic">No active odds</span>
+                  )}
+                </div>
+
+                {/* Expanded company details & embedded prediction market */}
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-3 pt-3 border-t border-zinc-800/50 space-y-2.5">
+                        <p className="text-xs text-zinc-300 leading-relaxed">{s.description}</p>
+                        <p className="text-xs text-zinc-500 italic">Outlook: {s.ipoNotes}</p>
+                        <div className="flex flex-wrap gap-1">
+                          {s.tags.map(tag => (
+                            <span key={tag} className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-500/5 border border-violet-500/10 text-violet-400">{tag}</span>
+                          ))}
+                        </div>
+
+                        {/* Embedded Full Market View */}
+                        {market && (
+                          <div className="mt-3 p-3 rounded-xl bg-zinc-950/90 border border-violet-500/20 shadow-inner">
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                              <span className="text-[9px] font-mono uppercase tracking-wider text-emerald-400 font-bold flex items-center gap-1.5">
+                                <span className="relative flex h-1.5 w-1.5">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                                </span>
+                                Live Prediction Market
+                              </span>
+                              <span className="text-[10px] font-mono text-zinc-500">
+                                Pool: ${(market.poolSize || 0).toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="text-xs font-bold text-white mb-2.5 leading-snug">
+                              {market.title}
+                            </p>
+                            <div className="grid grid-cols-2 gap-2" onClick={(e) => e.stopPropagation()}>
+                              {market.outcomes.map((outcome, idx) => (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => handlePlaceBet(market, outcome)}
+                                  className={`py-2 px-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-between transition-all active:scale-95 ${
+                                    idx === 0
+                                      ? "bg-emerald-500/20 hover:bg-emerald-500 hover:text-black border-emerald-500/40 text-emerald-400 shadow-sm"
+                                      : "bg-zinc-800 hover:bg-zinc-700 hover:text-white border-zinc-700 text-zinc-300"
+                                  }`}
+                                >
+                                  <span className="flex items-center gap-1">
+                                    {idx === 0 ? <TrendingUp className="w-3.5 h-3.5" /> : null}
+                                    Bet {outcome.label}
+                                  </span>
+                                  <span className="font-black text-sm">{outcome.odds.toFixed(2)}x</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+      )}
+    </div>
+  );
+}
 
 type CategoryFilter = "All" | PredictionEvent["category"];
 type SortKey = "pool" | "odds" | "closing";
@@ -278,8 +585,12 @@ export default function PredictionsDashboard() {
         </div>
       </section>
 
-      {/* Markets Grid */}
+      {/* Markets Grid — with Startup Intel Hub header for Startup tab */}
       <section>
+        {/* Startup Intelligence Hub */}
+        {activeTab === "Startup" && !loading && (
+          <StartupIntelHub markets={markets} searchQuery={search} />
+        )}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {Array.from({ length: 9 }).map((_, i) => (

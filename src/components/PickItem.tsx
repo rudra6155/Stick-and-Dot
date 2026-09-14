@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Trash2, ChevronDown, ExternalLink } from "lucide-react";
-import { AssetCard } from "@/components/AssetCard";
+import { Trash2, ChevronDown } from "lucide-react";
 import { AssetRiskPanel } from "@/components/AssetRiskPanel";
 import { AssetBacktestPanel } from "@/components/AssetBacktestPanel";
 import { AVAILABLE_METRICS, getMetric } from "@/components/AssetCard";

@@ -51,8 +51,8 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
   // We use selectedMetrics from state now
 
   useEffect(() => {
-    fetchAssetClassCounts().catch(() => ({})).then(counts => {
-      setLiveCount(counts[assetClass] || 0);
+    fetchAssetClassCounts().catch(() => ({} as Record<string, number>)).then(counts => {
+      setLiveCount((counts as Record<string, number>)[assetClass] || 0);
     });
   }, [assetClass]);
 

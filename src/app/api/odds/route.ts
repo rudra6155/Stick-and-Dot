@@ -22,16 +22,46 @@ function probToOdds(prob: number): number {
   return Number((100 / clampProbability(prob)).toFixed(2));
 }
 
+// ── Deterministic seeded pseudo-random number generator ──────────────────
+// Replaces Math.random() so that odds, pool sizes, and probabilities are
+// STABLE per event per calendar day. Users won't see numbers jump on refresh.
+// Uses a simple xorshift32 hash over the seed string + today's date.
+function seededRandom(seed: string): () => number {
+  const dayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const combined = seed + dayKey;
+  // djb2 hash
+  let hash = 5381;
+  for (let i = 0; i < combined.length; i++) {
+    hash = ((hash << 5) + hash) ^ combined.charCodeAt(i);
+    hash = hash >>> 0; // keep unsigned 32-bit
+  }
+  // xorshift32
+  return () => {
+    hash ^= hash << 13;
+    hash ^= hash >> 17;
+    hash ^= hash << 5;
+    hash = hash >>> 0;
+    return hash / 0xFFFFFFFF;
+  };
+}
+
+// ── Pool size from seed — stable per event per day ───────────────────────
+function seededPool(seed: string, min: number, max: number): number {
+  const rng = seededRandom(seed);
+  return Math.floor(rng() * (max - min) + min);
+}
+
 // Derives a proper 3-way (Home / Draw / Away) probability split instead of forcing
 // Home + Away to sum to 100%, which artificially strips out Draw's share of probability.
-function computeMatchProbabilities(homeGoals: number, awayGoals: number, elapsed: number, isLive: boolean) {
+function computeMatchProbabilities(homeGoals: number, awayGoals: number, elapsed: number, isLive: boolean, fixtureSeed?: string) {
   const goalDiff = homeGoals - awayGoals;
   const timeProgress = Math.min(elapsed, 90) / 90; // 0 -> 1 as the match progresses
 
   if (!isLive) {
-    // Pre-match: modest home advantage, standard football draw probability.
-    const homeProb = 38 + Math.floor(Math.random() * 14); // 38-51
-    const drawProb = 24 + Math.floor(Math.random() * 6); // 24-29
+    // Pre-match: deterministic home advantage using fixture seed for stability.
+    const rng = seededRandom(fixtureSeed || 'default-fixture');
+    const homeProb = 38 + Math.floor(rng() * 14); // 38-51, stable per fixture per day
+    const drawProb = 24 + Math.floor(rng() * 6);  // 24-29
     const awayProb = 100 - homeProb - drawProb;
     return { homeProb, drawProb, awayProb };
   }
@@ -53,111 +83,217 @@ function computeMatchProbabilities(homeGoals: number, awayGoals: number, elapsed
 
 function generateMockMarkets(): PredictionEvent[] {
   const events: PredictionEvent[] = [];
-  
-  const sportsTeams = [
-    ["Lakers", "Warriors", "NBA"], ["Arsenal", "Chelsea", "Premier League"],
-    ["Real Madrid", "Barcelona", "La Liga"], ["Chiefs", "49ers", "NFL"],
-    ["Yankees", "Dodgers", "MLB"], ["Djokovic", "Alcaraz", "Tennis Grand Slam"],
-    ["Max Verstappen", "Lando Norris", "F1 Championship"], ["Celtics", "Heat", "NBA Playoffs"],
-    ["Man City", "Liverpool", "Premier League"], ["PSG", "Bayern Munich", "Champions League"],
-    ["Nadal", "Sinner", "ATP Finals"], ["Mumbai Indians", "CSK", "IPL"],
-    ["Bills", "Eagles", "NFL Playoffs"], ["Inter Milan", "AC Milan", "Serie A Derby"],
-    ["Flamengo", "Palmeiras", "Brasileirao"], ["Knicks", "76ers", "NBA Eastern"],
-    ["Bucks", "Nuggets", "NBA Finals"], ["Mets", "Astros", "World Series"],
-    ["Packers", "Cowboys", "NFC Showdown"], ["Dortmund", "Leverkusen", "Bundesliga"]
+
+  // ── Sports: 40 high-profile matchups across global leagues ───────────────
+  const sportsTeams: [string, string, string, string][] = [
+    // NBA
+    ["Lakers", "Warriors", "NBA", "Tonight"],
+    ["Celtics", "Heat", "NBA Playoffs", "Tonight"],
+    ["Knicks", "76ers", "NBA Eastern", "Tonight"],
+    ["Bucks", "Nuggets", "NBA Finals", "Tonight"],
+    ["Thunder", "Clippers", "NBA", "Tonight"],
+    // Premier League
+    ["Arsenal", "Chelsea", "Premier League", "Tonight"],
+    ["Man City", "Liverpool", "Premier League", "Tonight"],
+    ["Tottenham", "Man United", "Premier League", "Tonight"],
+    ["Newcastle", "Aston Villa", "Premier League", "Tonight"],
+    // Champions League
+    ["PSG", "Bayern Munich", "Champions League", "Tonight"],
+    ["Real Madrid", "Barcelona", "La Liga", "Tonight"],
+    ["Inter Milan", "AC Milan", "Serie A Derby", "Tonight"],
+    ["Dortmund", "Leverkusen", "Bundesliga", "Tonight"],
+    ["Atletico Madrid", "Sevilla", "La Liga", "Tonight"],
+    ["Juventus", "Roma", "Serie A", "Tonight"],
+    // NFL
+    ["Chiefs", "49ers", "NFL", "Tonight"],
+    ["Bills", "Eagles", "NFL Playoffs", "Tonight"],
+    ["Packers", "Cowboys", "NFC Showdown", "Tonight"],
+    ["Ravens", "Bengals", "AFC North", "Tonight"],
+    ["Dolphins", "Jets", "AFC East", "Tonight"],
+    // MLB
+    ["Yankees", "Dodgers", "MLB", "Tonight"],
+    ["Mets", "Astros", "World Series", "Tonight"],
+    ["Cubs", "Cardinals", "NL Central", "Tonight"],
+    // Tennis
+    ["Djokovic", "Alcaraz", "Wimbledon Final", "Tonight"],
+    ["Nadal", "Sinner", "ATP Finals", "Tonight"],
+    ["Swiatek", "Gauff", "US Open Women's Final", "Tonight"],
+    // F1
+    ["Max Verstappen", "Lando Norris", "F1 Championship", "Tonight"],
+    ["Lewis Hamilton", "Charles Leclerc", "Monaco Grand Prix", "Tonight"],
+    // Cricket / IPL
+    ["Mumbai Indians", "CSK", "IPL Final", "Tonight"],
+    ["India", "Australia", "Test Championship", "Tonight"],
+    ["KKR", "RCB", "IPL", "Tonight"],
+    ["DC", "PBKS", "IPL", "Tonight"],
+    // South America
+    ["Flamengo", "Palmeiras", "Brasileirao", "Tonight"],
+    ["Boca Juniors", "River Plate", "Copa Argentina", "Tonight"],
+    // UFC / Boxing
+    ["Jon Jones", "Stipe Miocic", "UFC Heavyweight", "Tonight"],
+    ["Canelo Alvarez", "Dmitry Bivol", "WBC Super-Middleweight", "Tonight"],
+    // Golf
+    ["Scottie Scheffler", "Rory McIlroy", "The Open Championship", "Tonight"],
+    // Copa América
+    ["Brazil", "Argentina", "Copa América Final", "Tonight"],
+    ["Colombia", "Uruguay", "Copa América Semi", "Tonight"],
+    // Extras
+    ["Leverkusen", "Atletico Madrid", "Europa League", "Tonight"],
   ];
 
-  const startups = [
-    "OpenAI reaches $150B valuation by Q4",
-    "Stripe finally IPOs this year",
-    "SpaceX completes Mars orbital test",
-    "Figure AI deploys 10k robots",
-    "Anthropic releases Claude 5",
-    "xAI raises another $10B",
-    "Perplexity AI surpasses 100M MAUs",
-    "Neuralink gets FDA approval for V2",
-    "Waymo expands to 20 cities",
-    "Mistral AI valued over $10B"
+  // ── Startup Predictions: 30 events — Indian + Global unicorns ────────────
+  const startups: { title: string; probYes: number; pool: number; date: string }[] = [
+    // Global AI Unicorns
+    { title: "OpenAI achieves $200B valuation before Q1 2027", probYes: 62, pool: 18500000, date: "2027-03-31" },
+    { title: "Anthropic releases Claude 5 with GPT-5 beating benchmarks", probYes: 55, pool: 9200000, date: "2026-12-31" },
+    { title: "xAI's Grok surpasses 50M daily active users", probYes: 48, pool: 7800000, date: "2026-12-31" },
+    { title: "Perplexity AI crosses 100M monthly active users", probYes: 58, pool: 5600000, date: "2026-12-31" },
+    { title: "Mistral AI gets acquired by a major tech company", probYes: 32, pool: 4100000, date: "2026-12-31" },
+    { title: "Figure AI deploys 10,000 humanoid robots commercially", probYes: 28, pool: 6700000, date: "2027-06-30" },
+    { title: "Waymo expands to 20 US cities by end of 2026", probYes: 45, pool: 8300000, date: "2026-12-31" },
+    { title: "Neuralink receives FDA approval for consumer BCI device", probYes: 22, pool: 12400000, date: "2027-06-30" },
+    { title: "Runway ML IPO at over $10B valuation", probYes: 30, pool: 3200000, date: "2027-03-31" },
+    // Global FinTech / B2B
+    { title: "Stripe files IPO S-1 before December 31, 2026", probYes: 52, pool: 22000000, date: "2026-12-31" },
+    { title: "Klarna completes NYSE IPO at $14B+ valuation", probYes: 68, pool: 15000000, date: "2026-12-31" },
+    { title: "Databricks reaches $100B valuation", probYes: 40, pool: 9800000, date: "2027-06-30" },
+    { title: "Canva goes public via NYSE IPO this year", probYes: 35, pool: 7600000, date: "2026-12-31" },
+    { title: "Discord raises new funding at $20B+ valuation", probYes: 38, pool: 4500000, date: "2026-12-31" },
+    { title: "SpaceX completes first commercial Starship orbital flight", probYes: 72, pool: 28000000, date: "2026-12-31" },
+    // Indian Unicorns
+    { title: "Zepto achieves $1B revenue run-rate by Q4 2026", probYes: 55, pool: 4800000, date: "2026-12-31" },
+    { title: "PhonePe IPO on Indian exchanges by 2027", probYes: 48, pool: 6200000, date: "2027-12-31" },
+    { title: "Razorpay reaches $10B valuation in next funding round", probYes: 42, pool: 3900000, date: "2027-06-30" },
+    { title: "Groww surpasses 50M registered investors", probYes: 60, pool: 3100000, date: "2026-12-31" },
+    { title: "Swiggy Instamart becomes India's largest quick commerce", probYes: 38, pool: 5500000, date: "2027-03-31" },
+    { title: "Meesho crosses $2B GMV by Q4 2026", probYes: 50, pool: 2800000, date: "2026-12-31" },
+    { title: "Slice Bank launches full banking services by end of 2026", probYes: 44, pool: 1900000, date: "2026-12-31" },
+    { title: "Ola Electric delivers 1M EVs in 2026", probYes: 35, pool: 4200000, date: "2026-12-31" },
+    { title: "Zerodha launches mutual fund platform with 10M AUM users", probYes: 62, pool: 2600000, date: "2026-12-31" },
+    { title: "CRED surpasses 20M active premium users", probYes: 55, pool: 3400000, date: "2026-12-31" },
+    { title: "Lenskart expands to 50 countries globally", probYes: 30, pool: 1800000, date: "2027-06-30" },
+    { title: "Nykaa Fashion achieves profitability by Q2 FY27", probYes: 45, pool: 2200000, date: "2027-09-30" },
+    { title: "Dunzo acquires a rival quick-commerce startup", probYes: 28, pool: 1500000, date: "2026-12-31" },
+    { title: "InMobi Group lists one subsidiary on Indian exchanges", probYes: 32, pool: 1700000, date: "2027-12-31" },
+    { title: "BharatPe achieves 100M merchant payment network", probYes: 58, pool: 3000000, date: "2026-12-31" },
   ];
 
-  const cryptos = [
-    "Bitcoin breaks $150k by year end",
-    "Ethereum surpasses $10k",
-    "Solana reaches $500",
-    "Dogecoin hits $1",
-    "XRP wins final SEC appeal",
-    "Total crypto market cap exceeds $5T",
-    "Bitcoin ETF AUM exceeds $200B",
-    "Cardano smart contracts TVL > $5B"
+  // ── Crypto: 20 events ───────────────────────────────────────────────────
+  const cryptos: { title: string; probYes: number; pool: number; date: string }[] = [
+    { title: "Bitcoin breaks $150,000 before year end", probYes: 58, pool: 45000000, date: "2026-12-31" },
+    { title: "Ethereum surpasses $10,000 all-time high", probYes: 42, pool: 28000000, date: "2026-12-31" },
+    { title: "Solana reaches $500 per token", probYes: 38, pool: 18000000, date: "2026-12-31" },
+    { title: "XRP wins final SEC court appeal", probYes: 65, pool: 22000000, date: "2026-12-31" },
+    { title: "Total crypto market cap exceeds $5 Trillion", probYes: 40, pool: 35000000, date: "2026-12-31" },
+    { title: "Bitcoin ETF AUM surpasses $200 Billion", probYes: 55, pool: 31000000, date: "2026-12-31" },
+    { title: "Dogecoin reaches $1 per coin", probYes: 25, pool: 19000000, date: "2026-12-31" },
+    { title: "Cardano achieves $10B TVL in DeFi protocols", probYes: 28, pool: 8500000, date: "2026-12-31" },
+    { title: "Uniswap V4 processes $500B cumulative volume", probYes: 48, pool: 7200000, date: "2026-12-31" },
+    { title: "Arbitrum surpasses Ethereum mainnet in daily transactions", probYes: 35, pool: 9800000, date: "2026-12-31" },
+    { title: "Polygon zkEVM reaches $5B TVL", probYes: 30, pool: 6300000, date: "2026-12-31" },
+    { title: "BlackRock launches a second crypto ETF product", probYes: 60, pool: 14500000, date: "2026-12-31" },
+    { title: "Binance resolves all US legal issues by end of 2026", probYes: 42, pool: 11000000, date: "2026-12-31" },
+    { title: "Avalanche becomes top 5 DeFi chain by TVL", probYes: 32, pool: 7800000, date: "2026-12-31" },
+    { title: "EU MiCA regulations drive 3 exchanges out of Europe", probYes: 45, pool: 5600000, date: "2026-12-31" },
+    { title: "zkSync mainnet processes $100B in transactions", probYes: 38, pool: 4900000, date: "2026-12-31" },
+    { title: "Chainlink CCIP becomes the standard cross-chain protocol", probYes: 40, pool: 6100000, date: "2027-06-30" },
+    { title: "Litecoin halving causes 50%+ price surge", probYes: 35, pool: 5300000, date: "2027-08-31" },
+    { title: "India legalizes crypto trading with formal taxation framework", probYes: 50, pool: 8900000, date: "2026-12-31" },
+    { title: "Toncoin becomes Telegram's primary payment layer", probYes: 62, pool: 7400000, date: "2026-12-31" },
   ];
 
-  const equities = [
-    "NVIDIA hits $5T market cap",
-    "Apple announces AI-first iPhone",
-    "Tesla delivers 3M vehicles this year",
-    "Microsoft Azure overtakes AWS",
-    "Meta stock crosses $700",
-    "Google spins off Waymo as IPO",
-    "Amazon acquires a major studio",
-    "Goldman Sachs beats Q3 estimates by 20%"
+  // ── Equities: 20 market events ──────────────────────────────────────────
+  const equities: { title: string; probYes: number; pool: number; date: string }[] = [
+    { title: "NVIDIA market cap surpasses $5 Trillion", probYes: 48, pool: 38000000, date: "2026-12-31" },
+    { title: "Apple launches AI-native iPhone with on-device LLM", probYes: 72, pool: 24000000, date: "2026-12-31" },
+    { title: "Tesla delivers 3 million vehicles in 2026", probYes: 38, pool: 18500000, date: "2026-12-31" },
+    { title: "Microsoft Azure officially overtakes AWS in market share", probYes: 30, pool: 21000000, date: "2027-12-31" },
+    { title: "Meta Platforms stock crosses $700", probYes: 55, pool: 14000000, date: "2026-12-31" },
+    { title: "Google (Alphabet) spins off Waymo as separate public entity", probYes: 28, pool: 16000000, date: "2027-12-31" },
+    { title: "Amazon acquires a major Hollywood studio", probYes: 22, pool: 12000000, date: "2027-12-31" },
+    { title: "S&P 500 crosses 6,500 points before end of 2026", probYes: 52, pool: 29000000, date: "2026-12-31" },
+    { title: "NIFTY 50 crosses 30,000 points by Q4 2026", probYes: 42, pool: 8700000, date: "2026-12-31" },
+    { title: "Sensex reaches 1,00,000 mark by 2027", probYes: 35, pool: 6500000, date: "2027-12-31" },
+    { title: "Reliance Industries launches Jio AI cloud platform", probYes: 65, pool: 5400000, date: "2026-12-31" },
+    { title: "HDFC Bank becomes India's largest company by market cap", probYes: 48, pool: 4800000, date: "2026-12-31" },
+    { title: "Goldman Sachs beats Q3 2026 earnings by 20%+", probYes: 40, pool: 9200000, date: "2026-09-30" },
+    { title: "Berkshire Hathaway acquires a major Indian company", probYes: 18, pool: 11000000, date: "2027-12-31" },
+    { title: "SoftBank Vision Fund achieves profitability in FY2026", probYes: 30, pool: 7800000, date: "2027-03-31" },
+    { title: "Tesla launches its own insurance product in all 50 US states", probYes: 55, pool: 8100000, date: "2026-12-31" },
+    { title: "AMD surpasses Intel in total data center revenue", probYes: 45, pool: 13500000, date: "2026-12-31" },
+    { title: "Adani Group recovers to pre-Hindenburg report valuation", probYes: 50, pool: 6200000, date: "2026-12-31" },
+    { title: "Tata Motors Jaguar Land Rover achieves record EV sales year", probYes: 52, pool: 4300000, date: "2027-03-31" },
+    { title: "Infosys wins $5B+ TCV contract in H2 FY27", probYes: 38, pool: 3600000, date: "2027-03-31" },
   ];
 
-  // Sports
-  sportsTeams.forEach((match, i) => {
-    const odds1 = (1.3 + Math.random() * 1.2).toFixed(2);
-    const prob1 = Math.round((1 / Number(odds1)) * 100);
-    const odds2 = (1 + (100 - prob1) / prob1 + Math.random() * 0.2).toFixed(2);
+  // ── Build Sports events with deterministic seeded odds ───────────────────
+  sportsTeams.forEach(([team1, team2, league, date], i) => {
+    const id = `sports-${i}`;
+    const rng = seededRandom(id);
+    const prob1 = Math.round(38 + rng() * 24); // 38-62
+    const prob2 = 100 - prob1;
     events.push({
-      id: `sports-${i}`,
-      title: `${match[0]} vs ${match[1]} (${match[2]})`,
-      category: "Sports", status: "Open", resolutionDate: "Tonight",
+      id,
+      title: `${team1} vs ${team2} (${league})`,
+      category: "Sports",
+      status: "Open",
+      resolutionDate: date,
       outcomes: [
-        { label: match[0], odds: Number(odds1), probability: prob1 },
-        { label: match[1], odds: Number(odds2), probability: 100 - prob1 }
+        { label: team1, odds: probToOdds(prob1), probability: prob1 },
+        { label: team2, odds: probToOdds(prob2), probability: prob2 },
       ],
-      poolSize: Math.floor(Math.random() * 5000000) + 100000
+      poolSize: seededPool(id, 500000, 8000000),
     });
   });
 
-  // Startups
-  startups.forEach((title, i) => {
-    const probYes = Math.floor(Math.random() * 60) + 20;
+  // ── Build Startup events ─────────────────────────────────────────────────
+  startups.forEach((s, i) => {
+    const id = `startup-${i}`;
     events.push({
-      id: `startup-${i}`, title, category: "Startup", status: "Open",
-      resolutionDate: "2026-12-31",
+      id,
+      title: s.title,
+      category: "Startup",
+      status: "Open",
+      resolutionDate: s.date,
       outcomes: [
-        { label: "Yes", odds: probToOdds(probYes), probability: probYes },
-        { label: "No", odds: probToOdds(100 - probYes), probability: 100 - probYes }
+        { label: "Yes", odds: probToOdds(s.probYes), probability: s.probYes },
+        { label: "No", odds: probToOdds(100 - s.probYes), probability: 100 - s.probYes },
       ],
-      poolSize: Math.floor(Math.random() * 10000000) + 500000
+      poolSize: s.pool,
     });
   });
 
-  // Crypto
-  cryptos.forEach((title, i) => {
-    const probYes = Math.floor(Math.random() * 70) + 10;
+  // ── Build Crypto events ──────────────────────────────────────────────────
+  cryptos.forEach((c, i) => {
+    const id = `crypto-${i}`;
     events.push({
-      id: `crypto-${i}`, title, category: "Crypto", status: "Open",
-      resolutionDate: "End of Quarter",
+      id,
+      title: c.title,
+      category: "Crypto",
+      status: "Open",
+      resolutionDate: c.date,
       outcomes: [
-        { label: "Yes", odds: probToOdds(probYes), probability: probYes },
-        { label: "No", odds: probToOdds(100 - probYes), probability: 100 - probYes }
+        { label: "Yes", odds: probToOdds(c.probYes), probability: c.probYes },
+        { label: "No", odds: probToOdds(100 - c.probYes), probability: 100 - c.probYes },
       ],
-      poolSize: Math.floor(Math.random() * 50000000) + 1000000
+      poolSize: c.pool,
     });
   });
 
-  // Equities
-  equities.forEach((title, i) => {
-    const probYes = Math.floor(Math.random() * 55) + 25;
+  // ── Build Equities events ────────────────────────────────────────────────
+  equities.forEach((e, i) => {
+    const id = `equities-${i}`;
     events.push({
-      id: `equities-${i}`, title, category: "Equities", status: "Open",
-      resolutionDate: "Q4 2026",
+      id,
+      title: e.title,
+      category: "Equities",
+      status: "Open",
+      resolutionDate: e.date,
       outcomes: [
-        { label: "Yes", odds: probToOdds(probYes), probability: probYes },
-        { label: "No", odds: probToOdds(100 - probYes), probability: 100 - probYes }
+        { label: "Yes", odds: probToOdds(e.probYes), probability: e.probYes },
+        { label: "No", odds: probToOdds(100 - e.probYes), probability: 100 - e.probYes },
       ],
-      poolSize: Math.floor(Math.random() * 20000000) + 2000000
+      poolSize: e.pool,
     });
   });
 
@@ -207,7 +343,7 @@ export async function GET() {
                 odds: o.price,
                 probability: Math.round((1 / o.price) * 100)
               })),
-              poolSize: Math.floor(Math.random() * 3000000) + 200000
+              poolSize: seededPool(`oddsapi-${game.id}`, 200000, 3200000)
             };
           }).filter(Boolean) as PredictionEvent[];
           allSportsEvents.push(...mapped);
@@ -247,7 +383,7 @@ export async function GET() {
               const awayGoals = match.goals.away ?? 0;
               const isLive = ['1H', '2H', 'HT', 'ET', 'P'].includes(status);
 
-              const { homeProb, drawProb, awayProb } = computeMatchProbabilities(homeGoals, awayGoals, elapsed, isLive);
+              const { homeProb, drawProb, awayProb } = computeMatchProbabilities(homeGoals, awayGoals, elapsed, isLive, `apisports-${match.fixture.id}`);
 
               const prefix = isLive ? `[LIVE ${elapsed}'] ${home} ${homeGoals}-${awayGoals} ${away}` : `${home} vs ${away}`;
               return {
@@ -261,7 +397,7 @@ export async function GET() {
                   { label: "Draw", odds: probToOdds(drawProb), probability: Math.round(drawProb) },
                   { label: away, odds: probToOdds(awayProb), probability: Math.round(awayProb) }
                 ],
-                poolSize: Math.floor(Math.random() * 5000000) + 100000
+                poolSize: seededPool(`apisports-${match.fixture.id}`, 100000, 5100000)
               };
             });
             allSportsEvents.push(...mapped);
@@ -306,7 +442,7 @@ export async function GET() {
                 { label: "Draw", odds: probToOdds(drawProb), probability: Math.round(drawProb) },
                 { label: away, odds: probToOdds(awayProb), probability: Math.round(awayProb) }
               ],
-              poolSize: Math.floor(Math.random() * 5000000) + 100000
+              poolSize: seededPool(`live-${match.fixture.id}`, 100000, 5100000)
             };
           });
           allSportsEvents.push(...liveFixtures);
@@ -341,8 +477,8 @@ export async function GET() {
     allSportsEvents = mockData.filter(m => m.category === "Sports");
   }
 
-  // Shuffle sports
-  allSportsEvents.sort(() => Math.random() - 0.5);
+  // Sort sports deterministically by title so order is stable across requests
+  allSportsEvents.sort((a, b) => a.title.localeCompare(b.title));
 
   return NextResponse.json({ 
     source: allSportsEvents.some(e => e.id.startsWith('oddsapi') || e.id.startsWith('apisports') || e.id.startsWith('live')) ? "live-apis" : "simulation",

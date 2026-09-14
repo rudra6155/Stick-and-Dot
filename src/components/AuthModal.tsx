@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
-import { X, Mail, Key, Github, Loader2 } from "lucide-react";
+import { X, Mail, Key, Loader2 } from "lucide-react";
 
 export function AuthModal({ redirectUrl, onClose }: { redirectUrl?: string, onClose: () => void }) {
   const [email, setEmail] = useState("");

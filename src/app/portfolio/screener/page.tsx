@@ -150,6 +150,7 @@ export default function ScreenerPage() {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchResults(); }, []);
 
   const applyPreset = (preset: typeof PRACTICAL_FILTERS[0]) => {
