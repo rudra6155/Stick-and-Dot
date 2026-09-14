@@ -8,7 +8,6 @@ import dynamic from 'next/dynamic';
 import { useCountUp } from "@/hooks/useCountUp";
 import { AssetCard } from "@/components/AssetCard";
 
-const DollarParticles = dynamic(() => import('@/components/DollarParticles'), { ssr: false, loading: () => null });
 const TickerHeartbeat = dynamic(() => import('@/components/TickerHeartbeat'), { ssr: false });
 const StatsSection = dynamic(() => import('@/components/StatsSection'), {
   ssr: false,
@@ -394,9 +393,6 @@ export default function SuperFinanceHub({
 
       {/* Global Backgrounds */}
       <div className="fixed inset-0 pointer-events-none z-0 bg-gradient-to-b from-[#000000] to-[#050508]" />
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        {isMounted && window.innerWidth > 768 && <DollarParticles />}
-      </div>
 
       {/* Ticker Tape */}
       <div className="fixed top-0 left-0 w-full z-50">

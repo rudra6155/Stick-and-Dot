@@ -5,8 +5,6 @@ import { useCountUp } from "@/hooks/useCountUp";
 
 const Sparkline = dynamic(() => import("@/components/Sparkline"), { ssr: false });
 
-import { useCursor } from "@/components/CustomCursor";
-
 const classIcons: Record<string, string> = {
   Crypto: "◈",
   Stock: "▸",
@@ -148,7 +146,6 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
   const cardRef = useRef<HTMLDivElement>(null);
   const rectRef = useRef<DOMRect | null>(null);
   const glowRef = useRef<HTMLDivElement>(null);
-  const { setCursorState } = useCursor();
 
   const getMetricLocal = (id: string) => getMetric(id, asset, propFormatNumber || formatNumber);
 
@@ -160,9 +157,6 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ type: "spring", stiffness: 300, damping: 25 }}
       onMouseMove={(e) => {
-        // Drive the glow position via a CSS custom property set directly on the
-        // node instead of React state, so hovering doesn't re-render the card
-        // tree on every pixel of mouse movement.
         if (!rectRef.current || !glowRef.current) return;
         const x = e.clientX - rectRef.current.left;
         const y = e.clientY - rectRef.current.top;
@@ -173,10 +167,6 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
         if (cardRef.current) {
           rectRef.current = cardRef.current.getBoundingClientRect();
         }
-        setCursorState(asset.isUp ? 'profit' : 'loss');
-      }}
-      onMouseLeave={() => {
-        setCursorState('default');
       }}
       className="group relative bg-zinc-950/90 md:bg-white/[0.04] md:backdrop-blur-md border border-white/10 rounded-3xl p-6 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/30 hover:shadow-[0_20px_60px_rgba(16,185,129,0.08)] will-change-transform"
     >

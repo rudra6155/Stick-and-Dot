@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
-import SmoothScroll from "@/components/SmoothScroll";
-import { CursorProvider } from "@/components/CustomCursor";
 import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -33,15 +31,12 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
       <body className="bg-black text-white">
-        <SmoothScroll>
-          <CursorProvider>
-            <AuthProvider>
-              <Navbar />
-              {children}
-            </AuthProvider>
-          </CursorProvider>
-        </SmoothScroll>
+        <AuthProvider>
+          <Navbar />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
 }
+
