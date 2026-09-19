@@ -330,19 +330,20 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
   try {
     return await unstable_cache(
       async () => {
-        const { data, error } = await supabase.rpc('get_asset_class_counts');
-
-        if (error) {
-          // Throwing (instead of returning a fallback) keeps unstable_cache from
-          // persisting a broken `{ All: 0 }` result for the full revalidate window.
-          throw error;
-        }
-
+        const assetClasses = ['Crypto', 'Stock', 'ETF', 'REIT', 'Commodity', 'Bond', 'Indian Stock', 'International', 'Forex', 'Index', 'Gold'];
         const counts: Record<string, number> = { All: 0 };
-        (data || []).forEach((row: any) => {
-          counts[row.asset_class] = row.count;
-          counts['All'] += row.count;
-        });
+        
+        await Promise.all(assetClasses.map(async (cls) => {
+          const { count, error } = await supabase
+            .from('asset_snapshots')
+            .select('*', { count: 'exact', head: true })
+            .eq('asset_class', cls);
+            
+          if (!error && count !== null) {
+            counts[cls] = count;
+            counts['All'] += count;
+          }
+        }));
 
         return counts;
       },
@@ -350,7 +351,7 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
       { revalidate: 3600 } // Cache for 1 hour
     )();
   } catch (error) {
-    console.error('fetchAssetClassCounts: get_asset_class_counts RPC failed:', error);
+    console.error('fetchAssetClassCounts: query failed:', error);
     return { All: 0 };
   }
 }
@@ -383,30 +384,28 @@ async function enrichAssetsWithHistory(assets: Asset[]) {
   // than others), so we can't safely cap with a single global LIMIT — the
   // .in('ticker', tickers) filter already bounds the result set per page,
   // and we take the last 7 rows per ticker in JS below.
-  let historyData: { ticker: string; date: string; close: number }[] | null = null;
-  let histError: any = null;
+  let historyData: { ticker: string; date: string; close: number }[] = [];
   try {
-    // Only fetch the most recent rows — we take the last 7 per ticker anyway,
-    // and without a LIMIT this query pulls thousands of rows on the free tier
-    // causing Vercel serverless functions to timeout (10s).
-    const res = await supabaseAdmin
-      .from('price_history')
-      .select('ticker, date, close')
-      .in('ticker', tickers)
-      .order('date', { ascending: false })
-      .limit(tickers.length * 10);
-    // Reverse so oldest-first for the slice(-7) logic below
-    historyData = (res.data || []).reverse();
-    histError = res.error;
+    const results = await Promise.allSettled(
+      tickers.map(ticker => 
+        supabaseAdmin
+          .from('price_history')
+          .select('ticker, date, close')
+          .eq('ticker', ticker)
+          .order('date', { ascending: false })
+          .limit(7)
+      )
+    );
+    
+    results.forEach(res => {
+      if (res.status === 'fulfilled' && res.value.data) {
+        // Reverse so oldest-first for the slice(-7) logic below
+        historyData.push(...res.value.data.reverse());
+      }
+    });
   } catch (err) {
-    // A network/timeout failure throws instead of resolving with { error } —
-    // catch it here so it doesn't become an unhandled promise rejection.
-    console.error('enrichAssetsWithHistory: supabaseAdmin price_history query threw:', err);
+    console.error('enrichAssetsWithHistory: query threw:', err);
     return assets;
-  }
-
-  if (histError) {
-    console.error('enrichAssetsWithHistory: price_history query error:', histError);
   }
 
   if (historyData) {

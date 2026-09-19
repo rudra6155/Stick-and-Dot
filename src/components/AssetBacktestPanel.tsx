@@ -3,7 +3,7 @@
 import Sparkline from "./Sparkline";
 
 export function AssetBacktestPanel({ result }: { result: any }) {
-  if (!result || !result.chart || result.chart.length === 0) {
+  if (!result || !result.chart || result.chart.length === 0 || result.return_pct == null) {
     return (
       <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-8 text-center text-zinc-500">
         No price history available for backtest.
