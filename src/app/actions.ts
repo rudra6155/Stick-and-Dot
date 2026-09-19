@@ -313,7 +313,12 @@ export async function fetchAssetsPaginated(params: {
 
   const mappedAssets: Asset[] = (data || []).map(mapRowToAsset);
 
-  await enrichAssetsWithHistory(mappedAssets);
+  // Don't block the grid render on price_history — if it's slow or times out,
+  // the cards still render without sparklines rather than the whole page
+  // staying stuck at "Loading Market Data...".
+  enrichAssetsWithHistory(mappedAssets).catch((err) =>
+    console.error('enrichAssetsWithHistory background error:', err)
+  );
 
   return {
     assets: mappedAssets,
@@ -381,12 +386,17 @@ async function enrichAssetsWithHistory(assets: Asset[]) {
   let historyData: { ticker: string; date: string; close: number }[] | null = null;
   let histError: any = null;
   try {
+    // Only fetch the most recent rows — we take the last 7 per ticker anyway,
+    // and without a LIMIT this query pulls thousands of rows on the free tier
+    // causing Vercel serverless functions to timeout (10s).
     const res = await supabaseAdmin
       .from('price_history')
       .select('ticker, date, close')
       .in('ticker', tickers)
-      .order('date', { ascending: true });
-    historyData = res.data;
+      .order('date', { ascending: false })
+      .limit(tickers.length * 10);
+    // Reverse so oldest-first for the slice(-7) logic below
+    historyData = (res.data || []).reverse();
     histError = res.error;
   } catch (err) {
     // A network/timeout failure throws instead of resolving with { error } —
