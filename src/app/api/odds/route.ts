@@ -311,26 +311,40 @@ export async function GET() {
   
   let allSportsEvents: PredictionEvent[] = [];
 
-  // 1. Fetch from The Odds API (upcoming events across all sports)
+  // ── Run ALL external API calls in PARALLEL ──────────────────────────────
+  // The old sequential approach took 12-20s (4 calls × 3-5s each), which
+  // exceeds Vercel's 10s serverless timeout. Promise.allSettled brings it
+  // down to ~3-5s (the slowest single call).
+
+  type ApiResult = { source: string; events: PredictionEvent[] };
+
+  const apiCalls: Promise<ApiResult>[] = [];
+
+  // 1. The Odds API
   if (oddsApiKey) {
-    try {
-      const res = await fetch(
-        `https://api.the-odds-api.com/v4/sports/upcoming/odds/?apiKey=${oddsApiKey}&regions=us,eu&markets=h2h&oddsFormat=decimal`,
-        { next: { revalidate: 120 } }
-      );
-      if (res.status === 429) {
-        console.warn("Odds API rate limited (429) - skipping live odds for this cycle");
-      } else if (!res.ok) {
-        console.error(`Odds API request failed with status ${res.status}`);
-      } else {
-        const rawData = await res.json();
-        if (Array.isArray(rawData)) {
+    apiCalls.push(
+      (async (): Promise<ApiResult> => {
+        try {
+          const res = await fetch(
+            `https://api.the-odds-api.com/v4/sports/upcoming/odds/?apiKey=${oddsApiKey}&regions=us,eu&markets=h2h&oddsFormat=decimal`,
+            { next: { revalidate: 120 } }
+          );
+          if (res.status === 429) {
+            console.warn("Odds API rate limited (429) - skipping");
+            return { source: "odds-api", events: [] };
+          }
+          if (!res.ok) {
+            console.error(`Odds API failed with status ${res.status}`);
+            return { source: "odds-api", events: [] };
+          }
+          const rawData = await res.json();
+          if (!Array.isArray(rawData)) return { source: "odds-api", events: [] };
+
           const mapped: PredictionEvent[] = rawData.slice(0, 40).map((game: any) => {
             const bookmaker = game.bookmakers?.[0];
             const market = bookmaker?.markets?.[0];
             const outcomes = market?.outcomes || [];
             if (outcomes.length < 2) return null;
-
             const twoOutcomes = outcomes.slice(0, 2);
             return {
               id: `oddsapi-${game.id}`,
@@ -346,29 +360,36 @@ export async function GET() {
               poolSize: seededPool(`oddsapi-${game.id}`, 200000, 3200000)
             };
           }).filter(Boolean) as PredictionEvent[];
-          allSportsEvents.push(...mapped);
+          return { source: "odds-api", events: mapped };
+        } catch (e) {
+          console.error("Odds API Error", e);
+          return { source: "odds-api", events: [] };
         }
-      }
-    } catch (e) {
-      console.error("Odds API Error", e);
-    }
+      })()
+    );
   }
 
-  // 2. Fetch from API Sports (today + tomorrow fixtures)
+  // 2. API Sports — today + tomorrow fixtures (two parallel calls)
   if (sportsApiKey) {
     for (const date of [today, tomorrow]) {
-      try {
-        const res = await fetch(`https://v3.football.api-sports.io/fixtures?date=${date}&timezone=${encodeURIComponent(FIXTURES_TIMEZONE)}`, {
-          headers: { 'x-apisports-key': sportsApiKey },
-          next: { revalidate: 120 }
-        });
-        if (res.status === 429) {
-          console.warn(`API Sports rate limited (429) for ${date} - skipping this cycle`);
-        } else if (!res.ok) {
-          console.error(`API Sports request failed for ${date} with status ${res.status}`);
-        } else {
-          const data = await res.json();
-          if (data.response && Array.isArray(data.response)) {
+      apiCalls.push(
+        (async (): Promise<ApiResult> => {
+          try {
+            const res = await fetch(`https://v3.football.api-sports.io/fixtures?date=${date}&timezone=${encodeURIComponent(FIXTURES_TIMEZONE)}`, {
+              headers: { 'x-apisports-key': sportsApiKey },
+              next: { revalidate: 120 }
+            });
+            if (res.status === 429) {
+              console.warn(`API Sports rate limited (429) for ${date}`);
+              return { source: `apisports-${date}`, events: [] };
+            }
+            if (!res.ok) {
+              console.error(`API Sports failed for ${date} with status ${res.status}`);
+              return { source: `apisports-${date}`, events: [] };
+            }
+            const data = await res.json();
+            if (!data.response || !Array.isArray(data.response)) return { source: `apisports-${date}`, events: [] };
+
             const fixtures = data.response
               .filter((m: any) => m.fixture.status.short !== 'PST' && m.fixture.status.short !== 'CANC')
               .slice(0, 30);
@@ -400,27 +421,34 @@ export async function GET() {
                 poolSize: seededPool(`apisports-${match.fixture.id}`, 100000, 5100000)
               };
             });
-            allSportsEvents.push(...mapped);
+            return { source: `apisports-${date}`, events: mapped };
+          } catch (e) {
+            console.error(`API Sports Error for ${date}`, e);
+            return { source: `apisports-${date}`, events: [] };
           }
-        }
-      } catch (e) {
-        console.error(`API Sports Error for ${date}`, e);
-      }
+        })()
+      );
     }
 
-    // Also try live fixtures
-    try {
-      const res = await fetch(`https://v3.football.api-sports.io/fixtures?live=all`, {
-        headers: { 'x-apisports-key': sportsApiKey },
-        next: { revalidate: 60 }
-      });
-      if (res.status === 429) {
-        console.warn("API Sports live endpoint rate limited (429) - skipping this cycle");
-      } else if (!res.ok) {
-        console.error(`API Sports live request failed with status ${res.status}`);
-      } else {
-        const data = await res.json();
-        if (data.response && Array.isArray(data.response)) {
+    // 3. API Sports — live fixtures
+    apiCalls.push(
+      (async (): Promise<ApiResult> => {
+        try {
+          const res = await fetch(`https://v3.football.api-sports.io/fixtures?live=all`, {
+            headers: { 'x-apisports-key': sportsApiKey },
+            next: { revalidate: 60 }
+          });
+          if (res.status === 429) {
+            console.warn("API Sports live endpoint rate limited (429)");
+            return { source: "apisports-live", events: [] };
+          }
+          if (!res.ok) {
+            console.error(`API Sports live failed with status ${res.status}`);
+            return { source: "apisports-live", events: [] };
+          }
+          const data = await res.json();
+          if (!data.response || !Array.isArray(data.response)) return { source: "apisports-live", events: [] };
+
           const liveFixtures = data.response.slice(0, 20).map((match: any) => {
             const home = match.teams.home.name;
             const away = match.teams.away.name;
@@ -445,11 +473,20 @@ export async function GET() {
               poolSize: seededPool(`live-${match.fixture.id}`, 100000, 5100000)
             };
           });
-          allSportsEvents.push(...liveFixtures);
+          return { source: "apisports-live", events: liveFixtures };
+        } catch (e) {
+          console.error("API Sports Live Error", e);
+          return { source: "apisports-live", events: [] };
         }
-      }
-    } catch (e) {
-      console.error("API Sports Live Error", e);
+      })()
+    );
+  }
+
+  // ── Await ALL calls in parallel ─────────────────────────────────────────
+  const results = await Promise.allSettled(apiCalls);
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      allSportsEvents.push(...result.value.events);
     }
   }
 
@@ -485,3 +522,4 @@ export async function GET() {
     data: [...allSportsEvents, ...nonSportsMock] 
   });
 }
+
