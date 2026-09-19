@@ -56,13 +56,11 @@ function corrTextColor(val: number): string {
 }
 
 function corrLabel(val: number): string {
-  if (val >= 0.7) return "Strong Positive";
-  if (val >= 0.4) return "Moderate Positive";
-  if (val >= 0.1) return "Weak Positive";
-  if (val > -0.1) return "No Correlation";
-  if (val > -0.4) return "Weak Inverse";
-  if (val > -0.7) return "Moderate Inverse";
-  return "Strong Inverse";
+  if (val >= 0.6) return "Moves Together 👯";
+  if (val >= 0.2) return "Kind of Aligned 🤝";
+  if (val > -0.2) return "No Connection 🤷";
+  if (val > -0.6) return "Drifting Apart 🚶";
+  return "Moves Opposite 🪞";
 }
 
 const CHART_COLORS = [
@@ -165,8 +163,8 @@ function MatrixGrid({ labels, data }: { labels: LabelInfo[], data: MatrixEntry[]
                     isDimmed ? 'opacity-10 scale-95 grayscale' : 'opacity-100 hover:scale-110 hover:z-20'
                   } ${isDiagonal ? 'bg-zinc-800/30 border-transparent' : corrColor(val)}`}
                 >
-                  <span className={`text-[11px] font-mono font-bold ${isDiagonal ? 'text-zinc-600' : ''}`}>
-                    {isDiagonal ? '-' : val.toFixed(2)}
+                  <span className={`text-xl ${isDiagonal ? 'text-zinc-600' : ''}`}>
+                    {isDiagonal ? '-' : val >= 0.6 ? '👯' : val >= 0.2 ? '🤝' : val > -0.2 ? '🤷' : val > -0.6 ? '🚶' : '🪞'}
                   </span>
                 </motion.div>
               );
@@ -187,9 +185,8 @@ function MatrixGrid({ labels, data }: { labels: LabelInfo[], data: MatrixEntry[]
           >
             <div className="bg-zinc-900/90 backdrop-blur-xl border border-zinc-700/50 rounded-xl px-4 py-2 shadow-2xl flex flex-col items-center">
               <span className="text-xs font-medium text-zinc-300 mb-1">{activeTooltip.text}</span>
-              <span className={`text-lg font-mono font-black ${corrTextColor(activeTooltip.val)}`}>
-                {activeTooltip.val > 0 && activeTooltip.text !== 'Self' ? '+' : ''}
-                {activeTooltip.text === 'Self' ? '1.00' : activeTooltip.val.toFixed(2)}
+              <span className={`text-lg font-black ${corrTextColor(activeTooltip.val)}`}>
+                {activeTooltip.text === 'Self' ? 'Always Matches' : corrLabel(activeTooltip.val)}
               </span>
             </div>
           </motion.div>
@@ -513,7 +510,7 @@ export default function RelativityPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-4xl md:text-5xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white via-zinc-200 to-zinc-500"
         >
-          Market Relativity
+          Asset Matchmaker
         </motion.h1>
         <motion.p 
           initial={{ opacity: 0 }}
@@ -521,7 +518,7 @@ export default function RelativityPage() {
           transition={{ delay: 0.1 }}
           className="text-zinc-500 font-mono text-sm uppercase tracking-widest"
         >
-          Discover hidden connections across global markets
+          See how different assets behave with each other. No math required.
         </motion.p>
       </div>
 
@@ -544,7 +541,7 @@ export default function RelativityPage() {
                   />
                 )}
                 <span className={`relative z-10 ${isActive ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "text-zinc-500 hover:text-zinc-300"}`}>
-                  {tab === "matrix" ? "Market Intelligence" : "Custom Scenarios"}
+                  {tab === "matrix" ? "Discover Matches" : "Custom Compare"}
                 </span>
               </button>
             );
@@ -614,19 +611,19 @@ export default function RelativityPage() {
                       topHedge && {
                         icon: <Shield className="w-5 h-5" />,
                         color: "emerald",
-                        label: "Top Hedge Pair",
+                        label: "Best Balancer (Hedge)",
                         headline: `${topHedge.rowLabel} ↔ ${topHedge.colLabel}`,
-                        body: `These two assets move in opposite directions ${Math.abs(topHedge.value * 100).toFixed(0)}% of the time (correlation: ${topHedge.value.toFixed(2)}). Holding both reduces your portfolio volatility significantly.`,
-                        stat: topHedge.value.toFixed(2),
+                        body: `When one goes up, the other usually goes down. Holding both helps balance your portfolio so you don't lose everything on a bad day.`,
+                        stat: '🪞',
                         statColor: "text-emerald-400",
                       },
                       hiddenRisk && {
                         icon: <AlertTriangle className="w-5 h-5" />,
                         color: "amber",
-                        label: "Hidden Concentration Risk",
+                        label: "Danger: Hidden Risk",
                         headline: `${hiddenRisk.rowLabel} ↔ ${hiddenRisk.colLabel}`,
-                        body: `These two move together ${(hiddenRisk.value * 100).toFixed(0)}% of the time (correlation: +${hiddenRisk.value.toFixed(2)}). If you hold both thinking you're diversified, you're not — you have doubled exposure to the same risk factor.`,
-                        stat: `+${hiddenRisk.value.toFixed(2)}`,
+                        body: `These two are basically the same thing! If you hold both thinking you are diversified, you are not. If one crashes, the other will probably crash too.`,
+                        stat: '👯',
                         statColor: "text-amber-400",
                       },
                       mostUncorrelated && {
@@ -634,17 +631,17 @@ export default function RelativityPage() {
                         color: "sky",
                         label: "True Diversifier",
                         headline: `${mostUncorrelated.rowLabel} ↔ ${mostUncorrelated.colLabel}`,
-                        body: `Near-zero correlation (${mostUncorrelated.value.toFixed(2)}) means these two assets move almost independently. Adding one to a portfolio of the other genuinely reduces risk — this is real diversification.`,
-                        stat: mostUncorrelated.value.toFixed(2),
+                        body: `These two ignore each other. What happens to one doesn't affect the other. This is true diversification!`,
+                        stat: '🤷',
                         statColor: "text-sky-400",
                       },
                       topCorrelated && topCorrelated !== hiddenRisk && {
                         icon: <TrendingUp className="w-5 h-5" />,
                         color: "violet",
-                        label: "Momentum Pair",
+                        label: "Moves Together",
                         headline: `${topCorrelated.rowLabel} ↔ ${topCorrelated.colLabel}`,
-                        body: `Strong co-movement (+${topCorrelated.value.toFixed(2)}). When one surges, the other tends to follow. Useful for sector momentum strategies — but dangerous when the trend reverses.`,
-                        stat: `+${topCorrelated.value.toFixed(2)}`,
+                        body: `These two are best friends. When one shoots up, the other usually follows. Just be careful, they also fall together.`,
+                        stat: '🤝',
                         statColor: "text-violet-400",
                       },
                     ].filter(Boolean);
