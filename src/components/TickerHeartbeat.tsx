@@ -25,8 +25,7 @@ export default function TickerHeartbeat({ assets }: TickerHeartbeatProps) {
   const isVisible = useRef(true);
   const [mounted, setMounted] = useState(false);
   
-  // Create static initial state for hydration
-  const initialTickers = useRef<FloatingTicker[]>([]);
+  const [initialTickers, setInitialTickers] = useState<FloatingTicker[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -41,7 +40,8 @@ export default function TickerHeartbeat({ assets }: TickerHeartbeatProps) {
     const w = window.innerWidth;
     const h = window.innerHeight;
     
-    initialTickers.current = shuffled.slice(0, count).map((a, i) => ({
+    if (initialTickers.length === 0) {
+      setInitialTickers(shuffled.slice(0, count).map((a, i) => ({
       id: `${a.symbol}-${i}`,
       symbol: a.symbol,
       price: a.price,
@@ -54,6 +54,7 @@ export default function TickerHeartbeat({ assets }: TickerHeartbeatProps) {
       isPulsing: false,
       pulseFramesLeft: 0
     })));
+    }
 
     let animationFrameId: number;
     let nodes: HTMLElement[] = [];
@@ -173,7 +174,7 @@ export default function TickerHeartbeat({ assets }: TickerHeartbeatProps) {
       `}} />
       
       {/* We render the nodes statically in React, then animate them directly via DOM for 60fps performance */}
-      {mounted && initialTickers.current.map((t) => (
+      {mounted && initialTickers.map((t) => (
         <div key={t.id} className="ticker-node">
           {t.symbol}
         </div>

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { PredictionEvent } from "@/utils/sportsData";
 
+export const dynamic = "force-dynamic";
+
 // API-Sports fixtures are date-scoped. `date` params below are derived in this timezone
 // (rather than the server's UTC clock) so "today"/"tomorrow" line up with the target
 // audience's local day instead of silently drifting a day around UTC midnight.
