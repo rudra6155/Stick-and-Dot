@@ -355,7 +355,7 @@ export async function GET() {
               outcomes: twoOutcomes.map((o: any) => ({
                 label: o.name,
                 odds: o.price,
-                probability: Math.round((1 / o.price) * 100)
+                probability: Math.round((1 / Math.max(o.price, 1.01)) * 100)
               })),
               poolSize: seededPool(`oddsapi-${game.id}`, 200000, 3200000)
             };
@@ -400,8 +400,8 @@ export async function GET() {
               const league = match.league.name;
               const status = match.fixture.status.short;
               const elapsed = match.fixture.status.elapsed || 0;
-              const homeGoals = match.goals.home ?? 0;
-              const awayGoals = match.goals.away ?? 0;
+              const homeGoals = match.goals?.home ?? 0;
+              const awayGoals = match.goals?.away ?? 0;
               const isLive = ['1H', '2H', 'HT', 'ET', 'P'].includes(status);
 
               const { homeProb, drawProb, awayProb } = computeMatchProbabilities(homeGoals, awayGoals, elapsed, isLive, `apisports-${match.fixture.id}`);
@@ -454,8 +454,8 @@ export async function GET() {
             const away = match.teams.away.name;
             const league = match.league.name;
             const elapsed = match.fixture.status.elapsed || 0;
-            const homeGoals = match.goals.home ?? 0;
-            const awayGoals = match.goals.away ?? 0;
+            const homeGoals = match.goals?.home ?? 0;
+            const awayGoals = match.goals?.away ?? 0;
 
             const { homeProb, drawProb, awayProb } = computeMatchProbabilities(homeGoals, awayGoals, elapsed, true);
 
