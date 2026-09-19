@@ -313,11 +313,11 @@ export async function fetchAssetsPaginated(params: {
 
   const mappedAssets: Asset[] = (data || []).map(mapRowToAsset);
 
-  // Don't block the grid render on price_history — if it's slow or times out,
-  // the cards still render without sparklines rather than the whole page
-  // staying stuck at "Loading Market Data...".
-  enrichAssetsWithHistory(mappedAssets).catch((err) =>
-    console.error('enrichAssetsWithHistory background error:', err)
+  // Await the enrichment so the client receives the sparkline/history data.
+  // We bounded the query in enrichAssetsWithHistory with a strict LIMIT
+  // so it will not cause Vercel 10s timeouts anymore.
+  await enrichAssetsWithHistory(mappedAssets).catch((err) =>
+    console.error('enrichAssetsWithHistory error:', err)
   );
 
   return {

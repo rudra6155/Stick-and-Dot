@@ -69,7 +69,18 @@ export function BettingProvider({ children }: { children: ReactNode }) {
   const placeBet = (stake: number): boolean => {
     if (!betSlip) return false;
     const roundedStake = toCents(stake);
-    if (!(roundedStake > 0) || roundedStake > toCents(balance)) return false;
+    if (!(roundedStake > 0)) return false;
+
+    // Use a flag to track if the deduction was successful inside the updater
+    let success = false;
+    
+    setBalance(prev => {
+      if (roundedStake > toCents(prev)) return prev; // insufficient funds
+      success = true;
+      return toCents(prev - roundedStake);
+    });
+
+    if (!success) return false;
 
     const newBet: ActiveBet = {
       id: `bet-${Date.now()}`,
@@ -83,10 +94,9 @@ export function BettingProvider({ children }: { children: ReactNode }) {
       placedAt: new Date().toISOString(),
     };
 
-    // Actually lock the stake in escrow by deducting it from the spendable balance.
-    setBalance(prev => toCents(prev - roundedStake));
     setActiveBets(prev => [newBet, ...prev]);
-    setBetSlip(null);
+    // Note: Do NOT setBetSlip(null) here. The BetSlipSidebar has a 1.6s success
+    // animation (confetti + checkmark) that handles its own closing sequence.
     return true;
   };
 

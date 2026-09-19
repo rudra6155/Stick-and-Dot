@@ -601,13 +601,13 @@ export default function RelativityPage() {
 
                     const topHedge = pairs.sort((a, b) => a.value - b.value)[0];
                     const topCorrelated = pairs.sort((a, b) => b.value - a.value)[0];
-                    const mostUncorrelated = pairs.reduce((best, p) =>
+                    const mostUncorrelated = pairs.length > 0 ? pairs.reduce((best, p) =>
                       Math.abs(p.value) < Math.abs(best.value) ? p : best
-                    );
+                    ) : null;
 
-                    // Hidden risk: strongest positive correlation between different-sounding assets
+                    // Hidden risk: strongest positive correlation that ISN'T already the top Correlated pair
                     const hiddenRisk = [...pairs]
-                      .filter(p => p.value > 0.7)
+                      .filter(p => p.value > 0.7 && (!topCorrelated || p.key !== topCorrelated.key))
                       .sort((a, b) => b.value - a.value)[0];
 
                     const cards = [

@@ -70,38 +70,35 @@ export async function POST(req: NextRequest) {
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-  const historyPromises = tickers.map((ticker: string) =>
-    supabase
-      .from('price_history')
-      .select('ticker, date, close')
-      .eq('ticker', ticker)
-      .order('date', { ascending: false })
-      .limit(200)
-  );
+  // Fetch history for all tickers in a SINGLE query instead of 200 concurrent ones
+  // which exhausts connection pools and causes 504 timeouts.
+  const { data: allHistory, error: histError } = await supabase
+    .from('price_history')
+    .select('ticker, date, close')
+    .in('ticker', tickers)
+    .order('date', { ascending: false });
 
-  // Use allSettled (not Promise.all) so one rejected/errored query only
-  // drops that ticker's history instead of crashing the whole endpoint.
-  const historySettled = await Promise.allSettled(historyPromises);
-  const history: any[] = [];
-  historySettled.forEach((settled, i) => {
-    const ticker = tickers[i];
-    if (settled.status === 'rejected') {
-      console.error(`api/backtest: price_history query rejected for ${ticker}:`, settled.reason);
-      return;
-    }
-    const { data, error } = settled.value;
-    if (error) {
-      console.error(`api/backtest: price_history query error for ${ticker}:`, error);
-      return;
-    }
-    if (data) history.push(...data);
-  });
+  if (histError) {
+    console.error(`api/backtest: price_history batch query error:`, histError);
+    // Continue with empty history instead of crashing the endpoint
+  }
 
-  // Step 3 — compute performance per ticker
+  // Group the flat results by ticker and sort oldest-first
   const tickerHistory: Record<string, Array<{ date: string; close: number }>> = {};
-  history.reverse().forEach((row: any) => {
-    if (!tickerHistory[row.ticker]) tickerHistory[row.ticker] = [];
-    tickerHistory[row.ticker].push({ date: row.date, close: row.close });
+  tickers.forEach((t: string) => tickerHistory[t] = []);
+  
+  (allHistory || []).forEach(row => {
+    tickerHistory[row.ticker].push(row);
+  });
+  
+  // The DB query returned newest-first (descending). We need oldest-first for sparklines.
+  // We reverse each ticker's array individually to avoid the global array reversal bug.
+  Object.keys(tickerHistory).forEach(t => {
+    tickerHistory[t].reverse();
+    // Cap at 200 rows per ticker to match previous behavior
+    if (tickerHistory[t].length > 200) {
+      tickerHistory[t] = tickerHistory[t].slice(-200);
+    }
   });
 
   const results = assets.map((asset: any) => {

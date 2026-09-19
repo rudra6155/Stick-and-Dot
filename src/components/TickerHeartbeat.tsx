@@ -53,15 +53,20 @@ export default function TickerHeartbeat({ assets }: TickerHeartbeatProps) {
       pulseTimer: Math.random() * 500, // random start time for pulsing
       isPulsing: false,
       pulseFramesLeft: 0
-    }));
+    })));
 
+    let animationFrameId: number;
     let nodes: HTMLElement[] = [];
-    requestAnimationFrame(() => {
-      // Defer node query by one frame so React has time to render
-      // We skip the first child because it's the <style> tag
+
+    // Poll for DOM nodes until they render, instead of a single early requestAnimationFrame
+    const getNodes = () => {
       const allChildren = Array.from(containerRef.current?.children || []) as HTMLElement[];
       nodes = allChildren.filter(el => el.classList.contains('ticker-node'));
-    });
+      if (nodes.length === 0 && mounted) {
+        animationFrameId = requestAnimationFrame(getNodes);
+      }
+    };
+    getNodes();
 
     const animate = () => {
       if (!isVisible.current) {

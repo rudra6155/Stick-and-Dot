@@ -30,7 +30,7 @@ export default async function LeaderboardPage({
 
   // 1. Fetch picks within the time window
   const { data: picks, error: picksError } = await supabase
-    .from('leaderboard_picks')
+    .from('user_picks')
     .select('*')
     .gte('created_at', thresholdIso)
     .not('picked_at_price', 'is', null)

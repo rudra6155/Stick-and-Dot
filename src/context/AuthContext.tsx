@@ -25,6 +25,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data?.user ?? null);
+    }).catch(err => {
+      console.error('Auth context getUser error:', err);
+      setUser(null);
+    }).finally(() => {
       setLoading(false);
     });
 
