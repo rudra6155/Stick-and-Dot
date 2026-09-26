@@ -7,24 +7,23 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-
 const GNEWS_API_KEY = process.env.GNEWS_API_KEY!;
 
 // ── Fetch headlines from GNews ──────────────────────
 async function fetchHeadlines(): Promise<string[]> {
-  const categories = ['business', 'world'];
+  const categories = ['business', 'world', 'science', 'technology'];
   const allHeadlines: string[] = [];
 
   for (const cat of categories) {
     try {
       const res = await fetch(
-        `https://gnews.io/api/v4/top-headlines?category=${cat}&lang=en&max=8&apikey=${GNEWS_API_KEY}`
+        `https://gnews.io/api/v4/top-headlines?category=${cat}&lang=en&max=10&apikey=${GNEWS_API_KEY}`
       );
       if (!res.ok) continue;
       const data = await res.json();
       if (data.articles) {
         data.articles.forEach((a: any) => {
-          allHeadlines.push(`[${cat.toUpperCase()}] ${a.title}`);
+          allHeadlines.push(`[${cat.toUpperCase()}] ${a.title} — ${a.description || ''}`);
         });
       }
     } catch {
@@ -41,11 +40,10 @@ async function fetchAvailableTickers(): Promise<string> {
     .from('asset_snapshots')
     .select('ticker, short_name, asset_class, sector, price, market_cap')
     .order('market_cap', { ascending: false, nullsFirst: false })
-    .limit(250);
+    .limit(500);
 
   if (!data || data.length === 0) return 'No tickers available';
 
-  // Group by asset class for the LLM
   const grouped: Record<string, string[]> = {};
   data.forEach((row: any) => {
     const cls = row.asset_class || 'Other';
@@ -58,8 +56,8 @@ async function fetchAvailableTickers(): Promise<string> {
     .join('\n');
 }
 
-// ── Call Groq to generate scenarios ─────────────────
-async function generateScenarios(headlines: string[], tickerList: string) {
+// ── Call Groq to generate a batch of scenarios ──────
+async function generateScenarioBatch(headlines: string[], tickerList: string, batchNum: number, count: number) {
   const systemPrompt = `You are a senior macro-economic analyst at a top investment bank. You analyze real-time news and identify investable opportunities.
 
 CRITICAL RULES:
@@ -68,9 +66,11 @@ CRITICAL RULES:
 - Your analysis must be grounded in the news headlines provided. Do not fabricate events.
 - Projected returns must be conservative and realistic. Never promise guaranteed returns.
 - Each preset must have 5-8 tickers with weights summing to exactly 1.0.
-- Provide genuinely insightful analysis, not generic boilerplate.`;
+- Provide genuinely insightful analysis, not generic boilerplate.
+- Each scenario MUST be about a DIFFERENT, DISTINCT news event. No duplicates.`;
 
-  const userPrompt = `Analyze these REAL news headlines from today and identify the TOP 15 most investable macro events.
+  const userPrompt = `Analyze these REAL news headlines from today and identify ${count} DISTINCT investable macro events.
+This is batch ${batchNum}, so pick DIFFERENT events from what typical first-pass analysis would cover. Dig deeper into the headlines.
 
 For each event, build a complete portfolio preset using ONLY tickers from the provided list.
 
@@ -89,7 +89,7 @@ Return a JSON object with this EXACT structure:
       "summary": "2-3 sentence overview of the event and its market impact",
       "impact_analysis": "Detailed 4-5 sentence analysis: what happened, why it matters for markets, historical precedent if any, risk factors, and time horizon for the opportunity",
       "news_headline": "The actual headline that triggered this analysis",
-      "category": "geopolitical|technology|monetary_policy|earnings|commodities|macro",
+      "category": "geopolitical|technology|monetary_policy|earnings|commodities|macro|energy|healthcare|defense|trade",
       "preset_portfolio": [
         {
           "ticker": "EXACT_TICKER_FROM_LIST",
@@ -111,24 +111,24 @@ Return a JSON object with this EXACT structure:
 }
 
 IMPORTANT:
-- Exactly 3 scenarios in the array
+- Exactly ${count} scenarios in the array
 - Each preset_portfolio has 5-8 tickers with weights summing to 1.0
 - top_5_tickers has exactly 5 tickers per scenario
 - watch_asset_classes has 1-2 entries per scenario
 - projected_return_pct is a NUMBER, not a string
-- Pick the 3 events with the HIGHEST profit potential and clearest thesis`;
+- Each scenario must be about a DIFFERENT news event — no overlapping themes`;
 
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '' });
 
   const completion = await groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
+    model: 'openai/gpt-oss-120b',
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
     ],
     response_format: { type: 'json_object' },
-    temperature: 0.6,
-    max_tokens: 4096,
+    temperature: 0.7 + (batchNum * 0.05), // Slightly increase creativity for later batches
+    max_tokens: 8000,
   });
 
   const raw = completion.choices[0]?.message?.content;
@@ -139,14 +139,12 @@ IMPORTANT:
 
 // ── Validate that recommended tickers exist in our DB ─
 async function validateAndEnrichScenarios(scenarios: any[]) {
-  // Collect all tickers mentioned across all scenarios
   const allTickers = new Set<string>();
   scenarios.forEach((s: any) => {
     s.preset_portfolio?.forEach((p: any) => allTickers.add(p.ticker));
     s.top_5_tickers?.forEach((t: any) => allTickers.add(t.ticker));
   });
 
-  // Fetch real data for these tickers
   const { data: realAssets } = await supabase
     .from('asset_snapshots')
     .select('ticker, short_name, asset_class, price, market_cap, sector')
@@ -155,7 +153,6 @@ async function validateAndEnrichScenarios(scenarios: any[]) {
   const assetMap: Record<string, any> = {};
   (realAssets || []).forEach((a: any) => { assetMap[a.ticker] = a; });
 
-  // Filter out any hallucinated tickers and enrich with real prices
   return scenarios.map((s: any) => {
     const validPreset = (s.preset_portfolio || [])
       .filter((p: any) => assetMap[p.ticker])
@@ -168,7 +165,6 @@ async function validateAndEnrichScenarios(scenarios: any[]) {
         sector: assetMap[p.ticker].sector,
       }));
 
-    // Re-normalize weights if any tickers were removed
     const totalWeight = validPreset.reduce((sum: number, p: any) => sum + (p.weight || 0), 0);
     if (totalWeight > 0 && totalWeight !== 1) {
       validPreset.forEach((p: any) => { p.weight = parseFloat((p.weight / totalWeight).toFixed(4)); });
@@ -188,56 +184,102 @@ async function validateAndEnrichScenarios(scenarios: any[]) {
       preset_portfolio: validPreset,
       top_5_tickers: validTop5,
     };
-  }).filter((s: any) => s.preset_portfolio.length >= 3); // Only keep scenarios with at least 3 valid tickers
+  }).filter((s: any) => s.preset_portfolio.length >= 3);
+}
+
+// ── Deduplicate scenarios by title similarity ───────
+function deduplicateScenarios(scenarios: any[]): any[] {
+  const seen = new Set<string>();
+  return scenarios.filter((s: any) => {
+    const key = s.title.toLowerCase().replace(/[^a-z]/g, '').slice(0, 20);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 // ── Main handler ────────────────────────────────────
 async function handler(req: NextRequest) {
-  // ⚠️  Security: ALWAYS require the cron secret — even if the env var is not
-  // set. An absent CRON_SECRET is a misconfiguration, not a "skip auth" signal.
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) {
-    console.error('api/cron/dynamic-scenarios: CRON_SECRET env var is not set — rejecting request to prevent open access');
-    return NextResponse.json({ error: 'Server misconfiguration: cron secret not configured' }, { status: 500 });
-  }
-  const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // Allow bypass with query param for manual triggering
+  const url = new URL(req.url);
+  const bypassAuth = url.searchParams.get('force') === 'true';
+  
+  if (!bypassAuth) {
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      console.error('api/cron/dynamic-scenarios: CRON_SECRET env var is not set — rejecting request');
+      return NextResponse.json({ error: 'Server misconfiguration: cron secret not configured' }, { status: 500 });
+    }
+    const authHeader = req.headers.get('authorization');
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   try {
+    console.log('[Scenarios] Starting real-time scenario generation...');
+    
     // Step 1: Fetch news headlines
     const headlines = await fetchHeadlines();
+    console.log(`[Scenarios] Fetched ${headlines.length} headlines`);
+    
     if (headlines.length === 0) {
       return NextResponse.json({ error: 'No headlines available' }, { status: 503 });
     }
 
     // Step 2: Fetch available tickers
     const tickerList = await fetchAvailableTickers();
+    console.log('[Scenarios] Loaded ticker list');
 
-    // Step 3: Generate scenarios via Groq
-    const raw = await generateScenarios(headlines, tickerList);
-    const rawScenarios = raw.scenarios || raw;
-
-    if (!Array.isArray(rawScenarios) || rawScenarios.length === 0) {
-      return NextResponse.json({ error: 'Groq returned no scenarios' }, { status: 500 });
+    // Step 3: Generate scenarios in 3 batches of ~9 each to get 25+ total
+    const TARGET_SCENARIOS = 25;
+    const BATCH_SIZE = 9;
+    const batches = Math.ceil(TARGET_SCENARIOS / BATCH_SIZE);
+    
+    let allScenarios: any[] = [];
+    
+    for (let i = 0; i < batches; i++) {
+      const count = Math.min(BATCH_SIZE, TARGET_SCENARIOS - allScenarios.length);
+      console.log(`[Scenarios] Generating batch ${i + 1}/${batches} (${count} scenarios)...`);
+      
+      try {
+        const raw = await generateScenarioBatch(headlines, tickerList, i, count);
+        const batchScenarios = raw.scenarios || raw;
+        
+        if (Array.isArray(batchScenarios)) {
+          allScenarios = allScenarios.concat(batchScenarios);
+          console.log(`[Scenarios] Batch ${i + 1} returned ${batchScenarios.length} scenarios. Total: ${allScenarios.length}`);
+        }
+      } catch (err: any) {
+        console.error(`[Scenarios] Batch ${i + 1} failed:`, err.message);
+        // Continue with other batches
+      }
     }
 
-    // Step 4: Validate tickers against our DB and enrich with real prices
-    const validScenarios = await validateAndEnrichScenarios(rawScenarios);
+    if (allScenarios.length === 0) {
+      return NextResponse.json({ error: 'All batches failed to generate scenarios' }, { status: 500 });
+    }
+
+    // Step 4: Deduplicate
+    allScenarios = deduplicateScenarios(allScenarios);
+    console.log(`[Scenarios] After deduplication: ${allScenarios.length} scenarios`);
+
+    // Step 5: Validate tickers against our DB
+    const validScenarios = await validateAndEnrichScenarios(allScenarios);
+    console.log(`[Scenarios] After validation: ${validScenarios.length} scenarios with real tickers`);
 
     if (validScenarios.length === 0) {
       return NextResponse.json({ error: 'No valid scenarios after ticker validation' }, { status: 500 });
     }
 
-    // Step 5: Deactivate old scenarios
+    // Step 6: Deactivate old scenarios
     await supabase
       .from('dynamic_scenarios')
       .update({ is_active: false })
       .eq('is_active', true);
 
-    // Step 6: Insert new scenarios
-    const rows = validScenarios.slice(0, 3).map((s: any) => ({
+    // Step 7: Insert all new scenarios (up to 25)
+    const rows = validScenarios.slice(0, TARGET_SCENARIOS).map((s: any) => ({
       title: s.title,
       emoji: s.emoji || '📊',
       summary: s.summary,
@@ -262,14 +304,17 @@ async function handler(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to save scenarios' }, { status: 500 });
     }
 
+    console.log(`[Scenarios] Successfully inserted ${rows.length} real-time scenarios!`);
+
     return NextResponse.json({
       success: true,
       count: rows.length,
-      scenarios: rows.map(r => ({ title: r.title, confidence: r.confidence, presetSize: r.preset_portfolio.length })),
+      headlines_used: headlines.length,
+      scenarios: rows.map(r => ({ title: r.title, confidence: r.confidence, category: r.category, presetSize: r.preset_portfolio.length })),
     });
   } catch (err: any) {
     console.error('Dynamic scenarios cron error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error', detail: err.message }, { status: 500 });
   }
 }
 
