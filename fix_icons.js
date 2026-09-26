@@ -1,0 +1,1 @@
+const fs = require('fs'); let c = fs.readFileSync('src/app/portfolio/explore/page.tsx', 'utf8'); c = c.replace(/Stock:.*\n/, '"US Stock": "??",\n  Equity: "??",\n'); fs.writeFileSync('src/app/portfolio/explore/page.tsx', c);

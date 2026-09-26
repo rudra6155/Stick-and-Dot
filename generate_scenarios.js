@@ -185,7 +185,7 @@ async function main() {
   console.log('  Ticker list loaded.\n');
 
   // Step 3: Generate scenarios in batches
-  const TARGET = 15;
+  const TARGET = 4;
   const BATCH_SIZE = 1;
   const batches = Math.ceil(TARGET / BATCH_SIZE);
   let allScenarios = [];

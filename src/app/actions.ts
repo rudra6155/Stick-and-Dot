@@ -123,13 +123,13 @@ export type Asset = {
 };
 
 const normalizeClass = (raw: unknown): string => {
-  if (!raw) return 'Stock';
+  if (!raw) return 'US Stock';
   // DB rows are typed `any`, so a non-string value (number/boolean) could
   // reach here — coerce before calling string methods to avoid a crash.
   const str = typeof raw === 'string' ? raw : String(raw);
   const map: Record<string, string> = {
-    'stock': 'Stock', 'stocks': 'Stock',
-    'us tech': 'Stock', 'us blue chip': 'Stock',
+    'US Stock': 'US Stock', 'stocks': 'US Stock',
+    'us tech': 'US Stock', 'us blue chip': 'US Stock',
     'etf': 'ETF', 'etfs': 'ETF',
     'reit': 'REIT', 'reits': 'REIT',
     'crypto': 'Crypto', 'cryptocurrency': 'Crypto',
@@ -281,7 +281,7 @@ export async function fetchAssetsPaginated(params: {
   if (params.activeClass !== 'All') {
     query = query.eq('asset_class', params.activeClass);
   }
-  if (params.activeClass === 'Stock' && params.activeSector !== 'All Sectors') {
+  if (params.activeClass === 'US Stock' && params.activeSector !== 'All Sectors') {
     query = query.eq('sector', params.activeSector);
   }
 
@@ -330,7 +330,7 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
   try {
     return await unstable_cache(
       async () => {
-        const assetClasses = ['Crypto', 'Stock', 'ETF', 'REIT', 'Commodity', 'Bond', 'Indian Stock', 'International', 'Forex', 'Index', 'Gold'];
+        const assetClasses = ['Crypto', 'US Stock', 'ETF', 'REIT', 'Commodity', 'Bond', 'Indian Stock', 'International', 'Forex', 'Index', 'Equity'];
         const counts: Record<string, number> = { All: 0 };
         
         await Promise.all(assetClasses.map(async (cls) => {
