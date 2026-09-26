@@ -527,7 +527,7 @@ export default function PredictionsDashboard() {
             className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black font-black uppercase tracking-wider text-[11px] hover:bg-zinc-200 transition-all active:scale-95"
           >
             <Plus className="w-4 h-4" />
-            <span className="hidden md:inline">Create Market</span>
+            <span className="hidden md:inline">Create Scenario</span>
           </button>
         </div>
       </section>

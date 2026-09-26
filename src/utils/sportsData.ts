@@ -1,7 +1,7 @@
 export interface PredictionEvent {
   id: string;
   title: string;
-  category: "Sports" | "Startup" | "Equities" | "Crypto";
+  category: "Sports" | "Startup" | "Equities" | "Crypto" | "Forex" | "Macros";
   status: "Open" | "Closed" | "Resolved";
   resolutionDate: string;
   outcomes: { label: string; odds: number; probability: number }[];

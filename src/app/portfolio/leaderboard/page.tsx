@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 import { Trophy, TrendingUp, TrendingDown } from "lucide-react";
+import { LeaderboardClient } from "./LeaderboardClient";
 
 export const revalidate = 0; // Dynamic rendering for latest data
 
@@ -12,6 +13,29 @@ export default async function LeaderboardPage({
   const { window = "daily" } = await searchParams;
   const supabase = await createClient();
   let error: string | null = null;
+
+  // Get current user to check if they qualify to view the leaderboard
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  let hasAllAssetClasses = false;
+  let missingClasses: string[] = [];
+
+  const requiredClasses = ["Stock", "Crypto", "ETF", "Commodity"];
+
+  if (user) {
+    const { data: userPicks } = await supabase
+      .from('user_picks')
+      .select('asset_class')
+      .eq('user_id', user.id);
+      
+    if (userPicks) {
+      const pickedClasses = new Set(userPicks.map(p => p.asset_class));
+      missingClasses = requiredClasses.filter(c => !pickedClasses.has(c));
+      hasAllAssetClasses = missingClasses.length === 0;
+    } else {
+      missingClasses = requiredClasses;
+    }
+  }
 
   // Determine time threshold
   const now = new Date();
@@ -64,7 +88,7 @@ export default async function LeaderboardPage({
   }
 
   // 3. Compute ROI per user
-  const userStats: Record<string, { username: string, totalRoi: number, picksCount: number }> = {};
+  const userStats: Record<string, { userId: string, username: string, totalRoi: number, picksCount: number }> = {};
 
   validPicks.forEach(pick => {
     const currentPrice = currentPrices[pick.ticker];
@@ -72,7 +96,7 @@ export default async function LeaderboardPage({
       const roi = ((currentPrice - pick.picked_at_price) / pick.picked_at_price) * 100;
       
       if (!userStats[pick.user_id]) {
-        userStats[pick.user_id] = { username: pick.username || 'Anonymous', totalRoi: 0, picksCount: 0 };
+        userStats[pick.user_id] = { userId: pick.user_id, username: pick.username || 'Anonymous', totalRoi: 0, picksCount: 0 };
       }
       
       userStats[pick.user_id].totalRoi += roi;
@@ -83,6 +107,7 @@ export default async function LeaderboardPage({
   // 4. Rank users
   const rankedUsers = Object.values(userStats)
     .map(stat => ({
+      userId: stat.userId,
       username: stat.username,
       picksCount: stat.picksCount,
       avgRoi: stat.totalRoi / stat.picksCount
@@ -107,8 +132,10 @@ export default async function LeaderboardPage({
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-800 pb-8">
+    <>
+      <LeaderboardClient hasAllAssetClasses={hasAllAssetClasses} missingClasses={missingClasses} />
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-800 pb-8">
         <div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 flex items-center gap-3">
             <Trophy className="w-8 h-8 text-yellow-500" />
@@ -154,7 +181,7 @@ export default async function LeaderboardPage({
               const isPositive = user.avgRoi >= 0;
               return (
                 <div 
-                  key={user.username + idx} 
+                  key={user.userId + idx} 
                   className={`grid grid-cols-12 gap-4 px-4 md:px-8 py-6 items-center transition-colors hover:bg-zinc-900/30 ${
                     idx === 0 ? "bg-emerald-500/5" : ""
                   }`}
@@ -163,15 +190,17 @@ export default async function LeaderboardPage({
                     #{idx + 1}
                   </div>
                   <div className="col-span-5 sm:col-span-7 font-medium flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                      idx === 0 ? 'bg-yellow-500 text-black' :
-                      idx === 1 ? 'bg-zinc-300 text-black' :
-                      idx === 2 ? 'bg-amber-700 text-white' :
-                      'bg-zinc-800 text-zinc-400'
-                    }`}>
-                      {user.username.charAt(0).toUpperCase()}
-                    </div>
-                    {user.username}
+                    <Link href={`/portfolio/leaderboard/profile/${user.userId}`} className="flex items-center gap-3 hover:text-emerald-400 transition-colors">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                        idx === 0 ? 'bg-yellow-500 text-black' :
+                        idx === 1 ? 'bg-zinc-300 text-black' :
+                        idx === 2 ? 'bg-amber-700 text-white' :
+                        'bg-zinc-800 text-zinc-400'
+                      }`}>
+                        {user.username.charAt(0).toUpperCase()}
+                      </div>
+                      {user.username}
+                    </Link>
                   </div>
                   <div className="col-span-2 text-right text-sm text-zinc-400 hidden sm:block">
                     {user.picksCount}
@@ -192,5 +221,6 @@ export default async function LeaderboardPage({
         )}
       </div>
     </div>
+    </>
   );
 }

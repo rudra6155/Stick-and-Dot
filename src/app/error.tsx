@@ -12,6 +12,12 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error("Global Error Boundary caught:", error);
+    // Send error to our log endpoint so we can see it in the terminal
+    fetch('/api/log-error', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: error.message, stack: error.stack }) 
+    }).catch(() => {});
   }, [error]);
 
   return (

@@ -70,7 +70,7 @@ CRITICAL RULES:
 - Each preset must have 5-8 tickers with weights summing to exactly 1.0.
 - Provide genuinely insightful analysis, not generic boilerplate.`;
 
-  const userPrompt = `Analyze these REAL news headlines from today and identify the TOP 3 most investable macro events.
+  const userPrompt = `Analyze these REAL news headlines from today and identify the TOP 15 most investable macro events.
 
 For each event, build a complete portfolio preset using ONLY tickers from the provided list.
 

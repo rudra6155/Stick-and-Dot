@@ -97,7 +97,7 @@ export default function CreatePredictionModal({ isOpen, onClose, onSubmit, error
           <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-zinc-800 bg-zinc-900/95 backdrop-blur-sm">
             <h2 className="text-xl font-black text-white tracking-tight uppercase flex items-center gap-2">
               <Target className="w-5 h-5 text-emerald-400" />
-              Create Market
+              Create Scenario
             </h2>
             <button
               onClick={onClose}

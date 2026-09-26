@@ -1,3 +1,4 @@
+"use client";
 import React, { useRef } from "react";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
@@ -214,7 +215,7 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
         </div>
       </div>
 
-      {selectedMetrics.length > 0 && (
+      {(selectedMetrics || []).length > 0 && (
         <div className={`grid grid-cols-2 gap-y-4 gap-x-2 pt-4 border-t border-white/5 relative z-10`}>
           {selectedMetrics.map((metricId: string) => {
             const metric = AVAILABLE_METRICS.find(m => m.id === metricId);

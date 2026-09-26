@@ -2,21 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Compass, LineChart, BarChart3, TestTube, Newspaper, ShieldAlert, Target, Trophy, GitCompareArrows, Swords } from "lucide-react";
+import { LayoutDashboard, Compass, LineChart, ShieldAlert, Target, Trophy, GitCompareArrows, Swords } from "lucide-react";
 import { BettingProvider } from "@/context/BettingContext";
 
 const sidebarLinks = [
-  { href: "/portfolio", label: "My Picks", icon: LayoutDashboard },
+  { href: "/portfolio", label: "My Portfolio", icon: LayoutDashboard },
   { href: "/portfolio/predictions", label: "Predictions", icon: Swords },
   { href: "/portfolio/leaderboard", label: "Leaderboard", icon: Trophy },
+  { href: "/portfolio/suggestions", label: "Suggestions", icon: Target },
   { href: "/portfolio/explore", label: "Explore Markets", icon: Compass },
-  { href: "/portfolio/screener", label: "Screener", icon: BarChart3 },
   { href: "/portfolio/scenarios", label: "Scenarios", icon: LineChart },
   { href: "/portfolio/relativity", label: "Relativity", icon: GitCompareArrows },
-  { href: "/portfolio/backtest", label: "Backtest", icon: TestTube },
-  { href: "/portfolio/opportunities", label: "Opportunities", icon: Target },
   { href: "/portfolio/risk-score", label: "Risk Score", icon: ShieldAlert },
-  { href: "/portfolio/news", label: "Market News", icon: Newspaper },
 ];
 
 export default function PortfolioLayout({ children }: { children: React.ReactNode }) {

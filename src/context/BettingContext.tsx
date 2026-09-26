@@ -71,16 +71,9 @@ export function BettingProvider({ children }: { children: ReactNode }) {
     const roundedStake = toCents(stake);
     if (!(roundedStake > 0)) return false;
 
-    // Use a flag to track if the deduction was successful inside the updater
-    let success = false;
+    if (roundedStake > toCents(balance)) return false;
     
-    setBalance(prev => {
-      if (roundedStake > toCents(prev)) return prev; // insufficient funds
-      success = true;
-      return toCents(prev - roundedStake);
-    });
-
-    if (!success) return false;
+    setBalance(prev => toCents(prev - roundedStake));
 
     const newBet: ActiveBet = {
       id: `bet-${Date.now()}`,

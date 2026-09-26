@@ -85,12 +85,15 @@ export async function POST(req: NextRequest) {
       failedTickers.push(ticker);
       return;
     }
-    if (data) history.push(...data);
+    if (data) {
+      // Reverse each ticker's data individually to get chronological order (oldest first)
+      history.push(...[...data].reverse());
+    }
   });
 
   // Compute 6M return per asset
   const tickerHistory: Record<string, any[]> = {};
-  history.reverse().forEach((row: any) => {
+  history.forEach((row: any) => {
     if (!tickerHistory[row.ticker]) tickerHistory[row.ticker] = [];
     tickerHistory[row.ticker].push(row);
   });

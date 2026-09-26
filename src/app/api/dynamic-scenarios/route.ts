@@ -13,7 +13,7 @@ export async function GET() {
       .select('*')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
-      .limit(3);
+      .limit(15);
 
     if (error) {
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
