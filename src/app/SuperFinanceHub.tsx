@@ -620,8 +620,8 @@ export default function SuperFinanceHub({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 relative z-10">
           {error ? (
             <div className="col-span-full flex flex-col items-center justify-center p-8 text-center space-y-4">
-              <div className="text-red-400 font-mono text-sm">{error || "Something went wrong loading this."}</div>
-              <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white">Try again</button>
+              <div className="text-red-400 font-mono text-sm">{error || "Something went wrong loading market data."}</div>
+              <button onClick={() => fetchData(0, false)} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white transition-colors">Try again</button>
             </div>
           ) : assets.length === 0 && isRefreshing ? (
             <div className="col-span-full py-20 flex flex-col items-center justify-center text-center">

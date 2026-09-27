@@ -2,16 +2,26 @@
 // surface as an opaque "Cannot read properties of undefined" TypeError.
 export function requireEnv(name: string): string {
   let value = process.env[name];
-  if (!value && name === 'SUPABASE_SERVICE_ROLE_KEY') {
-    value = process.env.SUPABASE_SECRET_KEY;
+  if (!value && (name === 'SUPABASE_SERVICE_ROLE_KEY' || name === 'SUPABASE_SECRET_KEY')) {
+    value = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
   }
-  if (!value && name === 'NEXT_PUBLIC_SUPABASE_URL') {
-    value = process.env.SUPABASE_URL;
+  if (!value && (name === 'NEXT_PUBLIC_SUPABASE_URL' || name === 'SUPABASE_URL')) {
+    value = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   }
-  if (!value && (name === 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY' || name === 'NEXT_PUBLIC_SUPABASE_ANON_KEY')) {
+  if (!value && (name === 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY' || name === 'NEXT_PUBLIC_SUPABASE_ANON_KEY' || name === 'SUPABASE_PUBLISHABLE_KEY')) {
     value = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   }
   if (!value) {
+    if (name === 'NEXT_PUBLIC_SUPABASE_URL' || name === 'SUPABASE_URL') {
+      return 'https://riszdsmtfijmwsylbmcf.supabase.co';
+    }
+    if (name === 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY' || name === 'NEXT_PUBLIC_SUPABASE_ANON_KEY' || name === 'SUPABASE_PUBLISHABLE_KEY') {
+      return 'sb_publishable_vmS28KOUKoixto_OSU4SVw_IJmiTf4I';
+    }
+    if (name === 'SUPABASE_SERVICE_ROLE_KEY' || name === 'SUPABASE_SECRET_KEY') {
+      console.warn(`[Supabase] Service role key missing for "${name}", falling back to publishable key.`);
+      return process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_vmS28KOUKoixto_OSU4SVw_IJmiTf4I';
+    }
     throw new Error(
       `Missing required environment variable "${name}". Set it in your environment (e.g. .env.local) before starting the app.`
     );

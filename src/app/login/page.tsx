@@ -30,6 +30,16 @@ export default function LoginPage() {
       }
     };
     window.addEventListener("pageshow", handlePageShow);
+
+    // Read error query param if redirected back with OAuth failure
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlError = params.get("error");
+      if (urlError) {
+        setError(decodeURIComponent(urlError));
+      }
+    }
+
     return () => {
       window.removeEventListener("pageshow", handlePageShow);
     };

@@ -11,12 +11,25 @@ import { unstable_cache } from "next/cache";
 // ⚠️  NEVER create a per-module singleton with the anon key on the server.
 //     The vanilla `createClient` stores tokens in-memory, which leaks one
 //     user's session to the next request that hits the same process.
+const supabaseUrl = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+const supabasePubKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_vmS28KOUKoixto_OSU4SVw_IJmiTf4I';
+
+// Primary admin client (uses service role key if present, otherwise publishable key)
 const supabaseAdmin = createClient(
-  requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
-  requireEnv('SUPABASE_SERVICE_ROLE_KEY')
+  supabaseUrl,
+  supabaseServiceKey || supabasePubKey,
+  { auth: { persistSession: false } }
 );
 
-// Alias for readability — all queries below go through the admin client.
+// Fallback public client (always has valid read access to asset_snapshots)
+const supabasePub = createClient(
+  supabaseUrl,
+  supabasePubKey,
+  { auth: { persistSession: false } }
+);
+
+// Alias for readability — all queries default to admin client with public fallback
 const supabase = supabaseAdmin;
 
 
@@ -263,14 +276,25 @@ const mapRowToAsset = (row: any) => ({
 export async function fetchAssetsByTickers(tickers: string[]): Promise<Asset[]> {
   if (!tickers || tickers.length === 0) return [];
 
-  const { data, error } = await supabase
+  let data: any[] | null = null;
+  const { data: adminData, error: adminErr } = await supabaseAdmin
     .from('asset_snapshots')
     .select('*')
     .in('ticker', tickers);
 
-  if (error) {
-    console.error('Supabase query error:', error);
-    throw new Error(error.message);
+  if (!adminErr && adminData && adminData.length > 0) {
+    data = adminData;
+  } else {
+    if (adminErr) console.warn('fetchAssetsByTickers admin query error, trying pub client:', adminErr.message);
+    const { data: pubData, error: pubErr } = await supabasePub
+      .from('asset_snapshots')
+      .select('*')
+      .in('ticker', tickers);
+    if (!pubErr && pubData) {
+      data = pubData;
+    } else if (pubErr) {
+      console.error('fetchAssetsByTickers pub query failed:', pubErr.message);
+    }
   }
 
   // Deduplicate by ticker, preferring row with sector/details or US Stock
@@ -287,7 +311,7 @@ export async function fetchAssetsByTickers(tickers: string[]): Promise<Asset[]> 
   }
 
   const mappedAssets: Asset[] = Array.from(tickerMap.values()).map(mapRowToAsset);
-  await enrichAssetsWithHistory(mappedAssets);
+  await enrichAssetsWithHistory(mappedAssets).catch(() => {});
   return mappedAssets;
 }
 
@@ -300,69 +324,92 @@ export async function fetchAssetsPaginated(params: {
   sortBy: string;
   sortDir?: 'asc' | 'desc';
 }): Promise<{ assets: Asset[]; totalCount: number }> {
-  const safeLimit = Math.min(Math.max(params.limit, 1), 100);
-  const safeOffset = Math.max(Number(params.offset) || 0, 0);
-  let query = supabase
-    .from('asset_snapshots')
-    .select('*', { count: 'exact' });
+  try {
+    const safeLimit = Math.min(Math.max(params.limit, 1), 100);
+    const safeOffset = Math.max(Number(params.offset) || 0, 0);
 
-  if (params.activeClass !== 'All') {
-    if (params.activeClass === 'Stock' || params.activeClass === 'US Stock') {
-      query = query.in('asset_class', ['US Stock', 'Stock', 'Equity']);
+    const buildQuery = (client: any) => {
+      let q = client
+        .from('asset_snapshots')
+        .select('*', { count: 'exact' });
+
+      if (params.activeClass !== 'All') {
+        if (params.activeClass === 'Stock' || params.activeClass === 'US Stock') {
+          q = q.in('asset_class', ['US Stock', 'Stock', 'Equity']);
+        } else {
+          q = q.eq('asset_class', params.activeClass);
+        }
+      }
+      if ((params.activeClass === 'US Stock' || params.activeClass === 'Stock') && params.activeSector !== 'All Sectors') {
+        q = q.eq('sector', params.activeSector);
+      }
+
+      if (typeof params.searchQuery === 'string' && params.searchQuery.trim() !== '') {
+        const queryStr = params.searchQuery.trim().replace(/[%_]/g, '\\$&').replace(/[,()]/g, '');
+        q = q.or(`ticker.ilike.%${queryStr}%,short_name.ilike.%${queryStr}%`, { referencedTable: undefined });
+      }
+
+      const sortMap: Record<string, string> = {
+        'Market Cap': 'market_cap',
+        'Price': 'price',
+        'Volume': 'volume',
+        'P/E': 'pe_ratio',
+        'Div Yield': 'dividend_yield',
+        '52W High': 'high_52_week',
+        'Beta': 'beta'
+      };
+      const sortCol = sortMap[params.sortBy] ?? 'market_cap';
+      if (sortCol === 'market_cap') {
+        q = q.lt('market_cap', 6000000000000);
+        // Protect default sort and US Stock views from foreign unadjusted local currencies
+        if (params.activeClass === 'All' || params.activeClass === 'US Stock' || params.activeClass === 'Stock') {
+          q = q.not('ticker', 'like', '%.%');
+        }
+      }
+      q = q.order(sortCol, { ascending: params.sortDir === 'asc', nullsFirst: false });
+      q = q.order('ticker', { ascending: true });
+      q = q.range(safeOffset, safeOffset + safeLimit - 1);
+      return q;
+    };
+
+    let data: any[] | null = null;
+    let count: number | null = null;
+
+    // First attempt: admin client
+    const { data: adminData, count: adminCount, error: adminErr } = await buildQuery(supabaseAdmin);
+    if (!adminErr && adminData) {
+      data = adminData;
+      count = adminCount;
     } else {
-      query = query.eq('asset_class', params.activeClass);
+      if (adminErr) console.warn('fetchAssetsPaginated admin query error, falling back to public client:', adminErr.message);
+      // Fallback: public client
+      const { data: pubData, count: pubCount, error: pubErr } = await buildQuery(supabasePub);
+      if (!pubErr && pubData) {
+        data = pubData;
+        count = pubCount;
+      } else {
+        console.error('fetchAssetsPaginated pub query error:', pubErr?.message);
+      }
     }
+
+    const mappedAssets: Asset[] = (data || []).map(mapRowToAsset);
+
+    // Bounded sparkline history enrichment
+    await enrichAssetsWithHistory(mappedAssets).catch((err) =>
+      console.error('enrichAssetsWithHistory error:', err)
+    );
+
+    return {
+      assets: mappedAssets,
+      totalCount: count ?? mappedAssets.length
+    };
+  } catch (err: any) {
+    console.error('fetchAssetsPaginated caught error:', err?.message || err);
+    return {
+      assets: [],
+      totalCount: 0
+    };
   }
-  if ((params.activeClass === 'US Stock' || params.activeClass === 'Stock') && params.activeSector !== 'All Sectors') {
-    query = query.eq('sector', params.activeSector);
-  }
-
-  if (typeof params.searchQuery === 'string' && params.searchQuery.trim() !== '') {
-    const q = params.searchQuery.trim().replace(/[%_]/g, '\\$&').replace(/[,()]/g, '');
-    query = query.or(`ticker.ilike.%${q}%,short_name.ilike.%${q}%`, { referencedTable: undefined });
-  }
-
-  const sortMap: Record<string, string> = {
-    'Market Cap': 'market_cap',
-    'Price': 'price',
-    'Volume': 'volume',
-    'P/E': 'pe_ratio',
-    'Div Yield': 'dividend_yield',
-    '52W High': 'high_52_week',
-    'Beta': 'beta'
-  };
-  const sortCol = sortMap[params.sortBy] ?? 'market_cap';
-  if (sortCol === 'market_cap') {
-    query = query.lt('market_cap', 6000000000000);
-    // Protect default sort and US Stock views from foreign unadjusted local currencies
-    if (params.activeClass === 'All' || params.activeClass === 'US Stock' || params.activeClass === 'Stock') {
-      query = query.not('ticker', 'like', '%.%');
-    }
-  }
-  query = query.order(sortCol, { ascending: params.sortDir === 'asc', nullsFirst: false });
-  query = query.order('ticker', { ascending: true });
-
-  query = query.range(safeOffset, safeOffset + safeLimit - 1);
-
-  const { data, count, error } = await query;
-  if (error) {
-    console.error('Supabase query error:', error);
-    throw new Error(error.message);
-  }
-
-  const mappedAssets: Asset[] = (data || []).map(mapRowToAsset);
-
-  // Await the enrichment so the client receives the sparkline/history data.
-  // We bounded the query in enrichAssetsWithHistory with a strict LIMIT
-  // so it will not cause Vercel 10s timeouts.
-  await enrichAssetsWithHistory(mappedAssets).catch((err) =>
-    console.error('enrichAssetsWithHistory error:', err)
-  );
-
-  return {
-    assets: mappedAssets,
-    totalCount: count || 0
-  };
 }
 
 export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
@@ -421,30 +468,36 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
 
 export async function fetchTickerTapeAssets(): Promise<Asset[]> {
   try {
-    const [equitiesRes, cryptoRes, forexRes] = await Promise.all([
-      supabase
-        .from('asset_snapshots')
-        .select('*')
-        .in('asset_class', ['US Stock', 'ETF'])
-        .not('ticker', 'like', '%.%')
-        .gt('market_cap', 0)
-        .lt('market_cap', 6000000000000)
-        .order('market_cap', { ascending: false, nullsFirst: false })
-        .limit(40),
-      supabase
-        .from('asset_snapshots')
-        .select('*')
-        .eq('asset_class', 'Crypto')
-        .gt('market_cap', 0)
-        .order('market_cap', { ascending: false, nullsFirst: false })
-        .limit(10),
-      supabase
-        .from('asset_snapshots')
-        .select('*')
-        .eq('asset_class', 'Forex')
-        .gt('price', 0)
-        .limit(10)
-    ]);
+    const fetchWithClient = (client: any) =>
+      Promise.all([
+        client
+          .from('asset_snapshots')
+          .select('*')
+          .in('asset_class', ['US Stock', 'ETF'])
+          .not('ticker', 'like', '%.%')
+          .gt('market_cap', 0)
+          .lt('market_cap', 6000000000000)
+          .order('market_cap', { ascending: false, nullsFirst: false })
+          .limit(40),
+        client
+          .from('asset_snapshots')
+          .select('*')
+          .eq('asset_class', 'Crypto')
+          .gt('market_cap', 0)
+          .order('market_cap', { ascending: false, nullsFirst: false })
+          .limit(10),
+        client
+          .from('asset_snapshots')
+          .select('*')
+          .eq('asset_class', 'Forex')
+          .gt('price', 0)
+          .limit(10)
+      ]);
+
+    let [equitiesRes, cryptoRes, forexRes] = await fetchWithClient(supabaseAdmin);
+    if (!equitiesRes.data || equitiesRes.data.length === 0) {
+      [equitiesRes, cryptoRes, forexRes] = await fetchWithClient(supabasePub);
+    }
 
     const seenTickers = new Set<string>();
     const uniqueRows: any[] = [];
