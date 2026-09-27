@@ -13,6 +13,7 @@ export type ActiveBet = {
   eventId: string;
   eventTitle: string;
   outcomeLabel: string;
+  category?: string;
   stake: number;
   oddsAtPlacement: number;
   potentialPayout: number;
@@ -23,6 +24,7 @@ export type ActiveBet = {
 export type BetSlipItem = {
   eventId: string;
   eventTitle: string;
+  category?: string;
   outcome: BetOutcome;
 };
 
@@ -80,6 +82,7 @@ export function BettingProvider({ children }: { children: ReactNode }) {
       eventId: betSlip.eventId,
       eventTitle: betSlip.eventTitle,
       outcomeLabel: betSlip.outcome.label,
+      category: betSlip.category || "Equities",
       stake: roundedStake,
       oddsAtPlacement: betSlip.outcome.odds,
       potentialPayout: toCents(roundedStake * betSlip.outcome.odds),

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Users, Clock, Activity, Rocket, Coins, Briefcase } from "lucide-react";
+import { Users, Clock, Activity, Rocket, Coins, Briefcase, DollarSign, TrendingUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PredictionEvent } from "@/utils/sportsData";
 import { useBetting } from "@/context/BettingContext";
@@ -19,6 +19,8 @@ const CATEGORY_CONFIG: Record<PredictionEvent["category"], { icon: LucideIcon }>
   Startup: { icon: Rocket },
   Equities: { icon: Briefcase },
   Crypto: { icon: Coins },
+  Forex: { icon: DollarSign },
+  Macros: { icon: TrendingUp },
 };
 
 function formatPool(size?: number): string {
@@ -127,7 +129,7 @@ export default function PredictionMarket({ event, interactive = true }: Predicti
             disabled={disabled}
             onClick={() => {
               if (disabled) return;
-              openBetSlip({ eventId: event.id, eventTitle: event.title, outcome });
+              openBetSlip({ eventId: event.id, eventTitle: event.title, category: event.category, outcome });
             }}
             aria-label={`Bet on ${outcome.label} at ${outcome.odds.toFixed(2)}x odds`}
             className="flex items-center justify-between gap-1.5 px-3 py-3 rounded-xl border border-zinc-800/50 bg-zinc-800/20 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/[0.06] hover:shadow-[0_0_16px_rgba(16,185,129,0.12)] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-zinc-800/50 disabled:hover:bg-zinc-800/20 disabled:hover:shadow-none min-w-0"

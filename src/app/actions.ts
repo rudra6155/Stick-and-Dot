@@ -204,7 +204,7 @@ const mapRowToAsset = (row: any) => ({
   targetHighPrice: row.target_high_price || 0,
   trailingEps: row.trailing_eps || 0,
   forwardEps: row.forward_eps || 0,
-  currency: row.currency || '',
+  currency: row.currency || 'USD',
   website: row.website || '',
   longBusinessSummary: row.long_business_summary || '',
 
@@ -300,6 +300,9 @@ export async function fetchAssetsPaginated(params: {
     'Beta': 'beta'
   };
   const sortCol = sortMap[params.sortBy] ?? 'market_cap';
+  if (sortCol === 'market_cap') {
+    query = query.lt('market_cap', 20000000000000);
+  }
   query = query.order(sortCol, { ascending: params.sortDir === 'asc', nullsFirst: false });
   query = query.order('ticker', { ascending: true });
 
@@ -327,48 +330,65 @@ export async function fetchAssetsPaginated(params: {
 }
 
 export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
-  try {
-    return await unstable_cache(
-      async () => {
-        const assetClasses = ['Crypto', 'US Stock', 'ETF', 'REIT', 'Commodity', 'Bond', 'Indian Stock', 'International', 'Forex', 'Index', 'Equity'];
-        const counts: Record<string, number> = { All: 0 };
-        
-        await Promise.all(assetClasses.map(async (cls) => {
-          const { count, error } = await supabase
-            .from('asset_snapshots')
-            .select('*', { count: 'exact', head: true })
-            .eq('asset_class', cls);
-            
-          if (!error && count !== null) {
-            counts[cls] = count;
-            counts['All'] += count;
-          }
-        }));
+  return await unstable_cache(
+    async () => {
+      const assetClasses = ['Crypto', 'US Stock', 'ETF', 'REIT', 'Commodity', 'Bond', 'Indian Stock', 'International', 'Forex', 'Index', 'Equity'];
+      const counts: Record<string, number> = { All: 0 };
+      
+      await Promise.all(assetClasses.map(async (cls) => {
+        const { count, error } = await supabase
+          .from('asset_snapshots')
+          .select('*', { count: 'exact', head: true })
+          .eq('asset_class', cls);
+          
+        if (error) {
+          throw new Error(`Count failed for ${cls}: ${error.message}`);
+        }
+        if (count !== null) {
+          counts[cls] = count;
+          counts['All'] += count;
+        }
+      }));
 
-        return counts;
-      },
-      ['asset-class-counts'],
-      { revalidate: 3600 } // Cache for 1 hour
-    )();
-  } catch (error) {
-    console.error('fetchAssetClassCounts: query failed:', error);
-    return { All: 0 };
-  }
+      if (counts.All === 0) {
+        throw new Error('All asset class counts returned 0, likely temporary DB outage');
+      }
+
+      return counts;
+    },
+    ['asset-class-counts'],
+    { revalidate: 3600 } // Cache for 1 hour
+  )();
 }
 
 export async function fetchTickerTapeAssets(): Promise<Asset[]> {
   const { data, error } = await supabase
     .from('asset_snapshots')
     .select('*')
+    .in('asset_class', ['US Stock', 'Crypto', 'ETF'])
+    .not('ticker', 'like', '%.%')
+    .gt('market_cap', 0)
+    .lt('market_cap', 20000000000000)
     .order('market_cap', { ascending: false, nullsFirst: false })
-    .limit(30);
+    .limit(60);
 
   if (error) {
     console.error('Error fetching ticker tape assets:', error);
     return [];
   }
 
-  const mappedAssets: Asset[] = (data || []).map(mapRowToAsset);
+  // Deduplicate by ticker so multiple snapshots don't repeat the same asset
+  const seenTickers = new Set<string>();
+  const uniqueRows: any[] = [];
+  for (const row of data || []) {
+    if (!seenTickers.has(row.ticker)) {
+      seenTickers.add(row.ticker);
+      uniqueRows.push(row);
+      if (uniqueRows.length >= 30) break;
+    }
+  }
+
+  const mappedAssets: Asset[] = uniqueRows.map(mapRowToAsset);
 
   await enrichAssetsWithHistory(mappedAssets);
   return mappedAssets;
@@ -380,40 +400,34 @@ async function enrichAssetsWithHistory(assets: Asset[]) {
 
   // price_history has RLS enabled with no public SELECT policy, so this must
   // go through supabaseAdmin (service role) rather than the anon `supabase` client.
-  // Coverage isn't a uniform panel (some tickers have far more/less recent data
-  // than others), so we can't safely cap with a single global LIMIT — the
-  // .in('ticker', tickers) filter already bounds the result set per page,
-  // and we take the last 7 rows per ticker in JS below.
+  // Instead of up to 100 individual parallel queries (N+1), fetch all history in a single query.
   let historyData: { ticker: string; date: string; close: number }[] = [];
   try {
-    const results = await Promise.allSettled(
-      tickers.map(ticker => 
-        supabaseAdmin
-          .from('price_history')
-          .select('ticker, date, close')
-          .eq('ticker', ticker)
-          .order('date', { ascending: false })
-          .limit(7)
-      )
-    );
-    
-    results.forEach(res => {
-      if (res.status === 'fulfilled' && res.value.data) {
-        // Reverse so oldest-first for the slice(-7) logic below
-        historyData.push(...res.value.data.reverse());
-      }
-    });
+    const { data, error } = await supabaseAdmin
+      .from('price_history')
+      .select('ticker, date, close')
+      .in('ticker', tickers)
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('enrichAssetsWithHistory: query error:', error.message);
+      return assets;
+    }
+    historyData = data || [];
   } catch (err) {
     console.error('enrichAssetsWithHistory: query threw:', err);
     return assets;
   }
 
-  if (historyData) {
+  if (historyData && historyData.length > 0) {
     const histByTicker: Record<string, { date: string, close: number }[]> = {};
-    historyData.forEach(row => {
+    for (const row of historyData) {
       if (!histByTicker[row.ticker]) histByTicker[row.ticker] = [];
-      histByTicker[row.ticker].push(row);
-    });
+      // Keep only up to 7 most recent entries per ticker
+      if (histByTicker[row.ticker].length < 7) {
+        histByTicker[row.ticker].push(row);
+      }
+    }
 
     assets.forEach(asset => {
       const h = histByTicker[asset.symbol] || [];
@@ -424,11 +438,12 @@ async function enrichAssetsWithHistory(assets: Asset[]) {
         return;
       }
 
-      const recentHist = h.slice(-7);
-      asset.history = recentHist.map(r => r.close);
+      // Reverse so oldest-first for sparkline display and calculation
+      const chronological = [...h].reverse();
+      asset.history = chronological.map(r => r.close);
 
-      const first = recentHist[0].close;
-      const last = recentHist[recentHist.length - 1].close;
+      const first = chronological[0].close;
+      const last = chronological[chronological.length - 1].close;
       const changePct = (first != null && first !== 0) ? ((last - first) / first) * 100 : 0;
 
       asset.change = (Math.abs(changePct)).toFixed(2) + "%";

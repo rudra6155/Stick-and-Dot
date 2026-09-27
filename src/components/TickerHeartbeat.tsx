@@ -77,7 +77,7 @@ export default function TickerHeartbeat({ assets }: TickerHeartbeatProps) {
       const ww = window.innerWidth;
       const wh = window.innerHeight;
 
-      initialTickers.current.forEach((t, i) => {
+      initialTickers.forEach((t: FloatingTicker, i: number) => {
         t.x += t.vx;
         t.y += t.vy;
 

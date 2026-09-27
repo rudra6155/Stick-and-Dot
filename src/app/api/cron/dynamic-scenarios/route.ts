@@ -200,20 +200,14 @@ function deduplicateScenarios(scenarios: any[]): any[] {
 
 // ── Main handler ────────────────────────────────────
 async function handler(req: NextRequest) {
-  // Allow bypass with query param for manual triggering
-  const url = new URL(req.url);
-  const bypassAuth = url.searchParams.get('force') === 'true';
-  
-  if (!bypassAuth) {
-    const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret) {
-      console.error('api/cron/dynamic-scenarios: CRON_SECRET env var is not set — rejecting request');
-      return NextResponse.json({ error: 'Server misconfiguration: cron secret not configured' }, { status: 500 });
-    }
-    const authHeader = req.headers.get('authorization');
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error('api/cron/dynamic-scenarios: CRON_SECRET env var is not set — rejecting request');
+    return NextResponse.json({ error: 'Server misconfiguration: cron secret not configured' }, { status: 500 });
+  }
+  const authHeader = req.headers.get('authorization');
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
@@ -272,13 +266,7 @@ async function handler(req: NextRequest) {
       return NextResponse.json({ error: 'No valid scenarios after ticker validation' }, { status: 500 });
     }
 
-    // Step 6: Deactivate old scenarios
-    await supabase
-      .from('dynamic_scenarios')
-      .update({ is_active: false })
-      .eq('is_active', true);
-
-    // Step 7: Insert all new scenarios (up to 25)
+    // Step 6: Insert all new scenarios first (up to 25)
     const rows = validScenarios.slice(0, TARGET_SCENARIOS).map((s: any) => ({
       title: s.title,
       emoji: s.emoji || '📊',
@@ -295,13 +283,24 @@ async function handler(req: NextRequest) {
       is_active: true,
     }));
 
-    const { error: insertError } = await supabase
+    const { data: insertedRows, error: insertError } = await supabase
       .from('dynamic_scenarios')
-      .insert(rows);
+      .insert(rows)
+      .select('id');
 
     if (insertError) {
       console.error('Failed to insert scenarios:', insertError);
-      return NextResponse.json({ error: 'Failed to save scenarios' }, { status: 500 });
+      return NextResponse.json({ error: 'Insert failed, kept existing scenarios' }, { status: 500 });
+    }
+
+    // Step 7: Deactivate old scenarios only after new ones are safely inserted
+    const newIds = insertedRows?.map((r: { id: string | number }) => r.id) || [];
+    if (newIds.length > 0) {
+      await supabase
+        .from('dynamic_scenarios')
+        .update({ is_active: false })
+        .eq('is_active', true)
+        .not('id', 'in', `(${newIds.join(',')})`);
     }
 
     console.log(`[Scenarios] Successfully inserted ${rows.length} real-time scenarios!`);

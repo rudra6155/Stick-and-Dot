@@ -103,6 +103,7 @@ function StartupIntelHub({ markets = [], searchQuery = "" }: { markets?: Predict
     openBetSlip({
       eventId: market.id,
       eventTitle: market.title,
+      category: market.category,
       outcome,
     });
   };
@@ -330,7 +331,9 @@ const CATEGORY_TABS: { key: CategoryFilter; label: string; icon: LucideIcon }[] 
   { key: "Sports", label: "Sports", icon: Activity },
   { key: "Startup", label: "Startup", icon: Rocket },
   { key: "Crypto", label: "Crypto", icon: Coins },
+  { key: "Forex", label: "Forex", icon: DollarSign },
   { key: "Equities", label: "Equities", icon: Briefcase },
+  { key: "Macros", label: "Macros", icon: TrendingUp },
 ];
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
@@ -472,6 +475,15 @@ export default function PredictionsDashboard() {
 
   return (
     <main className="space-y-6 animate-in fade-in duration-500 pb-20">
+      {/* Simulation / Virtual Disclaimer Banner */}
+      <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs sm:text-sm">
+        <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <span className="font-bold tracking-wider uppercase text-amber-400 mr-2">Virtual Simulation:</span>
+          All markets, odds, and wallet balances are simulated paper trading for educational and analytical purposes. No real money or currency is held, wagered, or won.
+        </div>
+      </div>
+
       {/* Command Bar */}
       <section className="sticky top-24 z-30 rounded-2xl border border-zinc-800/60 bg-black/85 backdrop-blur-xl">
         <div className="flex items-center gap-3 px-4 py-3">

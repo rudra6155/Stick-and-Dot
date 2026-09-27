@@ -1,5 +1,6 @@
 import yfinance as yf
 import time
+import os
 from supabase import create_client
 from ticker_lists import (
     SP500_TICKERS, ETF_TICKERS, REIT_TICKERS,
@@ -8,8 +9,11 @@ from ticker_lists import (
     MIDCAP_TICKERS, INDIAN_EXTENDED_TICKERS
 )
 
-SUPABASE_URL = "https://riszdsmtfijmwsylbmcf.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpc3pkc210ZmlqbXdzeWxibWNmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTAwNjU1MSwiZXhwIjoyMDk0NTgyNTUxfQ.iOySao0m0yRVQuERASn2BB1uw4obL5GZxR3t6XNdfwk"
+SUPABASE_URL = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "https://riszdsmtfijmwsylbmcf.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+
+if not SUPABASE_KEY:
+    raise ValueError("SUPABASE_SERVICE_ROLE_KEY environment variable is not set")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
