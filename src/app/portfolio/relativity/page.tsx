@@ -596,33 +596,37 @@ export default function RelativityPage() {
                         return acc;
                       }, [] as (MatrixEntry & { key: string })[]);
 
-                    const topHedge = pairs.sort((a, b) => a.value - b.value)[0];
-                    const topCorrelated = pairs.sort((a, b) => b.value - a.value)[0];
-                    const mostUncorrelated = pairs.length > 0 ? pairs.reduce((best, p) =>
-                      Math.abs(p.value) < Math.abs(best.value) ? p : best
-                    ) : null;
+                    if (pairs.length === 0) return null;
+
+                    const sortedByHedge = [...pairs].sort((a, b) => a.value - b.value);
+                    const sortedByCorr = [...pairs].sort((a, b) => b.value - a.value);
+
+                    const topHedge = sortedByHedge[0];
+                    const topCorrelated = sortedByCorr[0];
+                    const mostUncorrelated = [...pairs].sort((a, b) => Math.abs(a.value) - Math.abs(b.value))[0];
 
                     // Hidden risk: strongest positive correlation that ISN'T already the top Correlated pair
-                    const hiddenRisk = [...pairs]
-                      .filter(p => p.value > 0.7 && (!topCorrelated || p.key !== topCorrelated.key))
-                      .sort((a, b) => b.value - a.value)[0];
+                    const hiddenRisk = sortedByCorr
+                      .filter(p => p.value > 0.6 && (!topCorrelated || p.key !== topCorrelated.key))[0];
 
                     const cards = [
                       topHedge && {
                         icon: <Shield className="w-5 h-5" />,
                         color: "emerald",
-                        label: "Best Balancer (Hedge)",
-                        headline: `${topHedge.rowLabel} ↔ ${topHedge.colLabel}`,
-                        body: `When one goes up, the other usually goes down. Holding both helps balance your portfolio so you don't lose everything on a bad day.`,
-                        stat: '🪞',
+                        label: topHedge.value < 0 ? "Best Balancer (Hedge)" : "Lowest Correlated Pair",
+                        headline: `${topHedge.rowLabel} ↔ ${topHedge.colLabel} (${topHedge.value > 0 ? '+' : ''}${topHedge.value.toFixed(2)})`,
+                        body: topHedge.value < 0
+                          ? `When one goes up, the other usually goes down. Holding both helps balance your portfolio so you don't lose everything on a bad day.`
+                          : `These two have the least historical correlation in the basket. Holding both provides independent exposure.`,
+                        stat: topHedge.value < -0.2 ? '🪞' : '🤷',
                         statColor: "text-emerald-400",
                       },
                       hiddenRisk && {
                         icon: <AlertTriangle className="w-5 h-5" />,
                         color: "amber",
                         label: "Danger: Hidden Risk",
-                        headline: `${hiddenRisk.rowLabel} ↔ ${hiddenRisk.colLabel}`,
-                        body: `These two are basically the same thing! If you hold both thinking you are diversified, you are not. If one crashes, the other will probably crash too.`,
+                        headline: `${hiddenRisk.rowLabel} ↔ ${hiddenRisk.colLabel} (+${hiddenRisk.value.toFixed(2)})`,
+                        body: `These two move together tightly! If you hold both thinking you are diversified, you are not. If one crashes, the other will probably crash too.`,
                         stat: '👯',
                         statColor: "text-amber-400",
                       },
@@ -630,16 +634,16 @@ export default function RelativityPage() {
                         icon: <Eye className="w-5 h-5" />,
                         color: "sky",
                         label: "True Diversifier",
-                        headline: `${mostUncorrelated.rowLabel} ↔ ${mostUncorrelated.colLabel}`,
+                        headline: `${mostUncorrelated.rowLabel} ↔ ${mostUncorrelated.colLabel} (${mostUncorrelated.value >= 0 ? '+' : ''}${mostUncorrelated.value.toFixed(2)})`,
                         body: `These two ignore each other. What happens to one doesn't affect the other. This is true diversification!`,
                         stat: '🤷',
                         statColor: "text-sky-400",
                       },
-                      topCorrelated && topCorrelated !== hiddenRisk && {
+                      topCorrelated && (!hiddenRisk || topCorrelated.key !== hiddenRisk.key) && {
                         icon: <TrendingUp className="w-5 h-5" />,
                         color: "violet",
                         label: "Moves Together",
-                        headline: `${topCorrelated.rowLabel} ↔ ${topCorrelated.colLabel}`,
+                        headline: `${topCorrelated.rowLabel} ↔ ${topCorrelated.colLabel} (+${topCorrelated.value.toFixed(2)})`,
                         body: `These two are best friends. When one shoots up, the other usually follows. Just be careful, they also fall together.`,
                         stat: '🤝',
                         statColor: "text-violet-400",

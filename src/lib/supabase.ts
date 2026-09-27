@@ -8,6 +8,9 @@ export function requireEnv(name: string): string {
   if (!value && name === 'NEXT_PUBLIC_SUPABASE_URL') {
     value = process.env.SUPABASE_URL;
   }
+  if (!value && (name === 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY' || name === 'NEXT_PUBLIC_SUPABASE_ANON_KEY')) {
+    value = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  }
   if (!value) {
     throw new Error(
       `Missing required environment variable "${name}". Set it in your environment (e.g. .env.local) before starting the app.`

@@ -108,6 +108,47 @@ export async function GET() {
     });
   }
 
+  // Fetch live sports fixtures from API-Sports if key available
+  if (process.env.API_SPORTS_KEY) {
+    try {
+      const sportsRes = await fetch(`https://v3.football.api-sports.io/fixtures?date=${todayStr}`, {
+        headers: { 'x-apisports-key': process.env.API_SPORTS_KEY },
+        signal: AbortSignal.timeout(3000),
+      });
+      if (sportsRes.ok) {
+        const sportsData = await sportsRes.json();
+        const fixtures = Array.isArray(sportsData?.response) ? sportsData.response : [];
+        for (const m of fixtures.slice(0, 75)) {
+          if (!m?.teams?.home?.name || !m?.teams?.away?.name) continue;
+          const fixtureId = m.fixture?.id || Math.random();
+          const rng = seededRandom(`fixture-${fixtureId}-${todayStr}`);
+          const homeProb = Math.round(35 + rng() * 25);
+          const drawProb = Math.round(20 + rng() * 15);
+          const awayProb = 100 - homeProb - drawProb;
+
+          const isLive = ['1H', '2H', 'HT', 'ET', 'P', 'LIVE'].includes(m.fixture?.status?.short);
+          const isFinished = ['FT', 'AET', 'PEN'].includes(m.fixture?.status?.short);
+
+          finalEvents.push({
+            id: `sports-${fixtureId}-${todayStr}`,
+            title: `${isLive ? '[LIVE] ' : ''}${m.teams.home.name} vs ${m.teams.away.name} (${m.league?.name || 'League'})`,
+            category: 'Sports',
+            status: isFinished ? 'Closed' : 'Open',
+            resolutionDate: isLive ? 'Live Now' : isFinished ? 'Final' : 'Tonight',
+            outcomes: [
+              { label: m.teams.home.name, odds: probToOdds(homeProb), probability: homeProb },
+              { label: 'Draw', odds: probToOdds(drawProb), probability: drawProb },
+              { label: m.teams.away.name, odds: probToOdds(awayProb), probability: awayProb },
+            ],
+            poolSize: seededPool(`sports-${fixtureId}`, 50000, 3000000),
+          });
+        }
+      }
+    } catch (sportsErr) {
+      console.warn('API-Sports live feed non-blocking timeout/error:', sportsErr);
+    }
+  }
+
   const startups = [
     'Stripe', 'SpaceX', 'Databricks', 'OpenAI', 'Anthropic',
     'Neuralink', 'Plaid', 'Epic Games', 'Discord', 'Scale AI',
@@ -138,7 +179,7 @@ export async function GET() {
     (m: string) => `Will ${m} establish a new 52-week trend before the next quarterly review?`,
   ];
 
-  for (let i = 0; i < 250; i++) {
+  for (let i = 0; i < 150; i++) {
     const rng = seededRandom('mock' + i + todayStr);
     const isStartup = rng() > 0.5;
     const pool = seededPool('mock' + i + todayStr, 50000, 10000000);

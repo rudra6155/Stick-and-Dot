@@ -96,7 +96,13 @@ export async function POST(req: NextRequest) {
         .order(q.sort_by, { ascending: q.sort_dir === 'asc' })
         .limit(q.limit);
 
-      if (q.filters.asset_class) query = query.eq('asset_class', q.filters.asset_class);
+      if (q.filters.asset_class) {
+        if (q.filters.asset_class === 'Stock') {
+          query = query.in('asset_class', ['US Stock', 'Stock', 'Equity']);
+        } else {
+          query = query.eq('asset_class', q.filters.asset_class);
+        }
+      }
       if (q.filters.sector) query = query.eq('sector', q.filters.sector);
 
       const { data } = await query;

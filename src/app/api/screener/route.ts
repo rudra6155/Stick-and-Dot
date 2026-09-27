@@ -58,7 +58,13 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (asset_class) query = query.eq('asset_class', asset_class);
+  if (asset_class) {
+    if (asset_class === 'Stock') {
+      query = query.in('asset_class', ['US Stock', 'Stock', 'Equity']);
+    } else {
+      query = query.eq('asset_class', asset_class);
+    }
+  }
   if (sector) query = query.eq('sector', sector);
   if (min_market_cap !== undefined) query = query.gte('market_cap', min_market_cap);
   if (max_pe !== undefined) query = query.lte('pe_ratio', max_pe).gt('pe_ratio', 0);

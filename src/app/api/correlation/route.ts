@@ -6,18 +6,22 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+import YahooFinance from 'yahoo-finance2';
+
+const yf = new YahooFinance({ suppressNotices: ['yahooSurvey', 'ripHistorical'] });
+
 // Representative tickers for each asset class (highest market cap / most liquid)
 const CLASS_REPRESENTATIVES: Record<string, { ticker: string; label: string }> = {
-  'Stock':          { ticker: 'AAPL',      label: 'US Stocks' },
+  'Stock':          { ticker: 'AAPL',        label: 'US Stocks' },
   'Indian Stock':   { ticker: 'RELIANCE.NS', label: 'Indian Stocks' },
-  'Crypto':         { ticker: 'BTC-USD',   label: 'Bitcoin' },
-  'ETF':            { ticker: 'SPY',       label: 'S&P 500 ETF' },
-  'Commodity':      { ticker: 'GC=F',      label: 'Gold' },
-  'Bond':           { ticker: 'TLT',       label: 'US Bonds' },
-  'REIT':           { ticker: 'VNQ',       label: 'REITs' },
-  'International':  { ticker: '7203.T',    label: 'International' },
-  'Forex':          { ticker: 'EURUSD=X',  label: 'EUR/USD' },
-  'Index':          { ticker: '^GSPC',     label: 'S&P 500' },
+  'Crypto':         { ticker: 'BTC-USD',     label: 'Bitcoin' },
+  'ETF':            { ticker: 'SPY',         label: 'S&P 500 ETF' },
+  'Commodity':      { ticker: 'GC=F',        label: 'Gold' },
+  'Bond':           { ticker: 'TLT',         label: 'US Bonds' },
+  'REIT':           { ticker: 'VNQ',         label: 'REITs' },
+  'International':  { ticker: '7203.T',      label: 'International' },
+  'Forex':          { ticker: 'EURUSD=X',    label: 'EUR/USD' },
+  'Index':          { ticker: '^GSPC',       label: 'S&P 500' },
 };
 
 // Compute Pearson correlation between two arrays of numbers
@@ -41,16 +45,20 @@ function pearsonCorrelation(x: number[], y: number[]): number {
   }
 
   const den = Math.sqrt(denX * denY);
-  if (den === 0) return 0;
-  return num / den;
+  if (den === 0 || isNaN(den)) return 0;
+  const res = num / den;
+  return isNaN(res) ? 0 : Math.max(-1, Math.min(1, res));
 }
 
 // Normalize price series to percentage returns from start
 function normalizeToReturns(prices: number[]): number[] {
   if (prices.length < 2) return [];
   const base = prices[0];
-  if (base === 0) return prices.map(() => 0);
-  return prices.map(p => ((p - base) / base) * 100);
+  if (base === 0 || isNaN(base)) return prices.map(() => 0);
+  return prices.map(p => {
+    const val = ((p - base) / base) * 100;
+    return isNaN(val) ? 0 : val;
+  });
 }
 
 // Align two time series by date
@@ -63,7 +71,7 @@ function alignSeries(
   const b: number[] = [];
   for (const point of seriesA) {
     const bClose = mapB.get(point.date);
-    if (bClose !== undefined) {
+    if (bClose !== undefined && point.close !== null && bClose !== null && !isNaN(point.close) && !isNaN(bClose)) {
       a.push(point.close);
       b.push(bClose);
     }
@@ -72,30 +80,79 @@ function alignSeries(
 }
 
 async function fetchPriceHistory(ticker: string): Promise<{ date: string; close: number }[]> {
-  const { data, error } = await supabase
-    .from('price_history')
-    .select('date, close')
-    .eq('ticker', ticker)
-    .order('date', { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from('price_history')
+      .select('date, close')
+      .eq('ticker', ticker)
+      .order('date', { ascending: true })
+      .limit(1000);
 
-  if (error || !data) return [];
-  return data;
+    if (!error && data && data.length >= 10) return data;
+  } catch (err) {
+    console.warn(`Supabase price_history query error for ${ticker}:`, err);
+  }
+
+  // Fallback to live Yahoo Finance chart API
+  try {
+    const yfResult = await yf.chart(ticker, { period1: '2026-01-01', interval: '1d' });
+    if (yfResult?.quotes && yfResult.quotes.length >= 5) {
+      return yfResult.quotes
+        .filter(q => q.close !== null && q.close !== undefined)
+        .map(q => ({
+          date: new Date(q.date).toISOString().split('T')[0],
+          close: q.close!
+        }));
+    }
+  } catch (err) {
+    console.warn(`Yahoo Finance chart fallback error for ${ticker}:`, err);
+  }
+
+  return [];
 }
 
 async function fetchPriceHistoryBatch(tickers: string[]): Promise<Record<string, { date: string; close: number }[]>> {
-  const { data, error } = await supabase
-    .from('price_history')
-    .select('ticker, date, close')
-    .in('ticker', tickers)
-    .order('date', { ascending: true });
-
-  if (error || !data) return {};
-
   const result: Record<string, { date: string; close: number }[]> = {};
-  for (const row of data) {
-    if (!result[row.ticker]) result[row.ticker] = [];
-    result[row.ticker].push({ date: row.date, close: row.close });
+
+  try {
+    const { data, error } = await supabase
+      .from('price_history')
+      .select('ticker, date, close')
+      .in('ticker', tickers)
+      .order('date', { ascending: true })
+      .limit(10000);
+
+    if (!error && data) {
+      for (const row of data) {
+        if (!result[row.ticker]) result[row.ticker] = [];
+        result[row.ticker].push({ date: row.date, close: row.close });
+      }
+    }
+  } catch (err) {
+    console.warn('Supabase batch price_history error:', err);
   }
+
+  // Fallback to Yahoo Finance for any tickers missing or having < 10 rows (e.g. BTC-USD or ad-hoc compare tickers)
+  await Promise.allSettled(
+    tickers.map(async (ticker) => {
+      if (!result[ticker] || result[ticker].length < 10) {
+        try {
+          const yfResult = await yf.chart(ticker, { period1: '2026-01-01', interval: '1d' });
+          if (yfResult?.quotes && yfResult.quotes.length >= 5) {
+            result[ticker] = yfResult.quotes
+              .filter(q => q.close !== null && q.close !== undefined)
+              .map(q => ({
+                date: new Date(q.date).toISOString().split('T')[0],
+                close: q.close!
+              }));
+          }
+        } catch (err) {
+          console.warn(`Yahoo Finance batch fallback failed for ${ticker}:`, err);
+        }
+      }
+    })
+  );
+
   return result;
 }
 
@@ -167,13 +224,15 @@ export async function POST(req: NextRequest) {
       if (seen.has(key)) continue;
       seen.add(key);
 
-      if (item.value > 0.7) {
-        insights.push(`${item.rowLabel} and ${item.colLabel} are highly correlated (${item.value.toFixed(2)}) — they tend to move together.`);
-      } else if (item.value < -0.5) {
-        insights.push(`${item.rowLabel} and ${item.colLabel} show inverse correlation (${item.value.toFixed(2)}) — potential hedging pair.`);
+      if (item.value >= 0.5) {
+        insights.push(`${item.rowLabel} and ${item.colLabel} are strongly correlated (+${item.value.toFixed(2)}) — they tend to move in tandem.`);
+      } else if (item.value <= -0.3) {
+        insights.push(`${item.rowLabel} and ${item.colLabel} show inverse correlation (${item.value.toFixed(2)}) — prime candidates for hedging.`);
+      } else if (Math.abs(item.value) < 0.15 && insights.length < 4) {
+        insights.push(`${item.rowLabel} and ${item.colLabel} are nearly independent (${item.value.toFixed(2)}) — excellent for portfolio diversification.`);
       }
 
-      if (insights.length >= 5) break;
+      if (insights.length >= 6) break;
     }
 
     return NextResponse.json({ labels, matrix, insights });
@@ -229,6 +288,15 @@ export async function POST(req: NextRequest) {
     if (assetData) {
       for (const a of assetData) {
         assetMap[a.ticker] = { name: a.short_name || a.ticker, asset_class: a.asset_class, price: a.price || 0 };
+      }
+    }
+
+    // Ensure all tickers have at least fallback names
+    for (const t of tickers) {
+      if (!assetMap[t]) {
+        const hist = allHistory[t] || [];
+        const lastPrice = hist.length > 0 ? hist[hist.length - 1].close : 0;
+        assetMap[t] = { name: t, asset_class: 'Asset', price: lastPrice };
       }
     }
 

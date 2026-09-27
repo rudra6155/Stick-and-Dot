@@ -51,7 +51,13 @@ export async function POST(req: NextRequest) {
   if (validTargetTickers.length > 0) {
     query = query.in('ticker', validTargetTickers);
   } else {
-    if (asset_class) query = query.eq('asset_class', asset_class);
+    if (asset_class) {
+      if (asset_class === 'Stock') {
+        query = query.in('asset_class', ['US Stock', 'Stock', 'Equity']);
+      } else {
+        query = query.eq('asset_class', asset_class);
+      }
+    }
     if (sector) query = query.eq('sector', sector);
     if (max_pe !== undefined) query = query.lte('pe_ratio', max_pe).gt('pe_ratio', 0);
     if (min_dividend_yield !== undefined) query = query.gte('dividend_yield', min_dividend_yield);

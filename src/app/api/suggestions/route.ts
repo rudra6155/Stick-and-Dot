@@ -8,10 +8,13 @@ const supabase = createClient(
 
 export async function GET() {
   try {
-    // 1. Top Performers (High revenue growth, high momentum)
+    // 1. Top Performers (High revenue growth, high momentum, reasonable price)
     const { data: topPerformers } = await supabase
       .from('asset_snapshots')
       .select('*')
+      .gt('price', 5)
+      .lt('revenue_growth', 20)
+      .gt('revenue_growth', 0.1)
       .order('revenue_growth', { ascending: false, nullsFirst: false })
       .limit(5);
 
