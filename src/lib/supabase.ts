@@ -1,7 +1,13 @@
 // Throws a clear, descriptive error instead of letting a missing env var
 // surface as an opaque "Cannot read properties of undefined" TypeError.
 export function requireEnv(name: string): string {
-  const value = process.env[name];
+  let value = process.env[name];
+  if (!value && name === 'SUPABASE_SERVICE_ROLE_KEY') {
+    value = process.env.SUPABASE_SECRET_KEY;
+  }
+  if (!value && name === 'NEXT_PUBLIC_SUPABASE_URL') {
+    value = process.env.SUPABASE_URL;
+  }
   if (!value) {
     throw new Error(
       `Missing required environment variable "${name}". Set it in your environment (e.g. .env.local) before starting the app.`
