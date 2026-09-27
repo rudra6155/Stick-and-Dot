@@ -128,7 +128,8 @@ const normalizeClass = (raw: unknown): string => {
   // reach here — coerce before calling string methods to avoid a crash.
   const str = typeof raw === 'string' ? raw : String(raw);
   const map: Record<string, string> = {
-    'US Stock': 'US Stock', 'stocks': 'US Stock',
+    'us stock': 'US Stock', 'stock': 'US Stock', 'stocks': 'US Stock',
+    'equity': 'US Stock', 'equities': 'US Stock',
     'us tech': 'US Stock', 'us blue chip': 'US Stock',
     'etf': 'ETF', 'etfs': 'ETF',
     'reit': 'REIT', 'reits': 'REIT',
@@ -142,6 +143,20 @@ const normalizeClass = (raw: unknown): string => {
   };
   return map[str.toLowerCase()] ?? str;
 };
+
+function inferCurrency(ticker: string, assetClass?: string): string {
+  if (!ticker) return 'USD';
+  if (assetClass === 'Indian Stock' || ticker.endsWith('.NS') || ticker.endsWith('.BO')) return 'INR';
+  if (ticker.endsWith('.T')) return 'JPY';
+  if (ticker.endsWith('.KS')) return 'KRW';
+  if (ticker.endsWith('.L')) return 'GBP';
+  if (ticker.endsWith('.DE') || ticker.endsWith('.PA')) return 'EUR';
+  if (ticker.endsWith('.SA')) return 'BRL';
+  if (ticker.endsWith('.BA')) return 'ARS';
+  if (ticker.endsWith('.JK')) return 'IDR';
+  if (ticker.endsWith('.MX')) return 'MXN';
+  return 'USD';
+}
 
 const mapRowToAsset = (row: any) => ({
   id: `trad_${row.id || row.ticker}`,
@@ -204,7 +219,7 @@ const mapRowToAsset = (row: any) => ({
   targetHighPrice: row.target_high_price || 0,
   trailingEps: row.trailing_eps || 0,
   forwardEps: row.forward_eps || 0,
-  currency: row.currency || 'USD',
+  currency: row.currency || inferCurrency(row.ticker, row.asset_class),
   website: row.website || '',
   longBusinessSummary: row.long_business_summary || '',
 
@@ -258,7 +273,20 @@ export async function fetchAssetsByTickers(tickers: string[]): Promise<Asset[]> 
     throw new Error(error.message);
   }
 
-  const mappedAssets: Asset[] = (data || []).map(mapRowToAsset);
+  // Deduplicate by ticker, preferring row with sector/details or US Stock
+  const tickerMap = new Map<string, any>();
+  for (const row of data || []) {
+    const existing = tickerMap.get(row.ticker);
+    if (!existing) {
+      tickerMap.set(row.ticker, row);
+    } else {
+      if (row.asset_class === 'US Stock' || (row.sector && !existing.sector)) {
+        tickerMap.set(row.ticker, row);
+      }
+    }
+  }
+
+  const mappedAssets: Asset[] = Array.from(tickerMap.values()).map(mapRowToAsset);
   await enrichAssetsWithHistory(mappedAssets);
   return mappedAssets;
 }
@@ -279,9 +307,13 @@ export async function fetchAssetsPaginated(params: {
     .select('*', { count: 'exact' });
 
   if (params.activeClass !== 'All') {
-    query = query.eq('asset_class', params.activeClass);
+    if (params.activeClass === 'Stock' || params.activeClass === 'US Stock') {
+      query = query.in('asset_class', ['US Stock', 'Stock', 'Equity']);
+    } else {
+      query = query.eq('asset_class', params.activeClass);
+    }
   }
-  if (params.activeClass === 'US Stock' && params.activeSector !== 'All Sectors') {
+  if ((params.activeClass === 'US Stock' || params.activeClass === 'Stock') && params.activeSector !== 'All Sectors') {
     query = query.eq('sector', params.activeSector);
   }
 
@@ -301,7 +333,11 @@ export async function fetchAssetsPaginated(params: {
   };
   const sortCol = sortMap[params.sortBy] ?? 'market_cap';
   if (sortCol === 'market_cap') {
-    query = query.lt('market_cap', 20000000000000);
+    query = query.lt('market_cap', 6000000000000);
+    // Protect default sort and US Stock views from foreign unadjusted local currencies
+    if (params.activeClass === 'All' || params.activeClass === 'US Stock' || params.activeClass === 'Stock') {
+      query = query.not('ticker', 'like', '%.%');
+    }
   }
   query = query.order(sortCol, { ascending: params.sortDir === 'asc', nullsFirst: false });
   query = query.order('ticker', { ascending: true });
@@ -318,7 +354,7 @@ export async function fetchAssetsPaginated(params: {
 
   // Await the enrichment so the client receives the sparkline/history data.
   // We bounded the query in enrichAssetsWithHistory with a strict LIMIT
-  // so it will not cause Vercel 10s timeouts anymore.
+  // so it will not cause Vercel 10s timeouts.
   await enrichAssetsWithHistory(mappedAssets).catch((err) =>
     console.error('enrichAssetsWithHistory error:', err)
   );
@@ -350,6 +386,9 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
         }
       }));
 
+      // Populate 'Stock' for any UI component looking up counts['Stock']
+      counts['Stock'] = (counts['US Stock'] || 0) + (counts['Equity'] || 0);
+
       if (counts.All === 0) {
         throw new Error('All asset class counts returned 0, likely temporary DB outage');
       }
@@ -362,36 +401,67 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
 }
 
 export async function fetchTickerTapeAssets(): Promise<Asset[]> {
-  const { data, error } = await supabase
-    .from('asset_snapshots')
-    .select('*')
-    .in('asset_class', ['US Stock', 'Crypto', 'ETF'])
-    .not('ticker', 'like', '%.%')
-    .gt('market_cap', 0)
-    .lt('market_cap', 20000000000000)
-    .order('market_cap', { ascending: false, nullsFirst: false })
-    .limit(60);
+  try {
+    const [equitiesRes, cryptoRes, forexRes] = await Promise.all([
+      supabase
+        .from('asset_snapshots')
+        .select('*')
+        .in('asset_class', ['US Stock', 'ETF'])
+        .not('ticker', 'like', '%.%')
+        .gt('market_cap', 0)
+        .lt('market_cap', 6000000000000)
+        .order('market_cap', { ascending: false, nullsFirst: false })
+        .limit(40),
+      supabase
+        .from('asset_snapshots')
+        .select('*')
+        .eq('asset_class', 'Crypto')
+        .gt('market_cap', 0)
+        .order('market_cap', { ascending: false, nullsFirst: false })
+        .limit(10),
+      supabase
+        .from('asset_snapshots')
+        .select('*')
+        .eq('asset_class', 'Forex')
+        .gt('price', 0)
+        .limit(10)
+    ]);
 
-  if (error) {
+    const seenTickers = new Set<string>();
+    const uniqueRows: any[] = [];
+
+    // Up to 18 top Equities/ETFs
+    for (const row of equitiesRes.data || []) {
+      if (!seenTickers.has(row.ticker)) {
+        seenTickers.add(row.ticker);
+        uniqueRows.push(row);
+        if (uniqueRows.length >= 18) break;
+      }
+    }
+    // Up to 6 top Cryptos
+    for (const row of cryptoRes.data || []) {
+      if (!seenTickers.has(row.ticker)) {
+        seenTickers.add(row.ticker);
+        uniqueRows.push(row);
+        if (uniqueRows.length >= 24) break;
+      }
+    }
+    // Up to 6 top Forex pairs
+    for (const row of forexRes.data || []) {
+      if (!seenTickers.has(row.ticker)) {
+        seenTickers.add(row.ticker);
+        uniqueRows.push(row);
+        if (uniqueRows.length >= 30) break;
+      }
+    }
+
+    const mappedAssets: Asset[] = uniqueRows.map(mapRowToAsset);
+    await enrichAssetsWithHistory(mappedAssets);
+    return mappedAssets;
+  } catch (error) {
     console.error('Error fetching ticker tape assets:', error);
     return [];
   }
-
-  // Deduplicate by ticker so multiple snapshots don't repeat the same asset
-  const seenTickers = new Set<string>();
-  const uniqueRows: any[] = [];
-  for (const row of data || []) {
-    if (!seenTickers.has(row.ticker)) {
-      seenTickers.add(row.ticker);
-      uniqueRows.push(row);
-      if (uniqueRows.length >= 30) break;
-    }
-  }
-
-  const mappedAssets: Asset[] = uniqueRows.map(mapRowToAsset);
-
-  await enrichAssetsWithHistory(mappedAssets);
-  return mappedAssets;
 }
 
 async function enrichAssetsWithHistory(assets: Asset[]) {
@@ -400,14 +470,15 @@ async function enrichAssetsWithHistory(assets: Asset[]) {
 
   // price_history has RLS enabled with no public SELECT policy, so this must
   // go through supabaseAdmin (service role) rather than the anon `supabase` client.
-  // Instead of up to 100 individual parallel queries (N+1), fetch all history in a single query.
+  // Instead of up to 100 individual parallel queries (N+1), fetch all history in a single bounded query.
   let historyData: { ticker: string; date: string; close: number }[] = [];
   try {
     const { data, error } = await supabaseAdmin
       .from('price_history')
       .select('ticker, date, close')
       .in('ticker', tickers)
-      .order('date', { ascending: false });
+      .order('date', { ascending: false })
+      .limit(Math.min(tickers.length * 7, 1000));
 
     if (error) {
       console.error('enrichAssetsWithHistory: query error:', error.message);

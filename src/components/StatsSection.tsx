@@ -33,7 +33,7 @@ export default function StatsSection({ assetClassCounts = {} }: { assetClassCoun
           {[
             { label: "Intl Stocks", count: assetClassCounts['International'] || 0, color: "bg-purple-500" },
             { label: "Crypto", count: assetClassCounts['Crypto'] || 0, color: "bg-violet-500" },
-            { label: "US Stocks", count: assetClassCounts['Stock'] || 0, color: "bg-cyan-500" },
+            { label: "US Stocks", count: assetClassCounts['US Stock'] || assetClassCounts['Stock'] || 0, color: "bg-cyan-500" },
             { label: "India", count: assetClassCounts['Indian Stock'] || 0, color: "bg-orange-500" },
             { label: "ETFs", count: assetClassCounts['ETF'] || 0, color: "bg-blue-500" },
             { label: "Forex", count: assetClassCounts['Forex'] || 0, color: "bg-rose-500" },

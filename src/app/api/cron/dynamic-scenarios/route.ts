@@ -39,13 +39,19 @@ async function fetchAvailableTickers(): Promise<string> {
   const { data } = await supabase
     .from('asset_snapshots')
     .select('ticker, short_name, asset_class, sector, price, market_cap')
+    .not('ticker', 'like', '%.%')
+    .gt('market_cap', 0)
+    .lt('market_cap', 6000000000000)
     .order('market_cap', { ascending: false, nullsFirst: false })
     .limit(500);
 
   if (!data || data.length === 0) return 'No tickers available';
 
+  const seen = new Set<string>();
   const grouped: Record<string, string[]> = {};
   data.forEach((row: any) => {
+    if (seen.has(row.ticker)) return;
+    seen.add(row.ticker);
     const cls = row.asset_class || 'Other';
     if (!grouped[cls]) grouped[cls] = [];
     grouped[cls].push(`${row.ticker} (${row.short_name || row.ticker}, $${(row.price || 0).toFixed(2)})`);

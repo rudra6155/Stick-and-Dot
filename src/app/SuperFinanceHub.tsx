@@ -585,7 +585,7 @@ export default function SuperFinanceHub({
           </div>
 
           {/* Sector Row — only when Stock tab active */}
-          {activeClass === "Stock" && (
+          {(activeClass === "Stock" || activeClass === "US Stock") && (
             <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
               {availableSectors.map(sector => (
                 <button

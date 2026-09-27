@@ -94,8 +94,9 @@ async function runDaemon() {
         for (const quote of quotesArray) {
           if (quote && quote.symbol && quote.regularMarketPrice != null) {
             const ids = tickerToIds.get(quote.symbol) || [];
-            // Guard against corrupt market caps (> $20T)
-            const validMarketCap = (quote.marketCap && quote.marketCap > 0 && quote.marketCap < 20000000000000)
+            // Guard against corrupt market caps (> $6T or foreign currencies)
+            const isUsd = !quote.currency || quote.currency === 'USD';
+            const validMarketCap = (quote.marketCap && quote.marketCap > 0 && quote.marketCap < 6000000000000 && isUsd)
               ? quote.marketCap
               : null;
 
