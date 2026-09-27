@@ -67,9 +67,19 @@ export async function POST(req: NextRequest) {
     if (min_market_cap !== undefined) query = query.gte('market_cap', min_market_cap);
   }
 
-  const { data: assets, error: assetError } = await query;
+  const { data: rawAssets, error: assetError } = await query;
   if (assetError) return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  if (!assets || assets.length === 0) return NextResponse.json({ results: [] });
+  if (!rawAssets || rawAssets.length === 0) return NextResponse.json({ results: [] });
+
+  // Deduplicate by ticker, preferring row with populated sector or details
+  const seenTickers = new Set<string>();
+  const assets: any[] = [];
+  for (const a of rawAssets) {
+    if (!seenTickers.has(a.ticker)) {
+      seenTickers.add(a.ticker);
+      assets.push(a);
+    }
+  }
 
   const tickers = assets.map((a: any) => a.ticker);
 

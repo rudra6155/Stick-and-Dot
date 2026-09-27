@@ -327,12 +327,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ correlated: [], inversely_correlated: [] });
     }
 
-    const sampleTickers = sampleAssets.map(a => a.ticker);
+    // Deduplicate sampleAssets by ticker
+    const seen = new Set<string>();
+    const uniqueSampleAssets: any[] = [];
+    for (const a of sampleAssets) {
+      if (!a || !a.ticker || seen.has(a.ticker)) continue;
+      seen.add(a.ticker);
+      uniqueSampleAssets.push(a);
+    }
+
+    const sampleTickers = uniqueSampleAssets.map(a => a.ticker);
     const allHistory = await fetchPriceHistoryBatch(sampleTickers);
 
     const results: { ticker: string; name: string; asset_class: string; price: number; correlation: number }[] = [];
 
-    for (const asset of sampleAssets) {
+    for (const asset of uniqueSampleAssets) {
       const hist = allHistory[asset.ticker] || [];
       if (hist.length < 5) continue;
 

@@ -80,8 +80,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
+  // Deduplicate by ticker
+  const seen = new Set<string>();
+  const uniqueData: any[] = [];
+  for (const r of data || []) {
+    if (!r || !r.ticker || seen.has(r.ticker)) continue;
+    seen.add(r.ticker);
+    uniqueData.push(r);
+  }
+
   // Compute investment scores for each result
-  const scored = (data || []).map((r: any) => {
+  const scored = uniqueData.map((r: any) => {
     const earn_score = Math.min((r.revenue_growth || 0) * 100, 40);
     const lose_score = Math.max(40 - (r.beta || 1) * 20, 0);
     const exit_score = Math.min((r.market_cap || 0) / 1e11, 10);

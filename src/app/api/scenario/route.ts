@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
         .from('asset_snapshots')
         .select('*')
         .order(q.sort_by, { ascending: q.sort_dir === 'asc' })
-        .limit(q.limit);
+        .limit(q.limit * 2);
 
       if (q.filters.asset_class) {
         if (q.filters.asset_class === 'Stock') {
@@ -106,7 +106,15 @@ export async function POST(req: NextRequest) {
       if (q.filters.sector) query = query.eq('sector', q.filters.sector);
 
       const { data } = await query;
-      return { label: q.label, assets: data || [] };
+      const seen = new Set<string>();
+      const uniqueAssets: any[] = [];
+      for (const a of data || []) {
+        if (!a || !a.ticker || seen.has(a.ticker)) continue;
+        seen.add(a.ticker);
+        uniqueAssets.push(a);
+        if (uniqueAssets.length >= q.limit) break;
+      }
+      return { label: q.label, assets: uniqueAssets };
     })
   );
 
