@@ -5,8 +5,8 @@ import { createClient } from '@supabase/supabase-js';
 export const revalidate = 300; // Cache for 5 minutes
 
 const supabase = createClient(
-  'https://riszdsmtfijmwsylbmcf.supabase.co',
-  ('sb_se' + 'cret_' + 'guh2RoT4BlFWh0jVBEB0-Q_9Y_Tu-gK')
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://riszdsmtfijmwsylbmcf.supabase.co',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_vmS28KOUKoixto_OSU4SVw_IJmiTf4I'
 );
 
 function clampProbability(prob: number): number {

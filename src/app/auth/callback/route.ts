@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.redirect(redirectUrl)
 
     const supabase = createServerClient(
-      'https://riszdsmtfijmwsylbmcf.supabase.co',
-      'sb_publishable_vmS28KOUKoixto_OSU4SVw_IJmiTf4I',
+      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://riszdsmtfijmwsylbmcf.supabase.co',
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_vmS28KOUKoixto_OSU4SVw_IJmiTf4I',
       {
         cookies: {
           getAll() {
