@@ -13,7 +13,7 @@ import { unstable_cache } from "next/cache";
 //     user's session to the next request that hits the same process.
 const supabaseUrl = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
-const supabasePubKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_vmS28KOUKoixto_OSU4SVw_IJmiTf4I';
+const supabasePubKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_79YfL9h7Vu_1jItiD7js4A_N95hySYI';
 
 // Primary admin client (uses service role key if present, otherwise publishable key)
 const supabaseAdmin = createClient(

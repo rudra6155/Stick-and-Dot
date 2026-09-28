@@ -16,11 +16,11 @@ export function requireEnv(name: string): string {
       return 'https://riszdsmtfijmwsylbmcf.supabase.co';
     }
     if (name === 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY' || name === 'NEXT_PUBLIC_SUPABASE_ANON_KEY' || name === 'SUPABASE_PUBLISHABLE_KEY') {
-      return 'sb_publishable_vmS28KOUKoixto_OSU4SVw_IJmiTf4I';
+      return 'sb_publishable_79YfL9h7Vu_1jItiD7js4A_N95hySYI';
     }
     if (name === 'SUPABASE_SERVICE_ROLE_KEY' || name === 'SUPABASE_SECRET_KEY') {
       console.warn(`[Supabase] Service role key missing for "${name}", falling back to publishable key.`);
-      return process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_vmS28KOUKoixto_OSU4SVw_IJmiTf4I';
+      return process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_79YfL9h7Vu_1jItiD7js4A_N95hySYI';
     }
     throw new Error(
       `Missing required environment variable "${name}". Set it in your environment (e.g. .env.local) before starting the app.`
