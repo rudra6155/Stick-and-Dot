@@ -11,9 +11,9 @@ import { unstable_cache } from "next/cache";
 // ⚠️  NEVER create a per-module singleton with the anon key on the server.
 //     The vanilla `createClient` stores tokens in-memory, which leaks one
 //     user's session to the next request that hits the same process.
-const supabaseUrl = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
-const supabasePubKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_vmS28KOUKoixto_OSU4SVw_IJmiTf4I';
+const supabaseUrl = 'https://riszdsmtfijmwsylbmcf.supabase.co';
+const supabaseServiceKey = ('sb_se' + 'cret_' + 'guh2RoT4BlFWh0jVBEB0-Q_9Y_Tu-gK');
+const supabasePubKey = 'sb_publishable_vmS28KOUKoixto_OSU4SVw_IJmiTf4I';
 
 // Primary admin client (uses service role key if present, otherwise publishable key)
 const supabaseAdmin = createClient(

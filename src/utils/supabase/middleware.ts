@@ -27,8 +27,8 @@ export async function updateSession(request: NextRequest) {
 
   try {
     const supabase = createServerClient(
-      requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
-      requireEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'),
+      'https://riszdsmtfijmwsylbmcf.supabase.co',
+      'sb_publishable_vmS28KOUKoixto_OSU4SVw_IJmiTf4I',
       {
         cookies: {
           getAll() {
