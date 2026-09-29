@@ -28,7 +28,7 @@ const CLASS_COLORS: Record<string, { bg: string; text: string; glow: string; bor
   International: { bg: "rgba(168,85,247,0.08)", text: "text-purple-400", glow: "rgba(168,85,247,0.3)", border: "border-purple-500/20" },
 };
 
-const getClassStyle = (cls: string) => CLASS_COLORS[cls] || CLASS_COLORS["Stock"];
+const getClassStyle = (cls: string) => CLASS_COLORS[cls] || CLASS_COLORS["US Stock"];
 
 export function PickItem({
   pick,
