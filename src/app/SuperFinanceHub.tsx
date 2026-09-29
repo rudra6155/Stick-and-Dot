@@ -52,46 +52,6 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
 }
 
-const AnimatedStat = ({ value, label, suffix = "" }: { value: number; label: string; suffix?: string }) => {
-  const numRef = useRef<HTMLSpanElement>(null);
-  
-  useGSAP(() => {
-    if (!numRef.current) return;
-
-    // The span's text content is owned entirely by GSAP (see empty JSX below) so
-    // React re-renders never have DOM text to reconcile against and can't wipe
-    // out this imperative mutation.
-    numRef.current.textContent = "0";
-
-    // We animate a dummy object and push its value to the DOM
-    const counter = { val: 0 };
-    gsap.to(counter, {
-      val: value,
-      scrollTrigger: {
-        trigger: numRef.current,
-        start: "top bottom",
-        end: "top center",
-        scrub: 1, // 1 second smoothing
-      },
-      onUpdate: () => {
-        if (numRef.current) {
-          numRef.current.textContent = Math.floor(counter.val).toString();
-        }
-      }
-    });
-  }, [value]);
-
-  return (
-    <div className="flex flex-col items-center">
-      <div className="text-4xl md:text-5xl font-mono text-emerald-400 font-bold tracking-tighter">
-        {/* No JSX text children on purpose — GSAP owns this node's textContent exclusively. */}
-        <span ref={numRef} />{suffix}
-      </div>
-      <div className="text-zinc-500 font-mono text-xs uppercase tracking-widest mt-2">{label}</div>
-    </div>
-  );
-};
-
 const TickerTape = ({ assets }: { assets: Asset[] }) => {
   const tapeAssets = assets.slice(0, 30);
   const tapeRef = useRef<HTMLDivElement>(null);
@@ -372,12 +332,27 @@ export default function SuperFinanceHub({
             transition={{ delay: 1, duration: 1 }}
             className="text-zinc-400 font-mono text-sm tracking-widest uppercase mb-12 md:mb-20 text-center px-4"
           >
-            You&apos;re in the driver&apos;s seat. {(assetClassCounts['All'] || 0).toLocaleString()}+ assets. Zero opinions.
+            You&apos;re in the driver&apos;s seat. 200,000+ assets. Zero opinions.
           </motion.p>
           <div className="flex flex-col md:flex-row gap-8 md:gap-24 opacity-80">
-            <AnimatedStat value={assetClassCounts['All'] || 0} label="Assets" />
-            <AnimatedStat value={Object.keys(assetClassCounts).filter(k => k !== 'All').length} label="Asset Classes" />
-            <AnimatedStat value={AVAILABLE_METRICS.length} label="Data Points" suffix="+" />
+            <div className="flex flex-col items-center">
+              <div className="text-4xl md:text-5xl font-mono text-emerald-400 font-bold tracking-tighter">
+                200,000+
+              </div>
+              <div className="text-zinc-500 font-mono text-xs uppercase tracking-widest mt-2">Assets</div>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="text-4xl md:text-5xl font-mono text-emerald-400 font-bold tracking-tighter">
+                {Object.keys(assetClassCounts).filter(k => k !== 'All').length}
+              </div>
+              <div className="text-zinc-500 font-mono text-xs uppercase tracking-widest mt-2">Asset Classes</div>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="text-4xl md:text-5xl font-mono text-emerald-400 font-bold tracking-tighter">
+                {AVAILABLE_METRICS.length}+
+              </div>
+              <div className="text-zinc-500 font-mono text-xs uppercase tracking-widest mt-2">Data Points</div>
+            </div>
           </div>
         </div>
         <motion.div
