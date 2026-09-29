@@ -1,24 +1,19 @@
 "use server";
-import { requireEnv } from "@/lib/supabase";
+import { getSupabaseUrl, getSupabasePublishableKey, getSupabaseServiceKey } from "@/lib/supabase-config";
 import { createClient } from "@supabase/supabase-js";
 import { unstable_cache } from "next/cache";
 
 // Service-role client — used for ALL server-side queries in this file.
-// This intentionally has NO user session; it bypasses RLS via the service
-// role key.  Every table queried here (asset_snapshots, price_history) is
-// public read-only data, so RLS bypass is safe and necessary.
-//
-// ⚠️  NEVER create a per-module singleton with the anon key on the server.
-//     The vanilla `createClient` stores tokens in-memory, which leaks one
-//     user's session to the next request that hits the same process.
-const supabaseUrl = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
-const supabasePubKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_79YfL9h7Vu_1jItiD7js4A_N95hySYI';
+// Uses centralized config that is immune to Vercel-Supabase integration
+// injecting dead/rotated keys.
+const supabaseUrl = getSupabaseUrl();
+const supabaseServiceKey = getSupabaseServiceKey();
+const supabasePubKey = getSupabasePublishableKey();
 
 // Primary admin client (uses service role key if present, otherwise publishable key)
 const supabaseAdmin = createClient(
   supabaseUrl,
-  supabaseServiceKey || supabasePubKey,
+  supabaseServiceKey,
   { auth: { persistSession: false } }
 );
 

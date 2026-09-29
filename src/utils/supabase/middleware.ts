@@ -1,24 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-
-// Local helper (rather than importing src/lib/supabase.ts) so this
-// edge-runtime middleware doesn't eagerly construct an unrelated second
-// Supabase client just to reuse a one-line env check.
-function requireEnv(name: string): string {
-  let value = process.env[name];
-  if (!value && (name === 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY' || name === 'NEXT_PUBLIC_SUPABASE_ANON_KEY')) {
-    value = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  }
-  if (!value && name === 'NEXT_PUBLIC_SUPABASE_URL') {
-    value = process.env.SUPABASE_URL;
-  }
-  if (!value) {
-    throw new Error(
-      `Missing required environment variable "${name}". Set it in your environment (e.g. .env.local) before starting the app.`
-    );
-  }
-  return value;
-}
+import { getSupabaseUrl, getSupabasePublishableKey } from '@/lib/supabase-config'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -27,8 +9,8 @@ export async function updateSession(request: NextRequest) {
 
   try {
     const supabase = createServerClient(
-      requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
-      requireEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'),
+      getSupabaseUrl(),
+      getSupabasePublishableKey(),
       {
         cookies: {
           getAll() {
