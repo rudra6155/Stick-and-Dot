@@ -53,6 +53,10 @@ export function PickModal({
 
   const handlePick = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!asset.price) {
+      setError("Pricing data is currently unavailable. Cannot pick this asset.");
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -170,7 +174,7 @@ export function PickModal({
 
           <button 
             type="submit" 
-            disabled={loading}
+            disabled={loading || !asset.price}
             className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 rounded-xl transition-colors disabled:opacity-50 mt-4 text-lg"
           >
             {loading ? "Confirming..." : "Confirm Pick"}

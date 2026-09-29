@@ -19,7 +19,7 @@ if (typeof window !== "undefined") {
 
 const CLASS_COLORS: Record<string, { bg: string; text: string; glow: string; border: string }> = {
   Crypto: { bg: "rgba(139,92,246,0.08)", text: "text-violet-400", glow: "rgba(139,92,246,0.3)", border: "border-violet-500/20" },
-  Stock: { bg: "rgba(6,182,212,0.08)", text: "text-cyan-400", glow: "rgba(6,182,212,0.3)", border: "border-cyan-500/20" },
+  "US Stock": { bg: "rgba(6,182,212,0.08)", text: "text-cyan-400", glow: "rgba(6,182,212,0.3)", border: "border-cyan-500/20" },
   ETF: { bg: "rgba(59,130,246,0.08)", text: "text-blue-400", glow: "rgba(59,130,246,0.3)", border: "border-blue-500/20" },
   REIT: { bg: "rgba(245,158,11,0.08)", text: "text-amber-400", glow: "rgba(245,158,11,0.3)", border: "border-amber-500/20" },
   Commodity: { bg: "rgba(234,179,8,0.08)", text: "text-yellow-400", glow: "rgba(234,179,8,0.3)", border: "border-yellow-500/20" },

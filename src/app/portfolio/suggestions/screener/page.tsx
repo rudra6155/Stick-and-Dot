@@ -205,7 +205,7 @@ export default function ScreenerPage() {
               <label htmlFor="assetClass" className="text-xs text-zinc-400">Asset Class</label>
               <select id="assetClass" value={assetClass} onChange={e => setAssetClass(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100">
-                {["All","Stock","ETF","REIT","Crypto","Commodity","Bond","Indian Stock","International","Forex","Index"].map(a => (
+                {["All","US Stock","ETF","REIT","Crypto","Commodity","Bond","Indian Stock","International","Forex","Index"].map(a => (
                   <option key={a} value={a}>{a}</option>
                 ))}
               </select>

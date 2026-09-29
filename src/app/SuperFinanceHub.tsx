@@ -6,7 +6,7 @@ import { Search, ChevronDown, Filter, Settings2, Check } from "lucide-react";
 import { fetchAssetsPaginated, fetchAssetClassCounts, fetchTickerTapeAssets, type Asset } from "./actions";
 import dynamic from 'next/dynamic';
 import { useCountUp } from "@/hooks/useCountUp";
-import { AssetCard } from "@/components/AssetCard";
+import { AssetCard, AVAILABLE_METRICS } from "@/components/AssetCard";
 
 const TickerHeartbeat = dynamic(() => import('@/components/TickerHeartbeat'), { ssr: false });
 const StatsSection = dynamic(() => import('@/components/StatsSection'), {
@@ -26,51 +26,7 @@ const StatsSection = dynamic(() => import('@/components/StatsSection'), {
   ),
 });
 
-const AVAILABLE_METRICS = [
-  { id: "volume",         label: "Volume" },
-  { id: "avgVolume",      label: "Avg Volume" },
-  { id: "marketCap",      label: "Market Cap" },
-  { id: "peRatio",        label: "P/E Ratio" },
-  { id: "forwardPe",      label: "Fwd P/E" },
-  { id: "priceToBook",    label: "P/B Ratio" },
-  { id: "priceToSales",   label: "P/S Ratio" },
-  { id: "evToEbitda",     label: "EV/EBITDA" },
-  { id: "dividendYield",  label: "Div Yield" },
-  { id: "earningsGrowth", label: "EPS Growth" },
-  { id: "revenueGrowth",  label: "Rev Growth" },
-  { id: "profitMargins",  label: "Net Margin" },
-  { id: "high52Week",     label: "52W High" },
-  { id: "low52Week",      label: "52W Low" },
-  { id: "ma50Day",        label: "50D MA" },
-  { id: "ma200Day",       label: "200D MA" },
-  { id: "beta",           label: "Beta" },
-  { id: "dayHigh",        label: "Day High" },
-  { id: "dayLow",         label: "Day Low" },
-  { id: "sector",         label: "Sector" },
-  { id: "previousClose",           label: "Prev Close" },
-  { id: "enterpriseValue",         label: "Ent Value" },
-  { id: "pegRatio",                label: "PEG Ratio" },
-  { id: "dividendRate",            label: "Div Rate" },
-  { id: "payoutRatio",             label: "Payout Ratio" },
-  { id: "grossMargins",            label: "Gross Margin" },
-  { id: "operatingMargins",        label: "Op Margin" },
-  { id: "returnOnEquity",          label: "ROE" },
-  { id: "returnOnAssets",          label: "ROA" },
-  { id: "totalRevenue",            label: "Revenue" },
-  { id: "ebitda",                  label: "EBITDA" },
-  { id: "totalDebt",               label: "Total Debt" },
-  { id: "freeCashflow",            label: "Free CF" },
-  { id: "allTimeHigh",             label: "All Time High" },
-  { id: "allTimeLow",              label: "All Time Low" },
-  { id: "sharesOutstanding",       label: "Shares Out" },
-  { id: "heldPercentInsiders",     label: "Insider %" },
-  { id: "heldPercentInstitutions", label: "Institution %" },
-  { id: "recommendationMean",      label: "Analyst Score" },
-  { id: "targetMeanPrice",         label: "Price Target" },
-  { id: "trailingEps",             label: "EPS" },
-  { id: "forwardEps",              label: "Fwd EPS" },
-  { id: "currency",                label: "Currency" },
-];
+
 
 const AnimatedText = ({ text, delayOffset = 0 }: { text: string; delayOffset?: number }) => (
   <div className="flex flex-wrap justify-center">
@@ -204,7 +160,7 @@ function LiveClock() {
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
-function AssetCardWrapper({ asset, index, selectedMetrics, formatNumber }: any) {
+function AssetCardWrapper({ asset, index, selectedMetrics }: any) {
   const { user, openAuthModal } = useAuth();
   const router = useRouter();
 
@@ -231,7 +187,7 @@ function AssetCardWrapper({ asset, index, selectedMetrics, formatNumber }: any) 
       aria-label={`View details for ${asset.symbol}`}
       className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black rounded-3xl"
     >
-      <AssetCard asset={asset} index={index} selectedMetrics={selectedMetrics} formatNumber={formatNumber} />
+      <AssetCard asset={asset} index={index} selectedMetrics={selectedMetrics} />
     </div>
   );
 }
@@ -385,7 +341,7 @@ export default function SuperFinanceHub({
     return () => clearTimeout(timer);
   }, [assets.length]);
 
-  const assetClasses = ["All", "Crypto", "Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
+  const assetClasses = ["All", "Crypto", "US Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
   const sortOptions = ["Market Cap", "Price", "Volume", "P/E", "Div Yield", "52W High", "Beta"];
 
   return (
@@ -585,7 +541,7 @@ export default function SuperFinanceHub({
           </div>
 
           {/* Sector Row — only when Stock tab active */}
-          {(activeClass === "Stock" || activeClass === "US Stock") && (
+          {(activeClass === "US Stock") && (
             <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
               {availableSectors.map(sector => (
                 <button
@@ -631,7 +587,7 @@ export default function SuperFinanceHub({
           ) : (
             <>
               {visibleAssets.map((asset, index) => (
-                <AssetCardWrapper key={asset.id} asset={asset} index={index} selectedMetrics={selectedMetrics} formatNumber={formatNumber} />
+                <AssetCardWrapper key={asset.id} asset={asset} index={index} selectedMetrics={selectedMetrics} />
               ))}
               {assets.length < totalCount && (
                 <div className="col-span-full flex justify-center pt-8">

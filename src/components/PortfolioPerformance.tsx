@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import ScrollTrigger from "gsap/dist/ScrollTrigger";
@@ -20,7 +20,7 @@ export default function PortfolioPerformance({ picks, assets, totalValue }: Perf
   const stripRef = useRef<HTMLDivElement>(null);
 
   // Calculate performance metrics
-  const metrics = (() => {
+  const metrics = useMemo(() => {
     if (!picks || picks.length === 0) return null;
 
     let totalPnL = 0;
@@ -44,12 +44,12 @@ export default function PortfolioPerformance({ picks, assets, totalValue }: Perf
       if (pnl > bestPick.pnl) bestPick = { ticker: p.ticker, pnl };
       if (pnl < worstPick.pnl) worstPick = { ticker: p.ticker, pnl };
 
-      if (asset.beta && totalValue > 0) {
+      if (typeof asset.beta === 'number' && totalValue > 0) {
         totalBeta += asset.beta * (currentVal / totalValue);
         betaCount++;
       }
 
-      classSet.add(p.asset_class || "Stock");
+      classSet.add(p.asset_class || "US Stock");
     });
 
     const pnlPct = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0;
@@ -63,7 +63,7 @@ export default function PortfolioPerformance({ picks, assets, totalValue }: Perf
       diversification: classSet.size,
       assetCount: picks.length,
     };
-  })();
+  }, [picks, assets, totalValue]);
 
   // GSAP entrance
   useGSAP(() => {

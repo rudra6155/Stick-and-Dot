@@ -7,12 +7,12 @@ const PRESETS = [
   { label: "💵 Dividend Earners", desc: "Div yield > 3%", filters: { min_dividend_yield: 0.03 } },
   { label: "🔍 Undervalued", desc: "P/E < 15, rev growth > 10%", filters: { max_pe: 15, min_revenue_growth: 0.1 } },
   { label: "🇮🇳 India Play", desc: "Indian stocks only", filters: { asset_class: "Indian Stock" } },
-  { label: "🤖 AI & Tech", desc: "Technology sector", filters: { asset_class: "Stock", sector: "Technology" } },
+  { label: "🤖 AI & Tech", desc: "Technology sector", filters: { asset_class: "US Stock", sector: "Technology" } },
 ];
 
 // Only these asset classes carry a meaningful "sector" — clearing it when the class changes
 // away from these prevents a stale sector (e.g. from a preset) from silently zeroing results.
-const SECTOR_CAPABLE_CLASSES = ["Stock", "Indian Stock", "International"];
+const SECTOR_CAPABLE_CLASSES = ["US Stock", "Indian Stock", "International"];
 
 export default function BacktestPage() {
   const [filters, setFilters] = useState<any>({});
@@ -165,7 +165,7 @@ export default function BacktestPage() {
                 }}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100"
               >
-                {["All", "Stock", "ETF", "REIT", "Crypto", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"].map(a => (
+                {["All", "US Stock", "ETF", "REIT", "Crypto", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"].map(a => (
                   <option key={a} value={a}>{a}</option>
                 ))}
               </select>

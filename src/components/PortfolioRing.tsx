@@ -10,7 +10,7 @@ if (typeof window !== "undefined") {
 
 const CLASS_COLORS: Record<string, string> = {
   Crypto: "#8b5cf6",
-  Stock: "#06b6d4",
+  "US Stock": "#06b6d4",
   ETF: "#3b82f6",
   REIT: "#f59e0b",
   Commodity: "#eab308",

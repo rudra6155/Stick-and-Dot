@@ -8,7 +8,7 @@ const Sparkline = dynamic(() => import("@/components/Sparkline"), { ssr: false }
 
 const classIcons: Record<string, string> = {
   Crypto: "◈",
-  Stock: "▸",
+  Stock: "▸", "US Stock": "▸",
   ETF: "◎",
   REIT: "▣",
   Commodity: "◆",
@@ -19,7 +19,7 @@ const classIcons: Record<string, string> = {
 
 const classColors: Record<string, string> = {
   Crypto: "bg-violet-500/10 text-violet-400 border-violet-500/20",
-  Stock: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+  Stock: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", "US Stock": "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
   ETF: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   REIT: "bg-amber-500/10 text-amber-400 border-amber-500/20",
   Commodity: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
@@ -77,7 +77,8 @@ export const AVAILABLE_METRICS = [
 
 const AnimatedPrice = ({ price }: { price: number }) => {
   const displayPrice = useCountUp(price, 800);
-  return <>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(displayPrice)}</>;
+  if (price == null || Number.isNaN(price)) return <>—</>;
+  return <>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(displayPrice || 0)}</>;
 };
 
 export const formatNumber = (num: number | undefined | null | string) => {

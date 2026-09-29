@@ -429,8 +429,9 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
           }
         }));
 
-        // Populate 'Stock' for any UI component looking up counts['Stock']
-        counts['Stock'] = (counts['US Stock'] || 0) + (counts['Equity'] || 0);
+        // Combine 'Equity' (generic US equities) into 'US Stock'
+        counts['US Stock'] = (counts['US Stock'] || 0) + (counts['Equity'] || 0);
+        delete counts['Equity'];
 
         if (counts.All === 0) {
           throw new Error('All asset class counts returned 0, likely temporary DB outage');
@@ -445,14 +446,12 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
     console.warn('fetchAssetClassCounts error during fetch/prerender, using fallback counts:', err?.message || err);
     return {
       All: 202302,
-      'Equity': 70426,
+      'US Stock': 81312,
       'Index': 33226,
       'International': 18732,
       'Bond': 16181,
       'Crypto': 15262,
       'Indian Stock': 13363,
-      'US Stock': 10886,
-      'Stock': 81312,
       'Commodity': 8962,
       'REIT': 5895,
       'Forex': 4832,

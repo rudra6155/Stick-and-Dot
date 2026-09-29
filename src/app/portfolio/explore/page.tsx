@@ -8,6 +8,7 @@ export const metadata = {
 const classIcons: Record<string, string> = {
   Crypto: "◈",
   Stock: "▸",
+  "US Stock": "▸",
   ETF: "◎",
   REIT: "▣",
   Commodity: "◆",
@@ -20,7 +21,7 @@ const classIcons: Record<string, string> = {
 
 export default async function ExplorePage() {
   const counts = await fetchAssetClassCounts();
-  const assetClasses = ["US Stock", "Equity", "Crypto", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
+  const assetClasses = ["US Stock", "Crypto", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
 
   return (
     <div className="bg-black text-white font-sans min-h-screen">

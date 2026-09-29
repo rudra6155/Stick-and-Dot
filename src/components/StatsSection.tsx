@@ -3,6 +3,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 export default function StatsSection({ assetClassCounts = {} }: { assetClassCounts?: Record<string, number> }) {
+  const maxCount = Math.max(1, ...Object.values(assetClassCounts));
+
   return (
     <section className="relative z-10 py-32 px-4 md:px-8 max-w-7xl mx-auto">
       {/* Panel 1 */}
@@ -33,7 +35,7 @@ export default function StatsSection({ assetClassCounts = {} }: { assetClassCoun
           {[
             { label: "Intl Stocks", count: assetClassCounts['International'] || 0, color: "bg-purple-500" },
             { label: "Crypto", count: assetClassCounts['Crypto'] || 0, color: "bg-violet-500" },
-            { label: "US Stocks", count: assetClassCounts['US Stock'] || assetClassCounts['Stock'] || 0, color: "bg-cyan-500" },
+            { label: "US Stocks", count: assetClassCounts['US Stock'] || 0, color: "bg-cyan-500" },
             { label: "India", count: assetClassCounts['Indian Stock'] || 0, color: "bg-orange-500" },
             { label: "ETFs", count: assetClassCounts['ETF'] || 0, color: "bg-blue-500" },
             { label: "Forex", count: assetClassCounts['Forex'] || 0, color: "bg-rose-500" },
@@ -42,7 +44,6 @@ export default function StatsSection({ assetClassCounts = {} }: { assetClassCoun
             { label: "REITs", count: assetClassCounts['REIT'] || 0, color: "bg-pink-500" },
             { label: "Bonds", count: assetClassCounts['Bond'] || 0, color: "bg-emerald-500" },
           ].map((item, i) => {
-            const maxCount = Math.max(1, ...Object.values(assetClassCounts)); // max bar based on biggest class
             return (
             <div key={item.label} className="flex items-center gap-4">
               <span className="font-mono text-xs text-zinc-500 w-24 text-right shrink-0">{item.label}</span>
