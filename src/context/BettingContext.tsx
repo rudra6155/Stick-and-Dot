@@ -52,6 +52,33 @@ export function BettingProvider({ children }: { children: ReactNode }) {
   const [balance, setBalance] = useState<number>(10000.00); // $10,000 virtual balance
   const [activeBets, setActiveBets] = useState<ActiveBet[]>([]);
   const [betSlip, setBetSlip] = useState<BetSlipItem | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load from LocalStorage on mount
+  React.useEffect(() => {
+    try {
+      const savedBalance = localStorage.getItem("sfh_virtual_balance");
+      const savedBets = localStorage.getItem("sfh_active_bets");
+      
+      if (savedBalance) setBalance(parseFloat(savedBalance));
+      if (savedBets) setActiveBets(JSON.parse(savedBets));
+    } catch (e) {
+      console.warn("Failed to load betting data from local storage", e);
+    } finally {
+      setIsLoaded(true);
+    }
+  }, []);
+
+  // Save to LocalStorage whenever they change
+  React.useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      localStorage.setItem("sfh_virtual_balance", balance.toString());
+      localStorage.setItem("sfh_active_bets", JSON.stringify(activeBets));
+    } catch (e) {
+      console.warn("Failed to save betting data to local storage", e);
+    }
+  }, [balance, activeBets, isLoaded]);
 
   const openBetSlip = (item: BetSlipItem) => {
     setBetSlip(item);
