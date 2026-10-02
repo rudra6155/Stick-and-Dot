@@ -332,12 +332,12 @@ export default function SuperFinanceHub({
             transition={{ delay: 1, duration: 1 }}
             className="text-zinc-400 font-mono text-sm tracking-widest uppercase mb-12 md:mb-20 text-center px-4"
           >
-            You&apos;re in the driver&apos;s seat. 200,000+ assets. Zero opinions.
+            You&apos;re in the driver&apos;s seat. 150,000+ assets. Zero opinions.
           </motion.p>
           <div className="flex flex-col md:flex-row gap-8 md:gap-24 opacity-80">
             <div className="flex flex-col items-center">
               <div className="text-4xl md:text-5xl font-mono text-emerald-400 font-bold tracking-tighter">
-                200,000+
+                150,000+
               </div>
               <div className="text-zinc-500 font-mono text-xs uppercase tracking-widest mt-2">Assets</div>
             </div>

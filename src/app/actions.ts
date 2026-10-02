@@ -330,15 +330,10 @@ export async function fetchAssetsPaginated(params: {
 
       if (params.activeClass !== 'All') {
         if (params.activeClass === 'Stock' || params.activeClass === 'US Stock') {
-          // Only query 'US Stock' — 'Equity' and legacy 'Stock' are duplicate rows
-          // of the same tickers and cause duplicate cards in the grid.
-          q = q.eq('asset_class', 'US Stock');
+          q = q.in('asset_class', ['US Stock', 'Stock', 'Equity']);
         } else {
           q = q.eq('asset_class', params.activeClass);
         }
-      } else {
-        // "All" view: exclude legacy duplicate classes at the DB level
-        q = q.not('asset_class', 'in', '("Equity","Stock")');
       }
       if ((params.activeClass === 'US Stock' || params.activeClass === 'Stock') && params.activeSector !== 'All Sectors') {
         q = q.eq('sector', params.activeSector);
@@ -392,23 +387,7 @@ export async function fetchAssetsPaginated(params: {
       }
     }
 
-    // Deduplicate by ticker — the DB stores some tickers under both 'US Stock'
-    // and 'Equity', causing duplicate cards. Prefer the 'US Stock' row.
-    const tickerMap = new Map<string, any>();
-    for (const row of data || []) {
-      const existing = tickerMap.get(row.ticker);
-      if (!existing) {
-        tickerMap.set(row.ticker, row);
-      } else {
-        // Prefer 'US Stock' over 'Equity'/'Stock', or row with more data
-        if (row.asset_class === 'US Stock' || (row.sector && !existing.sector)) {
-          tickerMap.set(row.ticker, row);
-        }
-      }
-    }
-
-    const uniqueRows = Array.from(tickerMap.values());
-    const mappedAssets: Asset[] = uniqueRows.map(mapRowToAsset);
+    const mappedAssets: Asset[] = (data || []).map(mapRowToAsset);
 
     // Bounded sparkline history enrichment
     await enrichAssetsWithHistory(mappedAssets).catch((err) =>
@@ -450,11 +429,8 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
           }
         }));
 
-        // Combine 'Equity' (generic US equities) into 'US Stock' — these are
-        // duplicate rows of the same tickers. Subtract from All to avoid double-counting.
-        const equityCount = counts['Equity'] || 0;
-        counts['US Stock'] = (counts['US Stock'] || 0) + equityCount;
-        counts['All'] -= equityCount; // Remove double-counted Equity from total
+        // Combine 'Equity' (generic US equities) into 'US Stock'
+        counts['US Stock'] = (counts['US Stock'] || 0) + (counts['Equity'] || 0);
         delete counts['Equity'];
 
         if (counts.All === 0) {
@@ -469,17 +445,17 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
   } catch (err: any) {
     console.warn('fetchAssetClassCounts error during fetch/prerender, using fallback counts:', err?.message || err);
     return {
-      All: 131876,
-      'US Stock': 81312,
-      'Index': 33226,
+      All: 153653,
+      'US Stock': 52744, // 10886 US Stock + 41858 Equity
+      'Index': 31066,
       'International': 18732,
-      'Bond': 16181,
-      'Crypto': 15262,
-      'Indian Stock': 13363,
-      'Commodity': 8962,
-      'REIT': 5895,
-      'Forex': 4832,
+      'Bond': 15683,
+      'Crypto': 11992,
+      'Indian Stock': 5801,
+      'Commodity': 7330,
       'ETF': 4537,
+      'REIT': 3872,
+      'Forex': 1896,
     };
   }
 }
