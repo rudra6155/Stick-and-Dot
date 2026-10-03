@@ -428,7 +428,10 @@ export default function SuperFinanceHub({
                       transition={{ type: "spring", stiffness: 300, damping: 25 }}
                     />
                   )}
-                  <span className="relative z-10">{cls} {assetClassCounts[cls] ? `(${assetClassCounts[cls].toLocaleString()})` : ''}</span>
+                  <span className="relative z-10">{cls} {activeClass === cls
+                    ? (totalCount > 0 ? `(${totalCount.toLocaleString()})` : '')
+                    : (assetClassCounts[cls] ? `(${assetClassCounts[cls].toLocaleString()})` : '')
+                  }</span>
                 </button>
               ))}
             </div>

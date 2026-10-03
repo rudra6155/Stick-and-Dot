@@ -195,8 +195,8 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
             {asset.assetClass}
           </span>
           <div className="flex items-center gap-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${asset.isUp ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"} animate-pulse`} />
-            <span className="text-[10px] font-medium font-mono text-zinc-400 uppercase">Live</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${asset.isUp ? "bg-emerald-500" : "bg-rose-500"}`} />
+            <span className="text-[10px] font-medium font-mono text-zinc-500 uppercase">Snapshot</span>
           </div>
         </div>
       </div>
