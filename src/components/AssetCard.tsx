@@ -144,12 +144,23 @@ export const getMetric = (id: string, asset: any, customFormatNumber?: any) => {
   }
 };
 
-function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propFormatNumber, hideHoverGlow }: any) {
+function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propFormatNumber, hideHoverGlow, liveData }: any) {
   const cardRef = useRef<HTMLDivElement>(null);
   const rectRef = useRef<DOMRect | null>(null);
   const glowRef = useRef<HTMLDivElement>(null);
 
-  const getMetricLocal = (id: string) => getMetric(id, asset, propFormatNumber || formatNumber);
+  const displayPrice = liveData?.price ?? asset.price;
+  const displayIsUp = liveData?.isUp ?? asset.isUp;
+  const displayChange = liveData?.change ?? asset.change;
+  const isLive = !!liveData;
+
+  const displayAsset = {
+    ...asset,
+    price: displayPrice,
+    marketCap: liveData?.marketCap ?? asset.marketCap,
+  };
+
+  const getMetricLocal = (id: string) => getMetric(id, displayAsset, propFormatNumber || formatNumber);
 
   return (
     <motion.div
@@ -195,8 +206,10 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
             {asset.assetClass}
           </span>
           <div className="flex items-center gap-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${asset.isUp ? "bg-emerald-500" : "bg-rose-500"}`} />
-            <span className="text-[10px] font-medium font-mono text-zinc-500 uppercase">Snapshot</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${displayIsUp ? "bg-emerald-500" : "bg-rose-500"} ${isLive ? "animate-pulse" : ""}`} />
+            <span className={`text-[10px] font-medium font-mono uppercase ${isLive ? "text-emerald-500" : "text-zinc-500"}`}>
+              {isLive ? "LIVE" : "Snapshot"}
+            </span>
           </div>
         </div>
       </div>
@@ -204,15 +217,15 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
       <div className="flex justify-between items-end mb-6 relative z-10">
         <div className="flex flex-col gap-1">
           <span className="text-3xl font-light font-mono tracking-tighter text-white">
-            <AnimatedPrice price={asset.price} />
+            <AnimatedPrice price={displayPrice} />
           </span>
-          <span className={`flex items-center gap-1 font-mono text-xs font-bold ${asset.isUp ? "text-emerald-400" : "text-rose-400"}`}>
-            {asset.isUp ? '▲' : '▼'} {(asset.change ?? '').replace('-','')}
+          <span className={`flex items-center gap-1 font-mono text-xs font-bold ${displayIsUp ? "text-emerald-400" : "text-rose-400"}`}>
+            {displayIsUp ? '▲' : '▼'} {(displayChange ?? '').replace('-','')}
           </span>
         </div>
 
         <div className="absolute right-0 bottom-2 w-[100px] h-[35px] pointer-events-none transition-opacity duration-300 opacity-60 group-hover:opacity-100">
-          <Sparkline data={asset.history || []} isUp={asset.isUp} width={100} height={35} />
+          <Sparkline data={asset.history || []} isUp={displayIsUp} width={100} height={35} />
         </div>
       </div>
 

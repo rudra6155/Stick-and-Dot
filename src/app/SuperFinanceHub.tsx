@@ -120,7 +120,7 @@ function LiveClock() {
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
-function AssetCardWrapper({ asset, index, selectedMetrics }: any) {
+function AssetCardWrapper({ asset, index, selectedMetrics, liveData }: any) {
   const { user, openAuthModal } = useAuth();
   const router = useRouter();
 
@@ -147,7 +147,7 @@ function AssetCardWrapper({ asset, index, selectedMetrics }: any) {
       aria-label={`View details for ${asset.symbol}`}
       className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black rounded-3xl"
     >
-      <AssetCard asset={asset} index={index} selectedMetrics={selectedMetrics} />
+      <AssetCard asset={asset} index={index} selectedMetrics={selectedMetrics} liveData={liveData} />
     </div>
   );
 }
@@ -183,6 +183,7 @@ export default function SuperFinanceHub({
   const [offset, setOffset] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [assetClassCounts, setAssetClassCounts] = useState<Record<string, number>>(initialAssetClassCounts);
+  const [liveDataMap, setLiveDataMap] = useState<Record<string, any>>({});
 
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
@@ -230,6 +231,34 @@ export default function SuperFinanceHub({
     }, 400);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Fetch real-time live prices for visible assets
+  useEffect(() => {
+    if (!assets || assets.length === 0) return;
+    
+    // Extract tickers that we don't already have live data for
+    const tickersToFetch = assets
+      .map(a => a.symbol)
+      .filter(ticker => !liveDataMap[ticker]);
+      
+    if (tickersToFetch.length === 0) return;
+
+    let isMounted = true;
+    fetch('/api/live-prices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tickers: tickersToFetch })
+    })
+    .then(res => res.json())
+    .then(json => {
+      if (isMounted && json.data) {
+        setLiveDataMap(prev => ({ ...prev, ...json.data }));
+      }
+    })
+    .catch(err => console.error("Failed to fetch live prices:", err));
+    
+    return () => { isMounted = false; };
+  }, [assets]); // This intentionally only depends on assets to run whenever new pages load
 
   useEffect(() => {
     setOffset(0);
@@ -565,7 +594,7 @@ export default function SuperFinanceHub({
           ) : (
             <>
               {visibleAssets.map((asset, index) => (
-                <AssetCardWrapper key={asset.id} asset={asset} index={index} selectedMetrics={selectedMetrics} />
+                <AssetCardWrapper key={asset.id} asset={asset} index={index} selectedMetrics={selectedMetrics} liveData={liveDataMap[asset.symbol]} />
               ))}
               {assets.length < totalCount && (
                 <div className="col-span-full flex justify-center pt-8">

@@ -354,13 +354,6 @@ export async function fetchAssetsPaginated(params: {
         'Beta': 'beta'
       };
       const sortCol = sortMap[params.sortBy] ?? 'market_cap';
-      if (sortCol === 'market_cap') {
-        q = q.lt('market_cap', 6000000000000);
-        // Protect default sort and US Stock views from foreign unadjusted local currencies
-        if (params.activeClass === 'All' || params.activeClass === 'US Stock' || params.activeClass === 'Stock') {
-          q = q.not('ticker', 'like', '%.%');
-        }
-      }
       q = q.order(sortCol, { ascending: params.sortDir === 'asc', nullsFirst: false });
       q = q.order('ticker', { ascending: true });
       q = q.range(safeOffset, safeOffset + safeLimit - 1);
