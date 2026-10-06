@@ -438,17 +438,17 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
   } catch (err: any) {
     console.warn('fetchAssetClassCounts error during fetch/prerender, using fallback counts:', err?.message || err);
     return {
-      All: 153653,
-      'US Stock': 52744, // 10886 US Stock + 41858 Equity
-      'Index': 31066,
-      'International': 18732,
-      'Bond': 15683,
-      'Crypto': 11992,
-      'Indian Stock': 5801,
-      'Commodity': 7330,
-      'ETF': 4537,
-      'REIT': 3872,
-      'Forex': 1896,
+      All: 0,
+      'US Stock': 0,
+      'Index': 0,
+      'International': 0,
+      'Bond': 0,
+      'Crypto': 0,
+      'Indian Stock': 0,
+      'Commodity': 0,
+      'ETF': 0,
+      'REIT': 0,
+      'Forex': 0,
     };
   }
 }
