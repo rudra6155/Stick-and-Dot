@@ -1,27 +1,19 @@
+import { getSupabaseUrl, getSupabasePublishableKey, getSupabaseServiceKey } from './supabase-config';
+
 // Throws a clear, descriptive error instead of letting a missing env var
 // surface as an opaque "Cannot read properties of undefined" TypeError.
 export function requireEnv(name: string): string {
-  let value = process.env[name];
-  if (!value && (name === 'SUPABASE_SERVICE_ROLE_KEY' || name === 'SUPABASE_SECRET_KEY')) {
-    value = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+  if (name === 'NEXT_PUBLIC_SUPABASE_URL' || name === 'SUPABASE_URL') {
+    return getSupabaseUrl();
   }
-  if (!value && (name === 'NEXT_PUBLIC_SUPABASE_URL' || name === 'SUPABASE_URL')) {
-    value = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  if (name === 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY' || name === 'NEXT_PUBLIC_SUPABASE_ANON_KEY' || name === 'SUPABASE_PUBLISHABLE_KEY') {
+    return getSupabasePublishableKey();
   }
-  if (!value && (name === 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY' || name === 'NEXT_PUBLIC_SUPABASE_ANON_KEY' || name === 'SUPABASE_PUBLISHABLE_KEY')) {
-    value = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (name === 'SUPABASE_SERVICE_ROLE_KEY' || name === 'SUPABASE_SECRET_KEY' || name === 'SB_SECRET') {
+    return getSupabaseServiceKey();
   }
+  const value = process.env[name];
   if (!value) {
-    if (name === 'NEXT_PUBLIC_SUPABASE_URL' || name === 'SUPABASE_URL') {
-      return 'https://riszdsmtfijmwsylbmcf.supabase.co';
-    }
-    if (name === 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY' || name === 'NEXT_PUBLIC_SUPABASE_ANON_KEY' || name === 'SUPABASE_PUBLISHABLE_KEY') {
-      return 'sb_publishable_79YfL9h7Vu_1jItiD7js4A_N95hySYI';
-    }
-    if (name === 'SUPABASE_SERVICE_ROLE_KEY' || name === 'SUPABASE_SECRET_KEY') {
-      console.warn(`[Supabase] Service role key missing for "${name}", falling back to publishable key.`);
-      return process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_79YfL9h7Vu_1jItiD7js4A_N95hySYI';
-    }
     throw new Error(
       `Missing required environment variable "${name}". Set it in your environment (e.g. .env.local) before starting the app.`
     );

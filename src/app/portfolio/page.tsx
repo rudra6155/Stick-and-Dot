@@ -200,6 +200,36 @@ export default function MyPortfolioPage() {
           assetMap[asset.symbol] = asset;
         });
         setAssets(assetMap);
+
+        // Fetch live quotes to compute real-time portfolio valuation and P&L
+        try {
+          const liveRes = await fetch('/api/live-prices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tickers }),
+          });
+          const liveJson = await liveRes.json();
+          if (liveJson?.data) {
+            setAssets(prev => {
+              const updated = { ...prev };
+              Object.entries(liveJson.data).forEach(([sym, q]: [string, any]) => {
+                if (updated[sym] && q.price) {
+                  updated[sym] = {
+                    ...updated[sym],
+                    price: q.price,
+                    change: q.change ?? updated[sym].change,
+                    isUp: q.isUp ?? updated[sym].isUp,
+                    marketCap: q.marketCap ?? updated[sym].marketCap,
+                    isLive: true,
+                  };
+                }
+              });
+              return updated;
+            });
+          }
+        } catch (e) {
+          console.warn("Live portfolio price fetch failed, fallback to snapshot:", e);
+        }
       }
     } catch (err: any) {
       setError(

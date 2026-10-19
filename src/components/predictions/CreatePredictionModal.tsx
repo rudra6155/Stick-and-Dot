@@ -97,7 +97,7 @@ export default function CreatePredictionModal({ isOpen, onClose, onSubmit, error
           <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-zinc-800 bg-zinc-900/95 backdrop-blur-sm">
             <h2 className="text-xl font-black text-white tracking-tight uppercase flex items-center gap-2">
               <Target className="w-5 h-5 text-emerald-400" />
-              Create Scenario
+              Create Prediction
             </h2>
             <button
               onClick={onClose}
@@ -182,8 +182,7 @@ export default function CreatePredictionModal({ isOpen, onClose, onSubmit, error
             <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-start gap-3">
               <Lock className="w-5 h-5 shrink-0 mt-0.5" />
               <p className="text-xs leading-relaxed">
-                <strong className="font-bold">Trustless Resolution:</strong> Your prediction will be resolved
-                automatically using market data and API oracles. Your stake is locked in escrow.
+                <strong className="font-bold">Market Resolution:</strong> Your prediction market will track live asset prices and oracle feeds to verify outcomes upon settlement.
               </p>
             </div>
 

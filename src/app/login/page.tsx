@@ -73,7 +73,7 @@ export default function LoginPage() {
       if (error) {
         setError(error.message);
       } else {
-        router.push("/portfolio");
+        window.location.href = "/portfolio";
       }
     } else {
       const { error } = await supabase.auth.signUp({
@@ -122,7 +122,7 @@ export default function LoginPage() {
     if (error) {
       setError(error.message);
     } else {
-      router.push("/portfolio");
+      window.location.href = "/portfolio";
     }
     setLoading(false);
   };

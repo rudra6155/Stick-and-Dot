@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import DynamicScenarioCard from "@/components/DynamicScenarioCard";
+import { RefreshCw } from "lucide-react";
 
 const SCENARIOS = [
   { key: "us_china_tension", title: "🇺🇸🇨🇳 US-China Tensions", desc: "Rotate to domestic US, gold, defense" },
@@ -34,23 +35,28 @@ export default function ScenariosPage() {
   const [dynamicScenarios, setDynamicScenarios] = useState<any[]>([]);
   const [loadingDynamic, setLoadingDynamic] = useState(true);
   const [dynamicError, setDynamicError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchDynamicScenarios = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoadingDynamic(true);
+    try {
+      const res = await fetch(`/api/dynamic-scenarios${isRefresh ? "?refresh=true" : ""}`);
+      const data = await res.json();
+      if (data.scenarios) {
+        setDynamicScenarios(data.scenarios);
+      } else {
+        setDynamicError("Failed to load dynamic scenarios");
+      }
+    } catch {
+      setDynamicError("Network error loading dynamic scenarios");
+    } finally {
+      setLoadingDynamic(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchDynamicScenarios() {
-      try {
-        const res = await fetch("/api/dynamic-scenarios");
-        const data = await res.json();
-        if (data.scenarios) {
-          setDynamicScenarios(data.scenarios);
-        } else {
-          setDynamicError("Failed to load dynamic scenarios");
-        }
-      } catch {
-        setDynamicError("Network error loading dynamic scenarios");
-      } finally {
-        setLoadingDynamic(false);
-      }
-    }
     fetchDynamicScenarios();
   }, []);
 
@@ -96,9 +102,25 @@ export default function ScenariosPage() {
 
         {/* Trending Now (Dynamic) */}
         <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-bold tracking-tight">Trending Now</h2>
-            <div className="h-px bg-zinc-800 flex-1"></div>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl font-bold tracking-tight">Trending Now</h2>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                Live News Feed · Today
+              </span>
+            </div>
+            <button
+              onClick={() => fetchDynamicScenarios(true)}
+              disabled={refreshing || loadingDynamic}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800 hover:border-zinc-700 text-xs font-mono text-zinc-300 transition-all disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-emerald-400" : "text-zinc-400"}`} />
+              {refreshing ? "Analyzing News..." : "Sync Latest News"}
+            </button>
           </div>
           
           {loadingDynamic ? (

@@ -18,8 +18,7 @@ export function LeaderboardClient({ hasAllAssetClasses, missingClasses }: Leader
   useEffect(() => {
     setIsClient(true);
     // Check if they have bets in at least 3 categories (Sports, Startup, Crypto, etc)
-    const betCategories = new Set(activeBets.map(b => b.category));
-    const hasEnoughBets = betCategories.size >= 2; // Simplified requirement for now
+    const hasEnoughBets = activeBets.length >= 2;
 
     if (!hasAllAssetClasses || !hasEnoughBets) {
       setShowPopup(true);
@@ -47,7 +46,7 @@ export function LeaderboardClient({ hasAllAssetClasses, missingClasses }: Leader
         
         <p className="text-zinc-400 text-center mb-8">
           To enter the global leaderboard and see where you rank, you must build a truly diversified portfolio. 
-          You need picks across multiple asset classes and active scenarios.
+          You need picks across multiple asset classes and active prediction bets.
         </p>
 
         <div className="space-y-4 mb-8">
@@ -72,11 +71,11 @@ export function LeaderboardClient({ hasAllAssetClasses, missingClasses }: Leader
               <AlertCircle className={`w-5 h-5 ${activeBets.length >= 2 ? 'text-emerald-400' : 'text-rose-400'}`} />
               <div>
                 <h3 className={`font-bold ${activeBets.length >= 2 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {activeBets.length >= 2 ? 'Active Scenarios: Complete' : 'Active Scenarios: Incomplete'}
+                  {activeBets.length >= 2 ? 'Active Predictions: Complete' : 'Active Predictions: Incomplete'}
                 </h3>
                 {activeBets.length < 2 && (
                   <p className="text-sm text-zinc-400 mt-1">
-                    You need active bets in at least 2 different scenario categories.
+                    You need active bets on at least 2 prediction markets.
                   </p>
                 )}
               </div>
@@ -89,7 +88,7 @@ export function LeaderboardClient({ hasAllAssetClasses, missingClasses }: Leader
             Pick Assets
           </Link>
           <Link href="/portfolio/predictions" className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold font-mono text-sm uppercase tracking-widest rounded-lg transition-colors">
-            Create Scenarios <ArrowRight className="w-4 h-4" />
+            Place Predictions <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </div>

@@ -2,10 +2,12 @@ export interface PredictionEvent {
   id: string;
   title: string;
   category: "Sports" | "Startup" | "Equities" | "Crypto" | "Forex" | "Macros";
-  status: "Open" | "Closed" | "Resolved";
+  status: "Open" | "Live" | "Closed" | "Resolved";
   resolutionDate: string;
   outcomes: { label: string; odds: number; probability: number }[];
   poolSize?: number;
+  newsHeadline?: string;
+  newsSource?: string;
 }
 
 export async function fetchLiveMarkets(): Promise<PredictionEvent[]> {

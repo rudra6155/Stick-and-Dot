@@ -45,6 +45,28 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
           .single();
 
         if (assetErr) throw new Error("Asset not found");
+
+        // Overlay live price if available
+        try {
+          const liveRes = await fetch('/api/live-prices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tickers: [ticker] }),
+          });
+          const liveJson = await liveRes.json();
+          if (liveJson?.data?.[ticker]) {
+            const q = liveJson.data[ticker];
+            assetData.price = q.price ?? assetData.price;
+            assetData.market_cap = q.marketCap ?? assetData.market_cap;
+            assetData.change = q.change ?? assetData.change;
+            assetData.isUp = q.isUp ?? assetData.isUp;
+            assetData.isLive = true;
+            assetData.quoteTime = q.quoteTime;
+          }
+        } catch (e) {
+          console.warn("Live quote fetch failed on detail page, using snapshot:", e);
+        }
+
         if (active) setAsset(assetData);
 
         // 2. Fetch Risk Score
@@ -136,6 +158,81 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
             Pick Asset
           </button>
         </div>
+
+        {/* Asset Live Header Summary */}
+        {asset && (
+          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6 sm:p-8 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                    {asset.short_name || asset.ticker}
+                  </h1>
+                  <span className="px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-400 font-bold">
+                    {asset.ticker}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono text-emerald-400 font-bold uppercase">
+                    {asset.asset_class}
+                  </span>
+                </div>
+                <p className="text-sm text-zinc-400 mt-1">{asset.sector || asset.long_business_summary?.slice(0, 80) || "Global Asset"}</p>
+              </div>
+
+              <div className="text-left sm:text-right">
+                <div className="flex items-baseline sm:justify-end gap-3">
+                  <span className="text-3xl sm:text-4xl font-mono font-bold text-white">
+                    ${Number(asset.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  {asset.change && (
+                    <span className={`text-sm font-mono font-bold ${asset.isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {asset.isUp ? '▲' : '▼'} {asset.change}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center sm:justify-end gap-1.5 mt-1">
+                  <span className={`w-1.5 h-1.5 rounded-full ${asset.isLive ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                    {asset.isLive ? "LIVE QUOTE" : asset.fetched_at ? `SNAPSHOT AS OF ${new Date(asset.fetched_at).toLocaleDateString()}` : "SNAPSHOT"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Metrics Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-zinc-900">
+              <div>
+                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Market Cap</p>
+                <p className="text-sm font-mono font-bold text-zinc-200 mt-0.5">
+                  {asset.market_cap 
+                    ? asset.market_cap > 1e12 
+                      ? `${(asset.market_cap / 1e12).toFixed(2)}T` 
+                      : asset.market_cap > 1e9 
+                        ? `${(asset.market_cap / 1e9).toFixed(2)}B` 
+                        : `${(asset.market_cap / 1e6).toFixed(1)}M` 
+                    : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">P/E Ratio</p>
+                <p className="text-sm font-mono font-bold text-zinc-200 mt-0.5">
+                  {asset.pe_ratio ? asset.pe_ratio.toFixed(2) : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">52W Range</p>
+                <p className="text-sm font-mono font-bold text-zinc-200 mt-0.5">
+                  {asset.low_52_week && asset.high_52_week ? `${asset.low_52_week.toFixed(1)} - ${asset.high_52_week.toFixed(1)}` : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Beta</p>
+                <p className="text-sm font-mono font-bold text-zinc-200 mt-0.5">
+                  {asset.beta ? asset.beta.toFixed(2) : "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Panels */}
         <div className="space-y-12">

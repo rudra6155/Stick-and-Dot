@@ -38,6 +38,7 @@ interface BettingContextType {
   // Deducts a stake directly from the wallet (the actual escrow lock), independent of the
   // bet slip flow. Used e.g. when a user creates a brand new market and funds its pool.
   deductStake: (stake: number) => boolean;
+  addActiveBet: (bet: ActiveBet) => void;
 }
 
 const BettingContext = createContext<BettingContextType | undefined>(undefined);
@@ -95,6 +96,10 @@ export function BettingProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
+  const addActiveBet = (bet: ActiveBet) => {
+    setActiveBets(prev => [bet, ...prev]);
+  };
+
   const placeBet = (stake: number): boolean => {
     if (!betSlip) return false;
     const roundedStake = toCents(stake);
@@ -124,7 +129,7 @@ export function BettingProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <BettingContext.Provider value={{ balance, activeBets, betSlip, openBetSlip, closeBetSlip, placeBet, deductStake }}>
+    <BettingContext.Provider value={{ balance, activeBets, betSlip, openBetSlip, closeBetSlip, placeBet, deductStake, addActiveBet }}>
       {children}
     </BettingContext.Provider>
   );

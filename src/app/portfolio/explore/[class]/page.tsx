@@ -20,6 +20,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
   } catch (e) {}
   
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [liveDataMap, setLiveDataMap] = useState<Record<string, any>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("Market Cap");
@@ -104,6 +105,37 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
     loadAssets();
     return () => { active = false; };
   }, [offset, debouncedSearchQuery, sortBy, sortDir, assetClass]);
+
+  // Real-time live prices overlay for visible cards
+  useEffect(() => {
+    if (!assets || assets.length === 0) return;
+    let isMounted = true;
+
+    const fetchLive = () => {
+      const tickersToFetch = assets.slice(0, 50).map(a => a.symbol);
+      if (tickersToFetch.length === 0) return;
+
+      fetch('/api/live-prices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tickers: tickersToFetch }),
+      })
+      .then(res => res.json())
+      .then(json => {
+        if (isMounted && json.data) {
+          setLiveDataMap(prev => ({ ...prev, ...json.data }));
+        }
+      })
+      .catch(err => console.warn("Failed to fetch live prices in explore:", err));
+    };
+
+    fetchLive();
+    const interval = setInterval(fetchLive, 60000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [assets]);
 
   const toggleSortDir = () => {
     setSortDir(d => d === 'desc' ? 'asc' : 'desc');
@@ -284,7 +316,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {assets.map((asset, index) => (
               <Link key={asset.symbol} href={`/portfolio/explore/${encodeURIComponent(assetClass)}/${encodeURIComponent(asset.symbol)}`} className="block">
-                <AssetCard asset={asset} selectedMetrics={selectedMetrics} index={index} />
+                <AssetCard asset={asset} selectedMetrics={selectedMetrics} index={index} liveData={liveDataMap[asset.symbol]} />
               </Link>
             ))}
           </div>

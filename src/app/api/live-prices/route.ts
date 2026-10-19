@@ -38,6 +38,11 @@ export async function POST(req: NextRequest) {
             ? quote.regularMarketChangePercent.toFixed(2) + "%" 
             : null,
           isUp: quote.regularMarketChangePercent !== undefined && quote.regularMarketChangePercent >= 0,
+          quoteTime: quote.regularMarketTime 
+            ? (quote.regularMarketTime instanceof Date 
+                ? quote.regularMarketTime.toISOString() 
+                : new Date(typeof quote.regularMarketTime === 'number' && quote.regularMarketTime < 1e11 ? quote.regularMarketTime * 1000 : quote.regularMarketTime).toISOString()) 
+            : new Date().toISOString(),
         };
       }
     }

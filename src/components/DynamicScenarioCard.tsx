@@ -370,11 +370,12 @@ export default function DynamicScenarioCard({ scenario, onPresetApplied }: { sce
 }
 
 function getTimeAgo(dateString: string): string {
+  if (!dateString) return "live";
   const now = new Date();
   const date = new Date(dateString);
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  if (diff < 60) return "just now";
+  if (Number.isNaN(diff) || diff <= 60) return "just now";
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;

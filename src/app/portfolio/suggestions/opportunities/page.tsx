@@ -33,7 +33,10 @@ export default function OpportunitiesPage() {
       try {
         setError(null);
         const res = await fetch('/api/opportunities', { signal: controller.signal });
-        if (!res.ok) throw new Error('Failed to fetch');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || ("Failed to fetch opportunities (" + res.status + ")"));
+        }
         const data = await res.json();
         setOpportunities(data.opportunities || []);
       } catch (err: any) {
@@ -148,15 +151,35 @@ export default function OpportunitiesPage() {
                 <div className="grid grid-cols-3 gap-2 pt-3 border-t border-zinc-800">
                   <div>
                     <p className="text-[10px] text-zinc-600 uppercase font-mono">Rev Growth</p>
-                    <p className="text-xs font-mono text-emerald-400 font-medium leading-relaxed">{o.revenue_growth ? `${(o.revenue_growth * 100).toFixed(1)}%` : "—"}</p>
+                    <p className="text-xs font-mono text-emerald-400 font-medium leading-relaxed">
+                      {o.revenue_growth != null 
+                        ? o.revenue_growth > 5 
+                          ? ">500%" 
+                          : `${(o.revenue_growth * 100).toFixed(1)}%` 
+                        : "—"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-[10px] text-zinc-600 uppercase font-mono">Div Yield</p>
-                    <p className="text-xs font-mono text-zinc-300 font-medium leading-relaxed">{o.dividend_yield ? `${(o.dividend_yield * 100).toFixed(1)}%` : "—"}</p>
+                    <p className="text-xs font-mono text-zinc-300 font-medium leading-relaxed">
+                      {o.dividend_yield != null 
+                        ? o.dividend_yield > 0.3 
+                          ? ">30%" 
+                          : `${(o.dividend_yield * 100).toFixed(1)}%` 
+                        : "—"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-[10px] text-zinc-600 uppercase font-mono">Market Cap</p>
-                    <p className="text-xs font-mono text-zinc-300 font-medium leading-relaxed">{o.market_cap > 1e9 ? `$${(o.market_cap / 1e9).toFixed(1)}B` : "—"}</p>
+                    <p className="text-xs font-mono text-zinc-300 font-medium leading-relaxed">
+                      {o.market_cap 
+                        ? o.market_cap > 1e12 
+                          ? `${(o.market_cap / 1e12).toFixed(1)}T` 
+                          : o.market_cap > 1e9 
+                            ? `${(o.market_cap / 1e9).toFixed(1)}B` 
+                            : `${(o.market_cap / 1e6).toFixed(0)}M` 
+                        : "—"}
+                    </p>
                   </div>
                 </div>
               </div>

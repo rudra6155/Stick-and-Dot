@@ -324,7 +324,7 @@ function StartupIntelHub({ markets = [], searchQuery = "" }: { markets?: Predict
 }
 
 type CategoryFilter = "All" | PredictionEvent["category"];
-type SortKey = "pool" | "odds" | "closing";
+type SortKey = "live" | "pool" | "odds" | "closing";
 
 const CATEGORY_TABS: { key: CategoryFilter; label: string; icon: LucideIcon }[] = [
   { key: "All", label: "All", icon: LayoutGrid },
@@ -337,6 +337,7 @@ const CATEGORY_TABS: { key: CategoryFilter; label: string; icon: LucideIcon }[] 
 ];
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "live", label: "Live First" },
   { key: "pool", label: "Pool Size" },
   { key: "odds", label: "Best Odds" },
   { key: "closing", label: "Closing Soon" },
@@ -365,19 +366,17 @@ export default function PredictionsDashboard() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<CategoryFilter>("All");
   const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("pool");
+  const [sortKey, setSortKey] = useState<SortKey>("live");
+  const [visibleCount, setVisibleCount] = useState(36);
   const [positionsExpanded, setPositionsExpanded] = useState(true);
 
-  const { activeBets, balance, deductStake } = useBetting();
+  const { activeBets, balance, deductStake, addActiveBet } = useBetting();
 
   const loadMarkets = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
       const data = await fetchLiveMarkets();
-      if (data.length === 0) {
-        setLoadError("Unable to reach the oracle feed. Showing no markets.");
-      }
       setMarkets(data);
     } catch {
       setLoadError("Unable to reach the oracle feed. Check your connection and try again.");
@@ -418,7 +417,20 @@ export default function PredictionsDashboard() {
       poolSize: data.amount,
     };
     setMarkets((prev) => [newEvent, ...prev]);
-    // Guarantee the new market is immediately visible regardless of the current filter/search.
+    if (addActiveBet) {
+      addActiveBet({
+        id: `bet-${Date.now()}`,
+        eventId: newEvent.id,
+        eventTitle: newEvent.title,
+        outcomeLabel: "Yes",
+        category: data.category || "Startup",
+        stake: data.amount,
+        oddsAtPlacement: 2.0,
+        potentialPayout: Math.round(data.amount * 2.0 * 100) / 100,
+        status: "Pending",
+        placedAt: new Date().toISOString(),
+      });
+    }
     setActiveTab("All");
     setSearch("");
     return true;
@@ -436,19 +448,41 @@ export default function PredictionsDashboard() {
     let result = activeTab === "All" ? markets : markets.filter((m) => m.category === activeTab);
 
     const query = search.trim().toLowerCase();
-    if (query) result = result.filter((m) => m.title.toLowerCase().includes(query));
+    if (query) {
+      result = result.filter(
+        (m) =>
+          m.title.toLowerCase().includes(query) ||
+          (m.newsHeadline && m.newsHeadline.toLowerCase().includes(query)) ||
+          (m.newsSource && m.newsSource.toLowerCase().includes(query))
+      );
+    }
 
     result = [...result];
-    if (sortKey === "pool") result.sort((a, b) => (b.poolSize || 0) - (a.poolSize || 0));
-    else if (sortKey === "odds") result.sort((a, b) => bestOdds(b) - bestOdds(a));
-    else result.sort((a, b) => closingRank(a.resolutionDate) - closingRank(b.resolutionDate));
+    if (sortKey === "live") {
+      result.sort((a, b) => {
+        const aLive = a.status === "Live" || a.title.includes("[LIVE") ? 1 : 0;
+        const bLive = b.status === "Live" || b.title.includes("[LIVE") ? 1 : 0;
+        if (bLive !== aLive) return bLive - aLive;
+        return (b.poolSize || 0) - (a.poolSize || 0);
+      });
+    } else if (sortKey === "pool") {
+      result.sort((a, b) => (b.poolSize || 0) - (a.poolSize || 0));
+    } else if (sortKey === "odds") {
+      result.sort((a, b) => bestOdds(b) - bestOdds(a));
+    } else {
+      result.sort((a, b) => closingRank(a.resolutionDate) - closingRank(b.resolutionDate));
+    }
 
     return result;
   }, [markets, activeTab, search, sortKey]);
 
+  useEffect(() => {
+    setVisibleCount(36);
+  }, [activeTab, search, sortKey]);
+
   const totalExposure = activeBets.reduce((acc, bet) => acc + bet.stake, 0);
   const totalPotentialReturn = activeBets.reduce((acc, bet) => acc + bet.potentialPayout, 0);
-  const liveCount = markets.filter((m) => m.title.includes("[LIVE")).length;
+  const liveCount = useMemo(() => markets.filter((m) => m.status === "Live" || m.title.includes("[LIVE")).length, [markets]);
 
   // Derived, client-side "trader profile" stats — there's no backend user/stats endpoint,
   // so this reads straight off the bets the wallet already tracks.
@@ -536,10 +570,11 @@ export default function PredictionsDashboard() {
 
           <button
             onClick={() => setIsModalOpen(true)}
+            aria-label="Create Prediction"
             className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black font-black uppercase tracking-wider text-[11px] hover:bg-zinc-200 transition-all active:scale-95"
           >
             <Plus className="w-4 h-4" />
-            <span className="hidden md:inline">Create Scenario</span>
+            <span className="hidden md:inline">Create Prediction</span>
           </button>
         </div>
       </section>
@@ -635,9 +670,24 @@ export default function PredictionsDashboard() {
               transition={{ duration: 0.2 }}
               className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
             >
-              {filteredMarkets.map((market) => (
+              {filteredMarkets.slice(0, visibleCount).map((market) => (
                 <PredictionMarket key={market.id} event={market} />
               ))}
+              {visibleCount < filteredMarkets.length && (
+                <div className="col-span-full flex flex-col items-center justify-center pt-8 pb-4">
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount((prev) => Math.min(prev + 36, filteredMarkets.length))}
+                    className="px-8 py-3.5 rounded-xl bg-zinc-900 border border-zinc-700 hover:border-emerald-500 text-white font-mono text-xs uppercase tracking-widest transition-all hover:bg-zinc-800 active:scale-95 flex items-center gap-2 shadow-lg"
+                  >
+                    <span>Load More Markets</span>
+                    <span className="text-emerald-400 font-bold">({Math.min(visibleCount, filteredMarkets.length)} / {filteredMarkets.length})</span>
+                  </button>
+                  <span className="text-[11px] font-mono text-zinc-500 mt-2">
+                    {markets.length.toLocaleString()}+ Real Live & Macro Markets Tracked
+                  </span>
+                </div>
+              )}
               {filteredMarkets.length === 0 && (
                 <div className="col-span-full py-24 text-center">
                   <div className="inline-flex flex-col items-center gap-3">

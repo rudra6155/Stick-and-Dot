@@ -208,7 +208,7 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
           <div className="flex items-center gap-1.5">
             <div className={`w-1.5 h-1.5 rounded-full ${displayIsUp ? "bg-emerald-500" : "bg-rose-500"} ${isLive ? "animate-pulse" : ""}`} />
             <span className={`text-[10px] font-medium font-mono uppercase ${isLive ? "text-emerald-500" : "text-zinc-500"}`}>
-              {isLive ? "LIVE" : "Snapshot"}
+              {isLive ? "LIVE" : asset.fetchedAt ? `Snapshot (${new Date(asset.fetchedAt).toLocaleDateString()})` : "Snapshot"}
             </span>
           </div>
         </div>

@@ -1,11 +1,11 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { requireEnv } from '@/lib/supabase';
+import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
 
 const supabase = createClient(
-  requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
-  requireEnv('SUPABASE_SERVICE_ROLE_KEY')
+  getSupabaseUrl(),
+  getSupabaseServiceKey()
 );
 
 const SORTABLE_COLUMNS = new Set([
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   let query = supabase
     .from('asset_snapshots')
     .select('*', { count: 'exact' })
-    .order(sort_by, { ascending: sort_dir === 'asc' })
+    .order(sort_by, { ascending: sort_dir === 'asc', nullsFirst: false })
     .order('ticker', { ascending: true })
     .range(offset, offset + limit - 1);
 
@@ -67,18 +67,18 @@ export async function POST(req: NextRequest) {
     }
   }
   if (sector) query = query.eq('sector', sector);
-  if (min_market_cap !== undefined) query = query.gte('market_cap', min_market_cap);
-  if (max_pe !== undefined) query = query.lte('pe_ratio', max_pe).gt('pe_ratio', 0);
-  if (min_dividend_yield !== undefined) query = query.gte('dividend_yield', min_dividend_yield);
-  if (min_revenue_growth !== undefined) query = query.gte('revenue_growth', min_revenue_growth);
-  if (min_profit_margins !== undefined) query = query.gte('profit_margins', min_profit_margins);
-  if (max_beta !== undefined) query = query.lte('beta', max_beta);
-  if (min_roe !== undefined) query = query.gte('return_on_equity', min_roe);
+  if (min_market_cap !== undefined && Number.isFinite(Number(min_market_cap))) query = query.gte('market_cap', Number(min_market_cap));
+  if (max_pe !== undefined && Number.isFinite(Number(max_pe))) query = query.lte('pe_ratio', Number(max_pe)).gt('pe_ratio', 0);
+  if (min_dividend_yield !== undefined && Number.isFinite(Number(min_dividend_yield))) query = query.gte('dividend_yield', Number(min_dividend_yield));
+  if (min_revenue_growth !== undefined && Number.isFinite(Number(min_revenue_growth))) query = query.gte('revenue_growth', Number(min_revenue_growth));
+  if (min_profit_margins !== undefined && Number.isFinite(Number(min_profit_margins))) query = query.gte('profit_margins', Number(min_profit_margins));
+  if (max_beta !== undefined && Number.isFinite(Number(max_beta))) query = query.lte('beta', Number(max_beta));
+  if (min_roe !== undefined && Number.isFinite(Number(min_roe))) query = query.gte('return_on_equity', Number(min_roe));
 
   const { data, error, count } = await query;
   if (error) {
     console.error('api/screener: asset_snapshots query error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error: ' + error.message }, { status: 500 });
   }
 
   // Deduplicate by ticker
@@ -92,15 +92,20 @@ export async function POST(req: NextRequest) {
 
   // Compute investment scores for each result
   const scored = uniqueData.map((r: any) => {
-    const earn_score = Math.min((r.revenue_growth || 0) * 100, 40);
+    const earn_score = Math.min(Math.max((r.revenue_growth || 0) * 100, 0), 40);
     const lose_score = Math.max(40 - (r.beta || 1) * 20, 0);
     const exit_score = Math.min((r.market_cap || 0) / 1e11, 10);
     const value_score = r.pe_ratio && r.pe_ratio > 0 && r.pe_ratio < 30 ? 10 : 0;
     const total_score = earn_score + lose_score + exit_score + value_score;
+    const growthDisplay = r.revenue_growth != null 
+      ? r.revenue_growth > 5 
+        ? '>500% rev growth' 
+        : `${(r.revenue_growth * 100).toFixed(1)}% rev growth` 
+      : '—';
     return {
       ...r,
       investment_score: Math.round(total_score),
-      what_can_earn: r.revenue_growth ? `${(r.revenue_growth * 100).toFixed(1)}% rev growth` : '—',
+      what_can_earn: growthDisplay,
       what_can_lose: r.beta ? `Beta ${r.beta.toFixed(2)} (${r.beta < 1 ? 'Low' : r.beta < 1.5 ? 'Medium' : 'High'} risk)` : '—',
       how_easy_exit: r.market_cap > 1e11 ? 'Very Easy' : r.market_cap > 1e10 ? 'Easy' : r.market_cap > 1e9 ? 'Moderate' : 'Hard',
     };

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Users, Clock, Activity, Rocket, Coins, Briefcase, DollarSign, TrendingUp } from "lucide-react";
+import { Users, Clock, Activity, Rocket, Coins, Briefcase, DollarSign, TrendingUp, Newspaper } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PredictionEvent } from "@/utils/sportsData";
 import { useBetting } from "@/context/BettingContext";
@@ -38,8 +38,8 @@ function clampPct(n: number): number {
 
 export default function PredictionMarket({ event, interactive = true }: PredictionMarketProps) {
   const { openBetSlip } = useBetting();
-  const isLive = event.title.includes("[LIVE");
-  const disabled = !interactive || event.status !== "Open";
+  const isLive = event.status === "Live" || event.title.includes("[LIVE");
+  const disabled = !interactive || (event.status !== "Open" && event.status !== "Live");
   const CategoryIcon = CATEGORY_CONFIG[event.category]?.icon ?? Activity;
 
   const leadingIndex = event.outcomes.reduce(
@@ -75,12 +75,25 @@ export default function PredictionMarket({ event, interactive = true }: Predicti
             </span>
           )}
         </div>
-        {event.status !== "Open" && (
+        {event.status !== "Open" && event.status !== "Live" && (
           <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 shrink-0">
             {event.status}
           </span>
         )}
       </div>
+
+      {/* Grounded News Badge */}
+      {event.newsHeadline && (
+        <div className="flex items-center gap-1.5 mb-2.5 px-2.5 py-1 rounded-lg bg-sky-500/[0.08] border border-sky-500/20 text-sky-300 text-[10px] font-mono leading-tight">
+          <Newspaper className="w-3 h-3 shrink-0 text-sky-400" />
+          <span className="truncate">News: &ldquo;{event.newsHeadline}&rdquo;</span>
+          {event.newsSource && (
+            <span className="shrink-0 text-[9px] uppercase tracking-wider text-sky-400/80 border-l border-sky-500/30 pl-1.5 font-sans font-bold">
+              {event.newsSource}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Title */}
       <div className="min-h-[2.75rem] mb-4">

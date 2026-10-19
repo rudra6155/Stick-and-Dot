@@ -1,16 +1,15 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { requireEnv } from '@/lib/supabase';
+import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
 
 const supabase = createClient(
-  requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
-  requireEnv('SUPABASE_SERVICE_ROLE_KEY')
+  getSupabaseUrl(),
+  getSupabaseServiceKey()
 );
 
-// Upper bound on how many tickers a single request may process — each
-// ticker fans out into its own concurrent price_history query below.
-const MAX_TICKERS = 200;
+// Upper bound on how many tickers a single request may process
+const MAX_TICKERS = 40;
 
 export async function POST(req: NextRequest) {
   let body;
@@ -39,7 +38,8 @@ export async function POST(req: NextRequest) {
   let query = supabase
     .from('asset_snapshots')
     .select('ticker, short_name, asset_class, sector, price, beta, market_cap, pe_ratio, revenue_growth, dividend_yield, return_on_equity')
-    .limit(200);
+    .order('market_cap', { ascending: false, nullsFirst: false })
+    .limit(MAX_TICKERS);
 
   const validTargetTickers = Array.isArray(targetTickers)
     ? targetTickers.filter((t: unknown): t is string => typeof t === 'string' && t.trim() !== '')
@@ -60,19 +60,22 @@ export async function POST(req: NextRequest) {
       }
     }
     if (sector) query = query.eq('sector', sector);
-    if (max_pe !== undefined) query = query.lte('pe_ratio', max_pe).gt('pe_ratio', 0);
-    if (min_dividend_yield !== undefined) query = query.gte('dividend_yield', min_dividend_yield);
-    if (min_revenue_growth !== undefined) query = query.gte('revenue_growth', min_revenue_growth);
-    if (max_beta !== undefined) query = query.lte('beta', max_beta);
-    if (min_roe !== undefined) query = query.gte('return_on_equity', min_roe);
-    if (min_market_cap !== undefined) query = query.gte('market_cap', min_market_cap);
+    if (max_pe !== undefined && Number.isFinite(Number(max_pe))) query = query.lte('pe_ratio', Number(max_pe)).gt('pe_ratio', 0);
+    if (min_dividend_yield !== undefined && Number.isFinite(Number(min_dividend_yield))) query = query.gte('dividend_yield', Number(min_dividend_yield));
+    if (min_revenue_growth !== undefined && Number.isFinite(Number(min_revenue_growth))) query = query.gte('revenue_growth', Number(min_revenue_growth));
+    if (max_beta !== undefined && Number.isFinite(Number(max_beta))) query = query.lte('beta', Number(max_beta));
+    if (min_roe !== undefined && Number.isFinite(Number(min_roe))) query = query.gte('return_on_equity', Number(min_roe));
+    if (min_market_cap !== undefined && Number.isFinite(Number(min_market_cap))) query = query.gte('market_cap', Number(min_market_cap));
   }
 
   const { data: rawAssets, error: assetError } = await query;
-  if (assetError) return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  if (assetError) {
+    console.error('api/backtest: asset_snapshots query error:', assetError);
+    return NextResponse.json({ error: 'Internal server error: ' + assetError.message }, { status: 500 });
+  }
   if (!rawAssets || rawAssets.length === 0) return NextResponse.json({ results: [] });
 
-  // Deduplicate by ticker, preferring row with populated sector or details
+  // Deduplicate by ticker
   const seenTickers = new Set<string>();
   const assets: any[] = [];
   for (const a of rawAssets) {
@@ -86,13 +89,14 @@ export async function POST(req: NextRequest) {
 
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0];
 
-  // Fetch history for all tickers in a SINGLE query instead of 200 concurrent ones
-  // which exhausts connection pools and causes 504 timeouts.
+  // Fetch history for filtered tickers within the 6-month window
   const { data: allHistory, error: histError } = await supabase
     .from('price_history')
     .select('ticker, date, close')
     .in('ticker', tickers)
+    .gte('date', sixMonthsAgoStr)
     .order('date', { ascending: false });
 
   if (histError) {
@@ -105,14 +109,14 @@ export async function POST(req: NextRequest) {
   tickers.forEach((t: string) => tickerHistory[t] = []);
   
   (allHistory || []).forEach(row => {
-    tickerHistory[row.ticker].push(row);
+    if (tickerHistory[row.ticker]) {
+      tickerHistory[row.ticker].push(row);
+    }
   });
   
   // The DB query returned newest-first (descending). We need oldest-first for sparklines.
-  // We reverse each ticker's array individually to avoid the global array reversal bug.
   Object.keys(tickerHistory).forEach(t => {
     tickerHistory[t].reverse();
-    // Cap at 200 rows per ticker to match previous behavior
     if (tickerHistory[t].length > 200) {
       tickerHistory[t] = tickerHistory[t].slice(-200);
     }
@@ -124,7 +128,11 @@ export async function POST(req: NextRequest) {
 
     const first = hist[0].close;
     const last = hist[hist.length - 1].close;
-    const return_pct = (first != null && first !== 0) ? ((last - first) / first) * 100 : 0;
+    let return_pct = 0;
+    if (first != null && first > 0 && last != null) {
+      return_pct = ((last - first) / first) * 100;
+    }
+    if (!Number.isFinite(return_pct)) return_pct = 0;
 
     // Sample 12 points for sparkline
     const step = Math.floor(hist.length / 12);
@@ -142,9 +150,10 @@ export async function POST(req: NextRequest) {
     const months = Object.keys(monthly).sort();
     const monthly_returns = months.slice(1).map((m, i) => {
       const prevClose = monthly[months[i]];
+      const mReturn = (prevClose != null && prevClose > 0) ? ((monthly[m] - prevClose) / prevClose) * 100 : 0;
       return {
         month: m,
-        return_pct: (prevClose != null && prevClose !== 0) ? ((monthly[m] - prevClose) / prevClose) * 100 : 0,
+        return_pct: Number.isFinite(mReturn) ? parseFloat(mReturn.toFixed(2)) : 0,
       };
     });
 
@@ -158,8 +167,7 @@ export async function POST(req: NextRequest) {
     };
   });
 
-  // Sort by return_pct descending. Use ?? (not ||) so a legitimate 0% return
-  // isn't treated the same as "missing data" and sorted to the bottom.
+  // Sort by return_pct descending
   results.sort((a: any, b: any) => (b.return_pct ?? -999) - (a.return_pct ?? -999));
 
   return NextResponse.json({ results, total: results.length });

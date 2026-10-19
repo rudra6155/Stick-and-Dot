@@ -56,7 +56,12 @@ const SORT_OPTIONS = [
 const formatMetric = (val: any, key: string) => {
   if (val === null || val === undefined) return "—";
   if (["revenue_growth", "earnings_growth", "profit_margins", "dividend_yield", "return_on_equity"].includes(key)) {
-    return (val * 100).toFixed(1) + "%";
+    if (typeof val === "number") {
+      if (val > 5) return ">500%";
+      if (val < -1) return "<-100%";
+      return (val * 100).toFixed(1) + "%";
+    }
+    return String(val);
   }
   if (key === "market_cap") return val > 1e12 ? `$${(val/1e12).toFixed(1)}T` : val > 1e9 ? `$${(val/1e9).toFixed(1)}B` : `$${(val/1e6).toFixed(0)}M`;
   if (key === "free_cashflow") return val > 1e9 ? `$${(val/1e9).toFixed(1)}B` : `$${(val/1e6).toFixed(0)}M`;
@@ -108,7 +113,10 @@ export default function ScreenerPage() {
         body: JSON.stringify({ limit: 200, offset: 0, ...(overrideFilters || buildFilters()) }),
         signal: abortControllerRef.current.signal,
       });
-      if (!res.ok) throw new Error("Failed to fetch");
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || ("Screener error (" + res.status + ")"));
+      }
       const data = await res.json();
       if (data.results) {
         setResults(data.results);
@@ -133,7 +141,10 @@ export default function ScreenerPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ limit: 200, offset: results.length, ...(buildFilters()) }),
       });
-      if (!res.ok) throw new Error("Failed to fetch more");
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || ("Failed to fetch more (" + res.status + ")"));
+      }
       const data = await res.json();
       if (data.results) {
         setResults((prev) => {

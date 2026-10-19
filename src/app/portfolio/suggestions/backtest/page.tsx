@@ -36,6 +36,14 @@ export default function BacktestPage() {
         body: JSON.stringify(reqFilters),
         signal: abortControllerRef.current.signal,
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.error || ("Backtest service error (" + res.status + "). Try refining your filters."));
+        setResults([]);
+        setLoading(false);
+        setRan(true);
+        return;
+      }
       const data = await res.json();
       if (data.error) {
         setError(data.error);
@@ -63,10 +71,16 @@ export default function BacktestPage() {
   // Geometric mean (compounded) return across the basket, rather than a naive arithmetic mean —
   // e.g. [+50%, -50%] arithmetic-averages to 0% but compounds to a real loss of ~13.4%.
   const avg = validResults.length
-    ? (
-        (validResults.reduce((prod, r) => prod * (1 + r.return_pct / 100), 1) ** (1 / validResults.length) - 1) *
-        100
-      ).toFixed(2)
+    ? (() => {
+        const hasExtremeLoss = validResults.some(r => (r.return_pct ?? 0) <= -99);
+        if (hasExtremeLoss) {
+          const sum = validResults.reduce((acc, r) => acc + (r.return_pct ?? 0), 0);
+          return (sum / validResults.length).toFixed(2);
+        }
+        const product = validResults.reduce((prod, r) => prod * Math.max(1 + (r.return_pct ?? 0) / 100, 0.001), 1);
+        const geoMean = (Math.pow(product, 1 / validResults.length) - 1) * 100;
+        return Number.isFinite(geoMean) ? geoMean.toFixed(2) : "0.00";
+      })()
     : null;
   const best = validResults.length ? validResults[0] : null;
   const worst = validResults.length ? validResults[validResults.length - 1] : null;

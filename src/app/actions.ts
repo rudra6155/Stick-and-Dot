@@ -92,6 +92,7 @@ export type Asset = {
   currency: string;
   website: string;
   longBusinessSummary: string;
+  fetchedAt?: string | null;
 
   // FMP additional fields
   netIncome: number;
@@ -230,6 +231,7 @@ const mapRowToAsset = (row: any) => ({
   currency: row.currency || inferCurrency(row.ticker, row.asset_class),
   website: row.website || '',
   longBusinessSummary: row.long_business_summary || '',
+  fetchedAt: row.fetched_at || null,
 
   // FMP additional fields
   netIncome: row.net_income || 0,

@@ -1,11 +1,11 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { requireEnv } from '@/lib/supabase';
+import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
 
 const supabase = createClient(
-  requireEnv('NEXT_PUBLIC_SUPABASE_URL'),
-  requireEnv('SUPABASE_SERVICE_ROLE_KEY')
+  getSupabaseUrl(),
+  getSupabaseServiceKey()
 );
 
 // Upper bound on how many tickers a single request may process — an

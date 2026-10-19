@@ -1,4 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { getSupabaseUrl, getSupabaseServiceKey } from "@/lib/supabase-config";
 import Link from "next/link";
 import { Trophy, TrendingUp, TrendingDown } from "lucide-react";
 import { LeaderboardClient } from "./LeaderboardClient";
@@ -52,8 +54,10 @@ export default async function LeaderboardPage({
 
   const thresholdIso = threshold.toISOString();
 
-  // 1. Fetch picks within the time window
-  const { data: picks, error: picksError } = await supabase
+  const adminClient = createAdminClient(getSupabaseUrl(), getSupabaseServiceKey());
+
+  // 1. Fetch picks within the time window (using admin to bypass RLS for global leaderboard)
+  const { data: picks, error: picksError } = await adminClient
     .from('user_picks')
     .select('*')
     .gte('created_at', thresholdIso)
@@ -72,7 +76,7 @@ export default async function LeaderboardPage({
   let currentPrices: Record<string, number> = {};
 
   if (tickers.length > 0) {
-    const { data: assets, error: assetsError } = await supabase
+    const { data: assets, error: assetsError } = await adminClient
       .from('asset_snapshots')
       .select('ticker, price')
       .in('ticker', tickers);
