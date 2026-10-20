@@ -188,6 +188,7 @@ export default function SuperFinanceHub({
   const [totalCount, setTotalCount] = useState(initialTotalCount || initialAssetClassCounts['All'] || 0);
   const [assetClassCounts, setAssetClassCounts] = useState<Record<string, number>>(initialAssetClassCounts);
   const [liveDataMap, setLiveDataMap] = useState<Record<string, any>>({});
+  const cacheRef = useRef<Record<string, { assets: Asset[]; totalCount: number }>>({});
 
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
@@ -577,7 +578,14 @@ export default function SuperFinanceHub({
               {availableSectors.map(sector => (
                 <button
                   key={sector}
-                  onClick={() => setActiveSector(sector)}
+                  onClick={() => {
+                    setActiveSector(sector);
+                    const key = `${activeClass}_${sector}_${sortBy}_${debouncedSearchQuery}`;
+                    if (cacheRef.current[key]) {
+                      setAssets(cacheRef.current[key].assets);
+                      setTotalCount(cacheRef.current[key].totalCount);
+                    }
+                  }}
                   className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors ${
                     activeSector === sector
                       ? "bg-white text-black font-medium"
@@ -591,6 +599,11 @@ export default function SuperFinanceHub({
           )}
         </div>
 
+        {isRefreshing && (
+          <div className="w-full h-1 bg-zinc-900 rounded-full overflow-hidden mb-4">
+            <div className="h-full bg-emerald-500 rounded-full animate-[pulse_1s_ease-in-out_infinite] w-full" />
+          </div>
+        )}
         {/* Results count */}
         <div className="mb-6 flex items-center gap-3">
           <span className="font-mono text-xs text-zinc-500 uppercase tracking-widest">
@@ -607,7 +620,7 @@ export default function SuperFinanceHub({
         </div>
 
         {/* Asset Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 relative z-10">
+        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 relative z-10 transition-opacity duration-200 ${isRefreshing ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
           {error ? (
             <div className="col-span-full flex flex-col items-center justify-center p-8 text-center space-y-4">
               <div className="text-red-400 font-mono text-sm">{error || "Something went wrong loading market data."}</div>

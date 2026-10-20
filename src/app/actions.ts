@@ -329,7 +329,7 @@ export async function fetchAssetsPaginated(params: {
     const buildQuery = (client: any) => {
       let q = client
         .from('asset_snapshots')
-        .select('*', { count: 'exact' });
+        .select('id, ticker, asset_class, short_name, price, market_cap, pe_ratio, forward_pe, peg_ratio, price_to_book, price_to_sales, ev_to_ebitda, dividend_yield, dividend_rate, payout_ratio, earnings_growth, revenue_growth, profit_margins, gross_margins, operating_margins, return_on_equity, return_on_assets, total_revenue, ebitda, total_debt, free_cashflow, high_52_week, low_52_week, ma_50_day, ma_200_day, beta, recommendation_mean, target_mean_price, trailing_eps, forward_eps, held_percent_insiders, held_percent_institutions, sector, industry, country, fetched_at, coin_id', { count: 'exact' });
 
       if (params.activeClass !== 'All') {
         if (params.activeClass === 'Stock' || params.activeClass === 'US Stock') {
