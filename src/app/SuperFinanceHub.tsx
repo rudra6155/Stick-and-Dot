@@ -385,8 +385,8 @@ export default function SuperFinanceHub({
           </motion.p>
           <div className="flex flex-col md:flex-row gap-8 md:gap-24 opacity-80">
             <div className="flex flex-col items-center">
-              <div className="text-4xl md:text-5xl font-mono text-emerald-400 font-bold tracking-tighter">
-                {(initialAssetClassCounts['All'] || initialTotalCount || 150000).toLocaleString()}
+              <div suppressHydrationWarning className="text-4xl md:text-5xl font-mono text-emerald-400 font-bold tracking-tighter">
+                {(initialAssetClassCounts['All'] || initialTotalCount || 150000).toLocaleString('en-US')}
               </div>
               <div className="text-zinc-500 font-mono text-xs uppercase tracking-widest mt-2">Assets</div>
             </div>
@@ -457,7 +457,7 @@ export default function SuperFinanceHub({
               )}
               {searchQuery && (
                 <p className="absolute -bottom-6 left-0 min-w-[110px] text-xs text-zinc-500 font-mono">
-                  {isRefreshing ? "Searching..." : `${totalCount.toLocaleString()} results`}
+                  {isRefreshing ? "Searching..." : `${totalCount.toLocaleString('en-US')} results`}
                 </p>
               )}
             </div>
@@ -478,8 +478,8 @@ export default function SuperFinanceHub({
                     />
                   )}
                   <span className="relative z-10">{cls} {activeClass === cls
-                    ? (totalCount > 0 ? `(${totalCount.toLocaleString()})` : '')
-                    : (assetClassCounts[cls] ? `(${assetClassCounts[cls].toLocaleString()})` : '')
+                    ? (totalCount > 0 ? `(${totalCount.toLocaleString('en-US')})` : '')
+                    : (assetClassCounts[cls] ? `(${assetClassCounts[cls].toLocaleString('en-US')})` : '')
                   }</span>
                 </button>
               ))}
@@ -606,11 +606,11 @@ export default function SuperFinanceHub({
         )}
         {/* Results count */}
         <div className="mb-6 flex items-center gap-3">
-          <span className="font-mono text-xs text-zinc-500 uppercase tracking-widest">
-                {totalCount.toLocaleString()} assets
+          <span suppressHydrationWarning className="font-mono text-xs text-zinc-500 uppercase tracking-widest">
+                {totalCount.toLocaleString('en-US')} assets
               </span>
-              <span className="font-mono text-xs text-zinc-600 ml-2">
-                {isRefreshing ? '· Refreshing…' : '· Data as of ' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              <span suppressHydrationWarning className="font-mono text-xs text-zinc-600 ml-2">
+                {isRefreshing ? '· Refreshing...' : '· Data as of ' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </span>
           {searchQuery && (
             <span className="font-mono text-xs text-emerald-500">
