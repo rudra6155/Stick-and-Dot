@@ -16,8 +16,9 @@ async function runTest() {
     return;
   }
   
-  console.log('Connected! Creating new page...');
-  const page = await browser.newPage();
+  console.log('Connected! Creating isolated incognito context...');
+  const context = await browser.createBrowserContext();
+  const page = await context.newPage();
   await page.setViewport({ width: 1280, height: 800 });
   
   console.log('Navigating to login...');
@@ -71,6 +72,7 @@ async function runTest() {
   }
 
   console.log('E2E and Lighthouse Tests Complete!');
+  await context.close().catch(() => {});
   await browser.disconnect();
 }
 

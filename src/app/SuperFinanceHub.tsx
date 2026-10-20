@@ -430,10 +430,10 @@ export default function SuperFinanceHub({
 
         {/* Control Bar */}
         <div className="sticky top-10 z-50 mb-12 flex flex-col gap-4 p-4 bg-[#0a0a0c]/90 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-          <div className="flex flex-col lg:flex-row gap-4">
-
+          {/* Top Row: Search input + Metrics & Sort Controls */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             {/* Search */}
-            <div className="relative flex-1">
+            <div className="relative flex-1 max-w-2xl">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none z-10" />
               <input
                 type="search"
@@ -462,36 +462,8 @@ export default function SuperFinanceHub({
               )}
             </div>
 
-            {/* Asset Class Tabs */}
-            <div className="flex gap-2 overflow-x-auto items-center pb-2 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent w-full max-w-full">
-              {assetClasses.map(cls => (
-                <button
-                  key={cls}
-                  onClick={() => { setActiveClass(cls); setActiveSector("All Sectors"); }}
-                  className={`relative px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all snap-start ${activeClass === cls ? "text-black" : "text-zinc-400 hover:text-white"}`}
-                >
-                  {activeClass === cls && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute inset-0 bg-white rounded-full shadow-[0_0_30px_rgba(255,255,255,0.25)]"
-                      transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                    />
-                  )}
-                  <span className="relative z-10">{cls} {activeClass === cls
-                    ? (totalCount > 0 ? `(${totalCount.toLocaleString('en-US')})` : '')
-                    : (assetClassCounts[cls] ? `(${assetClassCounts[cls].toLocaleString('en-US')})` : '')
-                  }</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Category Description Hint */}
-          <div className="text-[11px] font-mono text-zinc-500 px-1 -mt-2">
-            {categoryDescriptions[activeClass] || 'Market asset universe.'}
-          </div>
-
-          {/* Metrics + Sort */}
-            <div className="flex gap-2">
+            {/* Metrics + Sort */}
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
               {/* Metrics Dropdown */}
               <div className="relative min-w-[130px]">
                 <button
@@ -572,9 +544,37 @@ export default function SuperFinanceHub({
             </div>
           </div>
 
+          {/* Middle Row: Full-Width Dedicated Asset Class Tabs */}
+          <div className="w-full flex items-center gap-2 overflow-x-auto hide-scrollbar scrollbar-none py-1 scroll-smooth">
+            {assetClasses.map(cls => (
+              <button
+                key={cls}
+                onClick={() => { setActiveClass(cls); setActiveSector("All Sectors"); }}
+                className={`relative px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all shrink-0 select-none ${activeClass === cls ? "text-black" : "text-zinc-400 hover:text-white"}`}
+              >
+                {activeClass === cls && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-white rounded-full shadow-[0_0_30px_rgba(255,255,255,0.25)]"
+                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <span>{cls}</span>
+                  <span className={`text-[11px] font-mono ${activeClass === cls ? "text-zinc-700 font-semibold" : "text-zinc-500"}`}>
+                    {activeClass === cls
+                      ? (totalCount > 0 ? `(${totalCount.toLocaleString('en-US')})` : '')
+                      : (assetClassCounts[cls] ? `(${assetClassCounts[cls].toLocaleString('en-US')})` : '')
+                    }
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+
           {/* Sector Row — only when Stock tab active */}
           {(activeClass === "US Stock") && (
-            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+            <div className="w-full flex gap-2 overflow-x-auto hide-scrollbar scrollbar-none pt-1 pb-1">
               {availableSectors.map(sector => (
                 <button
                   key={sector}
@@ -586,7 +586,7 @@ export default function SuperFinanceHub({
                       setTotalCount(cacheRef.current[key].totalCount);
                     }
                   }}
-                  className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors ${
+                  className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors shrink-0 ${
                     activeSector === sector
                       ? "bg-white text-black font-medium"
                       : "bg-white/5 text-zinc-400 hover:bg-white/10"
@@ -597,6 +597,25 @@ export default function SuperFinanceHub({
               ))}
             </div>
           )}
+
+          {/* Bottom Row: Category Intel Sub-Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2.5 border-t border-white/5 text-xs font-mono">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[11px] font-semibold shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {activeClass}
+              </span>
+              <span className="text-zinc-400 text-[11px] truncate">
+                {categoryDescriptions[activeClass] || 'Market asset universe.'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-zinc-500 text-[11px] shrink-0 self-end sm:self-auto">
+              <span>
+                {activeClass === "US Stock" && activeSector !== "All Sectors" ? `${activeSector} · ` : ''}
+                {totalCount.toLocaleString('en-US')} assets tracked
+              </span>
+            </div>
+          </div>
         </div>
 
         {isRefreshing && (
@@ -670,14 +689,14 @@ export default function SuperFinanceHub({
           <div className="border-t border-white/5 pt-4 space-y-2 text-[10px] font-mono text-zinc-700 leading-relaxed max-w-4xl mx-auto text-center">
             <p>Market data is delayed and provided by third-party sources. Prices may not reflect real-time trading values. Data is refreshed periodically throughout the day.</p>
             <p>FIN is a market discovery and analysis tool. Nothing on this site constitutes financial advice, investment recommendations, or an offer to buy or sell securities. Always do your own research.</p>
-            <p className="text-zinc-800">Operated by Filtree &middot; <a href="https://filtree.in" target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-500 transition-colors">filtree.in</a> &middot; &copy; 2026</p>
+            <p className="text-zinc-700">Operated by Stick and Dot Media and Technology Private Limited &middot; Founder / Director: Yusuf Usmani &middot; &copy; 2026</p>
           </div>
         </div>
       </footer>
 
       <style dangerouslySetInnerHTML={{__html: `
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scrollbar::-webkit-scrollbar, .scrollbar-none::-webkit-scrollbar { display: none; }
+        .hide-scrollbar, .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .animate-ticker { animation: ticker 40s linear infinite; }
       `}} />

@@ -9,6 +9,7 @@ interface AuthContextType {
   loading: boolean;
   openAuthModal: (redirectUrl?: string) => void;
   closeAuthModal: () => void;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -51,8 +52,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRedirectUrl(undefined);
   };
 
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Auth context signOut error:', err);
+    } finally {
+      setUser(null);
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, openAuthModal, closeAuthModal }}>
+    <AuthContext.Provider value={{ user, loading, openAuthModal, closeAuthModal, signOut }}>
       {children}
       {isModalOpen && <AuthModal redirectUrl={redirectUrl} onClose={closeAuthModal} />}
     </AuthContext.Provider>

@@ -334,3 +334,19 @@ body {
   animation: stat-pulse 2s ease-in-out infinite;
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
 }
+
+/* ═══════════════════════════════════════════════════
+   SCROLLBAR UTILITIES
+   ═══════════════════════════════════════════════════ */
+
+.hide-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
