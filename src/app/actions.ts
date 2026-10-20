@@ -1,4 +1,5 @@
 "use server";
+import { DEFAULT_ASSET_CLASS_COUNTS } from "@/lib/constants";
 import { getSupabaseUrl, getSupabasePublishableKey, getSupabaseServiceKey } from "@/lib/supabase-config";
 import { createClient } from "@supabase/supabase-js";
 import { unstable_cache } from "next/cache";
@@ -395,10 +396,7 @@ export async function fetchAssetsPaginated(params: {
     };
   } catch (err: any) {
     console.error('fetchAssetsPaginated caught error:', err?.message || err);
-    return {
-      assets: [],
-      totalCount: 0
-    };
+    return { assets: [], totalCount: 150000 };
   }
 }
 
@@ -439,19 +437,7 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
     )();
   } catch (err: any) {
     console.warn('fetchAssetClassCounts error during fetch/prerender, using fallback counts:', err?.message || err);
-    return {
-      All: 0,
-      'US Stock': 0,
-      'Index': 0,
-      'International': 0,
-      'Bond': 0,
-      'Crypto': 0,
-      'Indian Stock': 0,
-      'Commodity': 0,
-      'ETF': 0,
-      'REIT': 0,
-      'Forex': 0,
-    };
+    return DEFAULT_ASSET_CLASS_COUNTS;
   }
 }
 

@@ -197,7 +197,7 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
           </div>
           <div>
             <h2 className="text-lg font-bold tracking-tight text-white/90 truncate max-w-[140px]">{asset.name}</h2>
-            <div className="text-zinc-400 text-xs font-mono">{asset.symbol}/USD</div>
+            <div className="text-zinc-400 text-xs font-mono">{asset.symbol}{asset.currency && asset.currency !== "USD" ? "/" + asset.currency : "/USD"}</div>
           </div>
         </div>
         
@@ -208,7 +208,7 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
           <div className="flex items-center gap-1.5">
             <div className={`w-1.5 h-1.5 rounded-full ${displayIsUp ? "bg-emerald-500" : "bg-rose-500"} ${isLive ? "animate-pulse" : ""}`} />
             <span className={`text-[10px] font-medium font-mono uppercase ${isLive ? "text-emerald-500" : "text-zinc-500"}`}>
-              {isLive ? "LIVE" : asset.fetchedAt ? `Snapshot (${new Date(asset.fetchedAt).toLocaleDateString()})` : "Snapshot"}
+              {isLive ? (liveData?.quoteTime ? `LIVE · ${new Date(liveData.quoteTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}` : "LIVE") : asset.fetchedAt ? `As of ${new Date(asset.fetchedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : "Snapshot"}
             </span>
           </div>
         </div>
@@ -220,7 +220,7 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
             <AnimatedPrice price={displayPrice} />
           </span>
           <span className={`flex items-center gap-1 font-mono text-xs font-bold ${displayIsUp ? "text-emerald-400" : "text-rose-400"}`}>
-            {displayIsUp ? '▲' : '▼'} {(displayChange ?? '').replace('-','')}
+            {displayIsUp ? '▲' : '▼'} {displayChange ? displayChange.replace('-','') : '0.00%'}
           </span>
         </div>
 

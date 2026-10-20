@@ -56,7 +56,7 @@ export default function StatsSection({ assetClassCounts = {} }: { assetClassCoun
                   className={`h-full rounded-full ${item.color}`}
                 />
               </div>
-              <span className="font-mono text-xs text-zinc-400 w-8 shrink-0">{item.count}</span>
+              <span className="font-mono text-xs text-zinc-400 min-w-[3.5rem] text-right shrink-0">{item.count ? item.count.toLocaleString() : "—"}</span>
             </div>
           )})}
         </div>

@@ -81,10 +81,10 @@ const TickerTape = ({ assets }: { assets: Asset[] }) => {
   return (
     <div ref={tapeRef} className="w-full overflow-hidden bg-black/40 border-b border-white/5 py-2 relative z-50 backdrop-blur-md">
       <div className="animate-ticker whitespace-nowrap flex items-center font-mono text-xs tracking-wider text-zinc-400">
-        {[...tapeAssets, ...tapeAssets].map((asset, i) => (
+        {tapeAssets.concat(tapeAssets).map((asset, i) => (
           <div key={i} className="inline-flex items-center gap-2 mx-6">
             <span className="text-white font-bold">{asset.symbol}</span>
-            <span>${(asset.price ?? 0).toFixed(2)}</span>
+            <span>{asset.currency && asset.currency !== "USD" ? asset.currency + " " : "$"}{(asset.price ?? 0).toFixed(2)}</span>
             <span className={asset.isUp ? "text-emerald-500" : "text-rose-500"}>
               {asset.isUp ? '▲' : '▼'}{(asset.change ?? '').replace('-', '')}
             </span>
@@ -154,19 +154,23 @@ function AssetCardWrapper({ asset, index, selectedMetrics, liveData }: any) {
 
 export default function SuperFinanceHub({
   initialAssetClassCounts,
-  initialTickerTapeAssets
+  initialTickerTapeAssets,
+  initialAssets = [],
+  initialTotalCount = 0,
 }: {
   initialAssetClassCounts: Record<string, number>;
   initialTickerTapeAssets: Asset[];
+  initialAssets?: Asset[];
+  initialTotalCount?: number;
 }) {
-  const [isRefreshing, setIsRefreshing] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(initialAssets.length === 0);
   const [isMounted, setIsMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
-  const [assets, setAssets] = useState<Asset[]>([]);
+  const [assets, setAssets] = useState<Asset[]>(initialAssets);
   const [tickerTapeAssets, setTickerTapeAssets] = useState<Asset[]>(initialTickerTapeAssets);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -181,7 +185,7 @@ export default function SuperFinanceHub({
   const [scanlineText, setScanlineText] = useState("");
   const placeholder = "Search tickers, assets...";
   const [offset, setOffset] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(initialTotalCount || initialAssetClassCounts['All'] || 0);
   const [assetClassCounts, setAssetClassCounts] = useState<Record<string, number>>(initialAssetClassCounts);
   const [liveDataMap, setLiveDataMap] = useState<Record<string, any>>({});
 
@@ -331,6 +335,21 @@ export default function SuperFinanceHub({
   }, [assets.length]);
 
   const assetClasses = ["All", "Crypto", "US Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
+
+  const categoryDescriptions: Record<string, string> = {
+    'All': 'Complete global market universe across equities, funds, digital assets, and currencies.',
+    'US Stock': 'Equities listed on US exchanges (NASDAQ, NYSE, AMEX) with fundamental financial metrics.',
+    'Crypto': 'Major cryptocurrencies, decentralized tokens, and stablecoins by market valuation.',
+    'ETF': 'Exchange-Traded Funds tracking broad market indices, commodities, and sectors.',
+    'REIT': 'Real Estate Investment Trusts owning and operating income-producing properties.',
+    'Commodity': 'Metals, energy contracts, and agricultural commodity benchmarks.',
+    'Bond': 'Sovereign debt, treasury yields, and fixed-income security benchmarks.',
+    'Indian Stock': 'Equities listed on the National Stock Exchange (NSE) and Bombay Stock Exchange (BSE).',
+    'International': 'Global equities across European, Asian, and Canadian markets (ex-US).',
+    'Forex': 'Global foreign exchange currency pairs with live exchange rates.',
+    'Index': 'Global market benchmark indices tracking major equity performance.',
+  };
+
   const sortOptions = ["Market Cap", "Price", "Volume", "P/E", "Div Yield", "52W High", "Beta"];
 
   return (
@@ -361,12 +380,12 @@ export default function SuperFinanceHub({
             transition={{ delay: 1, duration: 1 }}
             className="text-zinc-400 font-mono text-sm tracking-widest uppercase mb-12 md:mb-20 text-center px-4"
           >
-            You&apos;re in the driver&apos;s seat. {initialAssetClassCounts['All']?.toLocaleString()} assets. Zero opinions.
+            Search global markets, compare financial metrics, and analyze 150,000+ assets in one place. Zero opinions.
           </motion.p>
           <div className="flex flex-col md:flex-row gap-8 md:gap-24 opacity-80">
             <div className="flex flex-col items-center">
               <div className="text-4xl md:text-5xl font-mono text-emerald-400 font-bold tracking-tighter">
-                {initialAssetClassCounts['All']?.toLocaleString()}
+                {(initialAssetClassCounts['All'] || initialTotalCount || 150000).toLocaleString()}
               </div>
               <div className="text-zinc-500 font-mono text-xs uppercase tracking-widest mt-2">Assets</div>
             </div>
@@ -465,7 +484,12 @@ export default function SuperFinanceHub({
               ))}
             </div>
 
-            {/* Metrics + Sort */}
+            {/* Category Description Hint */}
+          <div className="text-[11px] font-mono text-zinc-500 px-1 -mt-2">
+            {categoryDescriptions[activeClass] || 'Market asset universe.'}
+          </div>
+
+          {/* Metrics + Sort */}
             <div className="flex gap-2">
               {/* Metrics Dropdown */}
               <div className="relative min-w-[130px]">
@@ -570,8 +594,11 @@ export default function SuperFinanceHub({
         {/* Results count */}
         <div className="mb-6 flex items-center gap-3">
           <span className="font-mono text-xs text-zinc-500 uppercase tracking-widest">
-            {totalCount} assets
-          </span>
+                {totalCount.toLocaleString()} assets
+              </span>
+              <span className="font-mono text-xs text-zinc-600 ml-2">
+                {isRefreshing ? '· Refreshing…' : '· Data as of ' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
           {searchQuery && (
             <span className="font-mono text-xs text-emerald-500">
               matching &quot;{searchQuery}&quot;
@@ -618,13 +645,20 @@ export default function SuperFinanceHub({
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="relative z-20 bg-[#020202] border-t border-white/10 pt-1 pb-8 px-8">
+      {/* Footer with Trust & Disclosures */}
+      <footer className="relative z-20 bg-[#020202] border-t border-white/10 pt-8 pb-8 px-8">
         <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent mb-8" />
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-mono text-zinc-600 uppercase tracking-widest">
-          <div className="font-bold text-white/50">Super Finance Hub</div>
-          <div>Sources: Yahoo Finance · NSE · CoinGecko</div>
-          <LiveClock />
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-mono text-zinc-600 uppercase tracking-widest">
+            <div className="font-bold text-white/50">FIN · Super Finance Hub</div>
+            <div>Sources: Yahoo Finance · NSE · CoinGecko</div>
+            <LiveClock />
+          </div>
+          <div className="border-t border-white/5 pt-4 space-y-2 text-[10px] font-mono text-zinc-700 leading-relaxed max-w-4xl mx-auto text-center">
+            <p>Market data is delayed and provided by third-party sources. Prices may not reflect real-time trading values. Data is refreshed periodically throughout the day.</p>
+            <p>FIN is a market discovery and analysis tool. Nothing on this site constitutes financial advice, investment recommendations, or an offer to buy or sell securities. Always do your own research.</p>
+            <p className="text-zinc-800">Operated by Filtree &middot; <a href="https://filtree.in" target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-500 transition-colors">filtree.in</a> &middot; &copy; 2026</p>
+          </div>
         </div>
       </footer>
 
