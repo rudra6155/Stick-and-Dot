@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
       
       let query = supabase
         .from('asset_snapshots')
-        .select('*')
+        .select('ticker, short_name, price, revenue_growth, dividend_yield, market_cap, beta, asset_class, sector')
         .order(q.sort_by, { ascending: q.sort_dir === 'asc' })
         .limit(q.limit * 2);
 

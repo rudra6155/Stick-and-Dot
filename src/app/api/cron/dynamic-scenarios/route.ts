@@ -197,11 +197,20 @@ async function validateAndEnrichScenarios(scenarios: any[]) {
 
 // ── Deduplicate scenarios by title similarity ───────
 function deduplicateScenarios(scenarios: any[]): any[] {
-  const seen = new Set<string>();
+  const seenTitles = new Set<string>();
+  const seenHeadlines = new Set<string>();
+
   return scenarios.filter((s: any) => {
-    const key = s.title.toLowerCase().replace(/[^a-z]/g, '').slice(0, 20);
-    if (seen.has(key)) return false;
-    seen.add(key);
+    // 1. Check title similarity
+    const titleKey = s.title.toLowerCase().replace(/[^a-z]/g, '').slice(0, 18);
+    if (seenTitles.has(titleKey)) return false;
+
+    // 2. Check underlying headline similarity (catches same story with different AI titles)
+    const rawHeadline = (s.news_headline || s.summary || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 25);
+    if (rawHeadline && seenHeadlines.has(rawHeadline)) return false;
+
+    seenTitles.add(titleKey);
+    if (rawHeadline) seenHeadlines.add(rawHeadline);
     return true;
   });
 }
