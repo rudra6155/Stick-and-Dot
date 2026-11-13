@@ -153,13 +153,20 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
             Back to {assetClass}
           </Link>
           
-          <button 
-            onClick={() => setIsPickModalOpen(true)}
-            className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-full transition-colors flex items-center gap-2"
-          >
-            <span className="w-5 h-5 rounded-full bg-black/20 flex items-center justify-center text-xs">P</span>
-            Pick Asset
-          </button>
+          {asset.asset_class === 'Index' ? (
+            <div className="px-5 py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-mono rounded-full flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Market Benchmark · Track Only
+            </div>
+          ) : (
+            <button 
+              onClick={() => setIsPickModalOpen(true)}
+              className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-full transition-colors flex items-center gap-2"
+            >
+              <span className="w-5 h-5 rounded-full bg-black/20 flex items-center justify-center text-xs">P</span>
+              Pick Asset
+            </button>
+          )}
         </div>
 
         {/* Asset Live Header Summary */}

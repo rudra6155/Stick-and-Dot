@@ -346,6 +346,12 @@ export async function fetchAssetsPaginated(params: {
         q = q.eq('sector', params.activeSector);
       }
 
+      // Filter out synthetic seed mock tickers from Sept 25
+      q = q
+        .not('ticker', 'like', 'BOND-%')
+        .not('ticker', 'like', 'REIT-%')
+        .not('ticker', 'like', 'COMM-%');
+
       if (typeof params.searchQuery === 'string' && params.searchQuery.trim() !== '') {
         const queryStr = params.searchQuery.trim().replace(/[%_]/g, '\\$&').replace(/[,()]/g, '');
         q = q.or(`ticker.ilike.%${queryStr}%,short_name.ilike.%${queryStr}%`, { referencedTable: undefined });

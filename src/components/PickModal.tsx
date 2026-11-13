@@ -53,6 +53,10 @@ export function PickModal({
 
   const handlePick = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (asset.asset_class === 'Index') {
+      setError("Market indices are benchmark scores and cannot be held as portfolio assets. Explore correlated ETFs to invest in this benchmark.");
+      return;
+    }
     if (!asset.price) {
       setError("Pricing data is currently unavailable. Cannot pick this asset.");
       return;
