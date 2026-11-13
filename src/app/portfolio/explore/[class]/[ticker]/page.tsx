@@ -9,6 +9,15 @@ import { PickModal } from "@/components/PickModal";
 import { createClient } from "@/utils/supabase/client";
 import RelatedMarketsPanel from "@/components/RelatedMarketsPanel";
 
+const getCurrencySymbol = (ticker: string, currency?: string) => {
+  if (currency === 'INR' || ticker?.endsWith('.NS') || ticker?.endsWith('.BO')) return '₹';
+  if (currency === 'GBP' || ticker?.endsWith('.L')) return '£';
+  if (currency === 'EUR' || ticker?.endsWith('.DE') || ticker?.endsWith('.PA') || ticker?.endsWith('.MI')) return '€';
+  if (currency === 'JPY' || ticker?.endsWith('.T')) return '¥';
+  if (currency === 'MXN' || ticker?.endsWith('.MX')) return 'MX$';
+  return '$';
+};
+
 export default function AssetDetailPage({ params }: { params: Promise<{ class: string, ticker: string }> }) {
   const { class: encodedClass, ticker: encodedTicker } = use(params);
   let assetClass = encodedClass;
@@ -36,77 +45,71 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
       setError("");
 
       try {
-        // 1. Fetch raw asset first (to show header quickly)
+        // 1. Fetch raw asset first and render immediately (instant paint)
         const { data: assetData, error: assetErr } = await supabase
           .from('asset_snapshots')
-          .select('*')
+          .select('id, ticker, short_name, asset_class, sector, industry, price, market_cap, pe_ratio, forward_pe, dividend_yield, beta, high_52_week, low_52_week, ma_50_day, ma_200_day, fetched_at, revenue_growth, profit_margins, return_on_equity')
           .eq('ticker', ticker)
           .eq('asset_class', assetClass)
           .single();
 
         if (assetErr) throw new Error("Asset not found");
 
-        // Overlay live price if available
-        try {
-          const liveRes = await fetch('/api/live-prices', {
+        if (active) {
+          setAsset(assetData);
+          setLoading(false);
+        }
+
+        // 2. Run Live Price, Risk Score, and Backtest in PARALLEL
+        const [liveResult, riskResultSettled, btResultSettled] = await Promise.allSettled([
+          fetch('/api/live-prices', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tickers: [ticker] }),
-          });
-          const liveJson = await liveRes.json();
-          if (liveJson?.data?.[ticker]) {
-            const q = liveJson.data[ticker];
-            assetData.price = q.price ?? assetData.price;
-            assetData.market_cap = q.marketCap ?? assetData.market_cap;
-            assetData.change = q.change ?? assetData.change;
-            assetData.isUp = q.isUp ?? assetData.isUp;
-            assetData.isLive = true;
-            assetData.quoteTime = q.quoteTime;
-          }
-        } catch (e) {
-          console.warn("Live quote fetch failed on detail page, using snapshot:", e);
-        }
+          }).then(res => res.json()).catch(() => null),
 
-        if (active) setAsset(assetData);
-
-        // 2. Fetch Risk Score
-        try {
-          const riskRes = await fetch("/api/risk-score", {
+          fetch("/api/risk-score", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ ticker }),
-          });
-          const riskData = await riskRes.json();
-          if (active) {
-            if (!riskData.error) {
-              setRiskResult(riskData);
-            } else {
-              setRiskResult({ hasError: true });
-            }
-          }
-        } catch (err) {
-          if (active) setRiskResult({ hasError: true });
-        }
+          }).then(res => res.json()).catch(() => ({ hasError: true })),
 
-        // 3. Fetch Backtest (single ticker)
-        try {
-          const btRes = await fetch("/api/backtest", {
+          fetch("/api/backtest", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ tickers: [ticker] }),
-          });
-          const btData = await btRes.json();
-          if (active) {
-            if (!btData.error && btData.results && btData.results.length > 0) {
-              setBacktestResult(btData.results[0]);
-            } else {
-              setBacktestResult({ hasError: true });
-            }
-          }
-        } catch (err) {
-          if (active) setBacktestResult({ hasError: true });
-        }
+          }).then(res => res.json()).catch(() => ({ hasError: true }))
+        ]);
 
+        if (active) {
+          // Update asset with live quote if resolved
+          if (liveResult.status === 'fulfilled' && liveResult.value?.data?.[ticker]) {
+            const q = liveResult.value.data[ticker];
+            setAsset((prev: any) => prev ? {
+              ...prev,
+              price: q.price ?? prev.price,
+              market_cap: q.marketCap ?? prev.market_cap,
+              change: q.change ?? prev.change,
+              isUp: q.isUp ?? prev.isUp,
+              isLive: true,
+              quoteTime: q.quoteTime
+            } : prev);
+          }
+
+          // Update risk score
+          if (riskResultSettled.status === 'fulfilled' && !riskResultSettled.value.error && !riskResultSettled.value.hasError) {
+            setRiskResult(riskResultSettled.value);
+          } else {
+            setRiskResult({ hasError: true });
+          }
+
+          // Update backtest
+          if (btResultSettled.status === 'fulfilled' && btResultSettled.value.results?.length > 0) {
+            setBacktestResult(btResultSettled.value.results[0]);
+          } else {
+            setBacktestResult({ hasError: true });
+          }
+        }
       } catch (err: any) {
         if (active) setError(err.message || "Failed to load asset data.");
       } finally {
@@ -181,7 +184,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
               <div className="text-left sm:text-right">
                 <div className="flex items-baseline sm:justify-end gap-3">
                   <span className="text-3xl sm:text-4xl font-mono font-bold text-white">
-                    ${Number(asset.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {getCurrencySymbol(asset.ticker, asset.currency)}{Number(asset.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                   {asset.change && (
                     <span className={`text-sm font-mono font-bold ${asset.isUp ? 'text-emerald-400' : 'text-rose-400'}`}>

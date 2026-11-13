@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type Asset = any;
 
-const sortOptions = ["Market Cap", "Price", "Volume", "P/E", "Div Yield", "52W High", "Beta"];
+const sortOptions = ["Market Cap", "Price", "Revenue Growth", "P/E", "Div Yield", "52W High", "Beta"];
 
 export default function AssetClassPage({ params }: { params: Promise<{ class: string }> }) {
   const { class: encodedClass } = use(params);
@@ -311,6 +311,31 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
           <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
             <div className="text-red-400 font-mono text-sm">{error || "Something went wrong loading this."}</div>
             <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white">Try again</button>
+          </div>
+        ) : loading && assets.length === 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-zinc-950/80 border border-zinc-800/80 rounded-3xl p-6 h-64 animate-pulse flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800" />
+                    <div className="space-y-2">
+                      <div className="h-4 w-24 bg-zinc-900 rounded" />
+                      <div className="h-3 w-16 bg-zinc-900/60 rounded" />
+                    </div>
+                  </div>
+                  <div className="h-5 w-16 bg-zinc-900 rounded" />
+                </div>
+                <div className="space-y-2">
+                  <div className="h-8 w-32 bg-zinc-900 rounded" />
+                  <div className="h-4 w-20 bg-zinc-900/60 rounded" />
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-4 border-t border-zinc-900">
+                  <div className="h-3 w-16 bg-zinc-900/40 rounded" />
+                  <div className="h-3 w-16 bg-zinc-900/40 rounded" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

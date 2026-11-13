@@ -14,7 +14,9 @@ const classIcons: Record<string, string> = {
   Commodity: "◆",
   Bond: "≡",
   "Indian Stock": "₹",
-  International: "⊕"
+  International: "⊕",
+  Index: "◒",
+  Forex: "¤"
 };
 
 const classColors: Record<string, string> = {
@@ -26,6 +28,8 @@ const classColors: Record<string, string> = {
   Bond: "bg-slate-500/10 text-slate-400 border-slate-500/20",
   "Indian Stock": "bg-orange-500/10 text-orange-400 border-orange-500/20",
   International: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  Index: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  Forex: "bg-rose-500/10 text-rose-400 border-rose-500/20",
   Gold: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
 };
 
@@ -75,10 +79,14 @@ export const AVAILABLE_METRICS = [
   { id: "sharesOutstanding",       label: "Shares Out" },
 ];
 
-const AnimatedPrice = ({ price }: { price: number }) => {
+const AnimatedPrice = ({ price, currency = 'USD' }: { price: number; currency?: string }) => {
   const displayPrice = useCountUp(price, 800);
   if (price == null || Number.isNaN(price)) return <>—</>;
-  return <>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(displayPrice || 0)}</>;
+  try {
+    return <>{new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(displayPrice || 0)}</>;
+  } catch {
+    return <>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(displayPrice || 0)}</>;
+  }
 };
 
 export const formatNumber = (num: number | undefined | null | string) => {
@@ -217,7 +225,7 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
       <div className="flex justify-between items-end mb-6 relative z-10">
         <div className="flex flex-col gap-1">
           <span className="text-3xl font-light font-mono tracking-tighter text-white">
-            <AnimatedPrice price={displayPrice} />
+            <AnimatedPrice price={displayPrice} currency={asset.currency} />
           </span>
           <span className={`flex items-center gap-1 font-mono text-xs font-bold ${displayIsUp ? "text-emerald-400" : "text-rose-400"}`}>
             {displayIsUp ? '▲' : '▼'} {displayChange ? displayChange.replace('-','') : '0.00%'}

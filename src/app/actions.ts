@@ -159,8 +159,12 @@ function inferCurrency(ticker: string, assetClass?: string): string {
   if (assetClass === 'Indian Stock' || ticker.endsWith('.NS') || ticker.endsWith('.BO')) return 'INR';
   if (ticker.endsWith('.T')) return 'JPY';
   if (ticker.endsWith('.KS')) return 'KRW';
-  if (ticker.endsWith('.L')) return 'GBP';
-  if (ticker.endsWith('.DE') || ticker.endsWith('.PA')) return 'EUR';
+  if (ticker.endsWith('.L') || ticker.endsWith('.IL')) return 'GBP';
+  if (ticker.endsWith('.DE') || ticker.endsWith('.PA') || ticker.endsWith('.AS') || ticker.endsWith('.MI') || ticker.endsWith('.MC') || ticker.endsWith('.BR') || ticker.endsWith('.LS') || ticker.endsWith('.VI')) return 'EUR';
+  if (ticker.endsWith('.TO') || ticker.endsWith('.V')) return 'CAD';
+  if (ticker.endsWith('.AX')) return 'AUD';
+  if (ticker.endsWith('.HK')) return 'HKD';
+  if (ticker.endsWith('.SW')) return 'CHF';
   if (ticker.endsWith('.SA')) return 'BRL';
   if (ticker.endsWith('.BA')) return 'ARS';
   if (ticker.endsWith('.JK')) return 'IDR';
@@ -350,7 +354,8 @@ export async function fetchAssetsPaginated(params: {
       const sortMap: Record<string, string> = {
         'Market Cap': 'market_cap',
         'Price': 'price',
-        'Volume': 'volume',
+        'Volume': 'market_cap', // Graceful fallback: volume is not in asset_snapshots, use market_cap (liquidity proxy)
+        'Revenue Growth': 'revenue_growth',
         'P/E': 'pe_ratio',
         'Div Yield': 'dividend_yield',
         '52W High': 'high_52_week',

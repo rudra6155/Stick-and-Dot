@@ -12,8 +12,8 @@ const SORTABLE_COLUMNS = new Set([
   'ticker', 'price', 'market_cap', 'pe_ratio', 'forward_pe', 'price_to_book',
   'price_to_sales', 'ev_to_ebitda', 'dividend_yield', 'earnings_growth',
   'revenue_growth', 'profit_margins', 'high_52_week', 'low_52_week',
-  'ma_50_day', 'ma_200_day', 'beta', 'volume', 'avg_volume',
-  'return_on_equity', 'return_on_assets',
+  'ma_50_day', 'ma_200_day', 'beta',
+  'return_on_equity', 'return_on_assets', 'free_cashflow'
 ]);
 
 export async function POST(req: NextRequest) {
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   let query = supabase
     .from('asset_snapshots')
-    .select('*', { count: 'exact' })
+    .select('id, ticker, short_name, asset_class, sector, industry, price, market_cap, pe_ratio, forward_pe, price_to_book, price_to_sales, ev_to_ebitda, dividend_yield, earnings_growth, revenue_growth, profit_margins, high_52_week, low_52_week, ma_50_day, ma_200_day, beta, return_on_equity, return_on_assets, free_cashflow', { count: 'exact' })
     .order(sort_by, { ascending: sort_dir === 'asc', nullsFirst: false })
     .order('ticker', { ascending: true })
     .range(offset, offset + limit - 1);
