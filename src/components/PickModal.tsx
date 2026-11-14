@@ -53,7 +53,8 @@ export function PickModal({
 
   const handlePick = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (asset.asset_class === 'Index') {
+    const isIndex = asset.asset_class?.toLowerCase() === 'index' || asset.ticker?.startsWith('^');
+    if (isIndex) {
       setError("Market indices are benchmark scores and cannot be held as portfolio assets. Explore correlated ETFs to invest in this benchmark.");
       return;
     }

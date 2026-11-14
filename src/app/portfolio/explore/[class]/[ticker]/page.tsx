@@ -153,7 +153,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
             Back to {assetClass}
           </Link>
           
-          {asset.asset_class === 'Index' ? (
+          {(asset.asset_class?.toLowerCase() === 'index' || assetClass?.toLowerCase() === 'index' || asset.ticker?.startsWith('^')) ? (
             <div className="px-5 py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-mono rounded-full flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               Market Benchmark · Track Only

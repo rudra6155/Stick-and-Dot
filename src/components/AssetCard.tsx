@@ -216,7 +216,16 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
           <div className="flex items-center gap-1.5">
             <div className={`w-1.5 h-1.5 rounded-full ${displayIsUp ? "bg-emerald-500" : "bg-rose-500"} ${isLive ? "animate-pulse" : ""}`} />
             <span suppressHydrationWarning className={`text-[10px] font-medium font-mono uppercase ${isLive ? "text-emerald-500" : "text-zinc-500"}`}>
-              {isLive ? (liveData?.quoteTime ? `LIVE · ${new Date(liveData.quoteTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}` : "LIVE") : asset.fetchedAt ? `As of ${new Date(asset.fetchedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : "Snapshot"}
+              {isLive 
+                ? (liveData?.quoteTime ? `LIVE · ${new Date(liveData.quoteTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}` : "LIVE")
+                : asset.assetClass === 'Bond' 
+                  ? "DAILY NAV" 
+                  : asset.assetClass === 'Index' 
+                    ? "BENCHMARK" 
+                    : asset.fetchedAt 
+                      ? `As of ${new Date(asset.fetchedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` 
+                      : "Snapshot"
+              }
             </span>
           </div>
         </div>

@@ -9,7 +9,7 @@ const QUICK_STAKES = [10, 50, 100, 500];
 const CONFETTI_COLORS = ["#34d399", "#6ee7b7", "#fbbf24", "#ffffff"];
 
 export default function BetSlipSidebar() {
-  const { betSlip, closeBetSlip, placeBet, balance } = useBetting();
+  const { betSlip, closeBetSlip, placeBet, balance, topUpBalance } = useBetting();
   const [stake, setStake] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -146,9 +146,20 @@ export default function BetSlipSidebar() {
                   <label htmlFor="stake-input" className="text-xs font-bold uppercase tracking-widest text-zinc-400">
                     Stake Amount
                   </label>
-                  <span className="text-[10px] font-mono text-zinc-600">
-                    Balance: ${roundedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-zinc-400">
+                      Balance: ${roundedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    {roundedBalance <= 0 && (
+                      <button
+                        type="button"
+                        onClick={() => topUpBalance(10000)}
+                        className="px-2 py-0.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded text-[9px] uppercase tracking-wider transition-colors"
+                      >
+                        +$10k Refill
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-mono text-lg">$</span>

@@ -35,10 +35,11 @@ interface BettingContextType {
   openBetSlip: (item: BetSlipItem) => void;
   closeBetSlip: () => void;
   placeBet: (stake: number) => boolean;
-  // Deducts a stake directly from the wallet (the actual escrow lock), independent of the
-  // bet slip flow. Used e.g. when a user creates a brand new market and funds its pool.
   deductStake: (stake: number) => boolean;
   addActiveBet: (bet: ActiveBet) => void;
+  topUpBalance: (amount?: number) => void;
+  resetBalance: () => void;
+  cancelBet: (betId: string) => void;
 }
 
 const BettingContext = createContext<BettingContextType | undefined>(undefined);
@@ -128,8 +129,47 @@ export function BettingProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
+  const topUpBalance = (amount = 10000) => {
+    const toAdd = toCents(amount);
+    setBalance(prev => {
+      const next = toCents(prev + toAdd);
+      try {
+        localStorage.setItem("sfh_virtual_balance", next.toString());
+      } catch {}
+      return next;
+    });
+  };
+
+  const resetBalance = () => {
+    setBalance(10000.00);
+    setActiveBets([]);
+    try {
+      localStorage.setItem("sfh_virtual_balance", "10000");
+      localStorage.setItem("sfh_active_bets", "[]");
+    } catch {}
+  };
+
+  const cancelBet = (betId: string) => {
+    const target = activeBets.find(b => b.id === betId);
+    if (!target) return;
+    setBalance(prev => {
+      const next = toCents(prev + target.stake);
+      try {
+        localStorage.setItem("sfh_virtual_balance", next.toString());
+      } catch {}
+      return next;
+    });
+    setActiveBets(prev => {
+      const next = prev.filter(b => b.id !== betId);
+      try {
+        localStorage.setItem("sfh_active_bets", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
   return (
-    <BettingContext.Provider value={{ balance, activeBets, betSlip, openBetSlip, closeBetSlip, placeBet, deductStake, addActiveBet }}>
+    <BettingContext.Provider value={{ balance, activeBets, betSlip, openBetSlip, closeBetSlip, placeBet, deductStake, addActiveBet, topUpBalance, resetBalance, cancelBet }}>
       {children}
     </BettingContext.Provider>
   );

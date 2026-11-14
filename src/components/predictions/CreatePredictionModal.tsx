@@ -25,7 +25,7 @@ const CATEGORIES: { value: PredictionEvent["category"]; label: string; icon: Luc
 ];
 
 export default function CreatePredictionModal({ isOpen, onClose, onSubmit, errorMessage }: CreatePredictionModalProps) {
-  const { balance } = useBetting();
+  const { balance, topUpBalance } = useBetting();
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<PredictionEvent["category"]>("Sports");
   const [amount, setAmount] = useState("");
@@ -155,9 +155,20 @@ export default function CreatePredictionModal({ isOpen, onClose, onSubmit, error
                 <label htmlFor="prediction-amount" className="text-xs font-bold uppercase tracking-widest text-zinc-400">
                   Initial Pool Stake
                 </label>
-                <span className="text-[10px] font-mono text-zinc-600">
-                  Balance: ${roundedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-zinc-400">
+                    Balance: ${roundedBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  {roundedBalance <= 0 && (
+                    <button
+                      type="button"
+                      onClick={() => topUpBalance(10000)}
+                      className="px-2 py-0.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded text-[9px] uppercase tracking-wider transition-colors"
+                    >
+                      +$10k Refill
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-mono">$</span>
@@ -171,7 +182,18 @@ export default function CreatePredictionModal({ isOpen, onClose, onSubmit, error
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3.5 pl-8 text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono"
                 />
               </div>
-              {exceedsBalance && <p className="text-[11px] font-medium text-rose-400">Exceeds available balance.</p>}
+              {exceedsBalance && (
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-mono">
+                  <span>Exceeds available balance ($0.00).</span>
+                  <button
+                    type="button"
+                    onClick={() => topUpBalance(10000)}
+                    className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded text-[10px] uppercase tracking-wider transition-colors"
+                  >
+                    + Claim $10,000 Funds
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

@@ -370,7 +370,7 @@ export default function PredictionsDashboard() {
   const [visibleCount, setVisibleCount] = useState(36);
   const [positionsExpanded, setPositionsExpanded] = useState(true);
 
-  const { activeBets, balance, deductStake, addActiveBet } = useBetting();
+  const { activeBets, balance, deductStake, addActiveBet, topUpBalance } = useBetting();
 
   const loadMarkets = useCallback(async () => {
     setLoading(true);
@@ -518,6 +518,23 @@ export default function PredictionsDashboard() {
         </div>
       </div>
 
+      {/* Zero balance alert with instant refill */}
+      {balance <= 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span>Virtual balance is <strong>$0.00</strong> (Funds locked in active bets). Claim test funds to place new bets or create prediction markets.</span>
+          </div>
+          <button
+            onClick={() => topUpBalance(10000)}
+            className="self-start sm:self-auto px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl text-xs uppercase tracking-wider font-sans transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Claim +$10,000 Paper Funds
+          </button>
+        </div>
+      )}
+
       {/* Command Bar */}
       <section className="sticky top-24 z-30 rounded-2xl border border-zinc-800/60 bg-black/85 backdrop-blur-xl">
         <div className="flex items-center gap-3 px-4 py-3">
@@ -533,12 +550,22 @@ export default function PredictionsDashboard() {
           <div className="hidden sm:block h-8 w-px bg-zinc-800 shrink-0" />
 
           <div className="flex-1 min-w-0 flex items-center gap-4 overflow-x-auto hide-scrollbar">
-            <CommandStat
-              icon={<DollarSign className="w-3.5 h-3.5" />}
-              label="Balance"
-              value={`$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              valueClass="text-white"
-            />
+            <div className="flex items-center gap-2 shrink-0">
+              <CommandStat
+                icon={<DollarSign className="w-3.5 h-3.5" />}
+                label="Balance"
+                value={`$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                valueClass={balance <= 0 ? "text-rose-400" : "text-white"}
+              />
+              <button
+                onClick={() => topUpBalance(10000)}
+                title="Claim +$10,000 in simulated paper trading funds"
+                className="px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95"
+              >
+                <Plus className="w-3 h-3" />
+                <span>$10k Faucet</span>
+              </button>
+            </div>
             <CommandStat
               icon={<Eye className="w-3.5 h-3.5" />}
               label="Exposure"
@@ -797,6 +824,7 @@ function CommandStat({
 }
 
 function PositionCard({ bet }: { bet: ActiveBet }) {
+  const { cancelBet } = useBetting();
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col justify-between hover:border-zinc-700 transition-colors">
       <div className="mb-4">
@@ -821,6 +849,14 @@ function PositionCard({ bet }: { bet: ActiveBet }) {
           <div className="text-lg font-black text-emerald-400 font-mono">${bet.potentialPayout.toFixed(2)}</div>
         </div>
       </div>
+      {bet.status === "Pending" && (
+        <button
+          onClick={() => cancelBet(bet.id)}
+          className="mt-4 w-full py-2 px-3 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-700/40 text-xs font-mono font-medium transition-all flex items-center justify-center gap-1.5 active:scale-98"
+        >
+          <span>Cancel Bet & Refund (${bet.stake.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
+        </button>
+      )}
     </div>
   );
 }
