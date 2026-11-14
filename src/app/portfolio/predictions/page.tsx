@@ -578,12 +578,23 @@ export default function PredictionsDashboard() {
               value={`+$${totalPotentialReturn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               valueClass="text-emerald-400"
             />
-            <CommandStat
-              icon={<Target className="w-3.5 h-3.5" />}
-              label="Active"
-              value={activeBets.length.toString()}
-              valueClass="text-white"
-            />
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById('active-positions');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                setPositionsExpanded(true);
+              }}
+              className="text-left hover:opacity-80 transition-opacity cursor-pointer"
+              title="Click to jump to your active bets"
+            >
+              <CommandStat
+                icon={<Target className="w-3.5 h-3.5" />}
+                label="Active"
+                value={activeBets.length.toString()}
+                valueClass={activeBets.length > 0 ? "text-emerald-400 font-bold" : "text-white"}
+              />
+            </button>
             {liveCount > 0 && (
               <span className="flex items-center gap-1.5 text-xs font-mono text-rose-400 shrink-0">
                 <span className="relative flex h-2 w-2">
@@ -658,6 +669,57 @@ export default function PredictionsDashboard() {
           </div>
         </div>
       </section>
+
+      {/* Active Positions (Featured above markets whenever open bets exist) */}
+      {activeBets.length > 0 && (
+        <section id="active-positions" className="rounded-2xl border border-emerald-500/20 bg-emerald-950/10 p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setPositionsExpanded((v) => !v)}
+              aria-expanded={positionsExpanded}
+              className="flex items-center gap-3 group text-left cursor-pointer"
+            >
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <Lock className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-black tracking-tight text-white uppercase">My Active Positions</h2>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono text-[11px] font-bold">
+                    {activeBets.length} Open
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500 font-mono">
+                  ${totalExposure.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Total Staked · Potential Win: +${totalPotentialReturn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <ChevronDown
+                className={`w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-transform ml-2 ${
+                  positionsExpanded ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+          </div>
+
+          <AnimatePresence initial={false}>
+            {positionsExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-2">
+                  {activeBets.map((bet) => (
+                    <PositionCard key={bet.id} bet={bet} />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
+      )}
 
       {/* Markets Grid — with Startup Intel Hub header for Startup tab */}
       <section>
@@ -747,44 +809,7 @@ export default function PredictionsDashboard() {
         )}
       </section>
 
-      {/* Active Positions */}
-      {activeBets.length > 0 && (
-        <section className="pt-6 border-t border-zinc-800/50">
-          <button
-            onClick={() => setPositionsExpanded((v) => !v)}
-            aria-expanded={positionsExpanded}
-            className="flex items-center justify-between w-full mb-4 group"
-          >
-            <div className="flex items-center gap-3">
-              <Lock className="w-5 h-5 text-emerald-400" />
-              <h2 className="text-xl font-black tracking-tight text-white uppercase">My Active Positions</h2>
-            </div>
-            <ChevronDown
-              className={`w-5 h-5 text-zinc-500 group-hover:text-zinc-300 transition-transform ${
-                positionsExpanded ? "rotate-180" : ""
-              }`}
-            />
-          </button>
 
-          <AnimatePresence initial={false}>
-            {positionsExpanded && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
-                className="overflow-hidden"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {activeBets.map((bet) => (
-                    <PositionCard key={bet.id} bet={bet} />
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </section>
-      )}
 
       <CreatePredictionModal
         isOpen={isModalOpen}
