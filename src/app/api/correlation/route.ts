@@ -82,9 +82,23 @@ function alignSeries(
 }
 
 const TICKER_ALIASES: Record<string, string> = {
+  'MICROSOFT': 'MSFT',
+  'APPLE': 'AAPL',
+  'GOOGLE': 'GOOGL',
+  'ALPHABET': 'GOOGL',
+  'AMAZON': 'AMZN',
+  'NVIDIA': 'NVDA',
+  'TESLA': 'TSLA',
+  'META': 'META',
+  'FACEBOOK': 'META',
+  'NETFLIX': 'NFLX',
+  'BITCOIN': 'BTC-USD',
   'BTC': 'BTC-USD',
+  'ETHEREUM': 'ETH-USD',
   'ETH': 'ETH-USD',
+  'SOLANA': 'SOL-USD',
   'SOL': 'SOL-USD',
+  'DOGECOIN': 'DOGE-USD',
   'DOGE': 'DOGE-USD',
   'GOLD': 'GC=F',
   'SILVER': 'SI=F',
@@ -92,8 +106,16 @@ const TICKER_ALIASES: Record<string, string> = {
   'CRUDE': 'CL=F',
   'SP500': 'SPY',
   'S&P500': 'SPY',
+  'S&P': 'SPY',
   'DOW': 'DIA',
+  'DOWJONES': 'DIA',
   'NASDAQ': 'QQQ',
+  'RELIANCE': 'RELIANCE.NS',
+  'TCS': 'TCS.NS',
+  'INFY': 'INFY.NS',
+  'INFOSYS': 'INFY.NS',
+  'HDFC': 'HDFCBANK.NS',
+  'HDFCBANK': 'HDFCBANK.NS',
   'NIFTY': '^NSEI',
   'SENSEX': '^BSESN',
 };
@@ -235,7 +257,7 @@ async function fetchPriceHistoryBatch(tickers: string[]): Promise<Record<string,
     })
   );
 
-  // Fallback to asset_snapshots fundamentals for any ticker still missing history
+  // Fallback to asset_snapshots fundamentals for any registered ticker still missing history
   const missingTickers = cleanTickers.filter(t => !result[t] || result[t].length < 10);
   if (missingTickers.length > 0) {
     try {
@@ -244,7 +266,7 @@ async function fetchPriceHistoryBatch(tickers: string[]): Promise<Record<string,
         .select('ticker, price, high_52_week, low_52_week, ma_50_day, ma_200_day, beta')
         .in('ticker', missingTickers);
 
-      if (snapshots) {
+      if (snapshots && snapshots.length > 0) {
         for (const s of snapshots) {
           result[s.ticker] = synthesizeTrajectory(s);
         }
@@ -254,14 +276,11 @@ async function fetchPriceHistoryBatch(tickers: string[]): Promise<Record<string,
     }
   }
 
-  // Ensure every single ticker has at least a synthesized trajectory
+  // Map raw aliases to clean results (e.g. BTC -> BTC-USD, MICROSOFT -> MSFT)
   for (let i = 0; i < tickers.length; i++) {
     const raw = tickers[i];
     const clean = cleanTickers[i];
-    if (!result[clean] || result[clean].length < 5) {
-      result[clean] = synthesizeTrajectory({ ticker: clean, price: 100 });
-    }
-    if (raw !== clean) {
+    if (result[clean] && raw !== clean) {
       result[raw] = result[clean];
     }
   }
@@ -353,11 +372,28 @@ export async function POST(req: NextRequest) {
 
   // ── MODE: compare ─────────────────────────────────────
   if (mode === 'compare') {
-    const { tickers } = body;
-    if (!tickers || !Array.isArray(tickers) || tickers.length < 2 || tickers.length > 6) {
+    const rawTickers = body.tickers;
+    if (!rawTickers || !Array.isArray(rawTickers)) {
       return NextResponse.json({ error: 'Provide 2-6 tickers to compare' }, { status: 400 });
     }
 
+    // Resolve aliases and deduplicate
+    const resolvedTickers: string[] = [];
+    const seen = new Set<string>();
+    for (const t of rawTickers) {
+      if (!t || typeof t !== 'string') continue;
+      const clean = resolveTicker(t);
+      if (clean && !seen.has(clean)) {
+        seen.add(clean);
+        resolvedTickers.push(clean);
+      }
+    }
+
+    if (resolvedTickers.length < 2 || resolvedTickers.length > 6) {
+      return NextResponse.json({ error: 'Provide 2-6 distinct assets to compare' }, { status: 400 });
+    }
+
+    const tickers = resolvedTickers;
     const allHistory = await fetchPriceHistoryBatch(tickers);
 
     // Build pairwise correlations
