@@ -197,7 +197,7 @@ function MatrixGrid({ labels, data }: { labels: LabelInfo[], data: MatrixEntry[]
 }
 
 // ── Interactive SVG Chart Component ──────────────────────
-function InteractiveChart({ charts, tickers }: { charts: Record<string, ChartPoint[]>, tickers: string[] }) {
+function InteractiveChart({ charts, tickers, onLoadPreset }: { charts: Record<string, ChartPoint[]>, tickers: string[], onLoadPreset?: (tickers: string[]) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 300 });
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
@@ -225,7 +225,21 @@ function InteractiveChart({ charts, tickers }: { charts: Record<string, ChartPoi
     [tickers, charts]
   );
   if (allPoints.length === 0) {
-    return <div className="flex items-center justify-center h-full text-zinc-600 font-mono text-sm">No price history available</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 p-6 text-center">
+        <AlertTriangle className="w-8 h-8 text-amber-400" />
+        <p className="text-zinc-300 font-mono text-sm font-bold">Price History Unavailable for Selected Combination</p>
+        <p className="text-zinc-500 text-xs max-w-md">Try comparing established market assets or load one of our verified multi-asset matchups.</p>
+        {onLoadPreset && (
+          <button
+            onClick={() => onLoadPreset(['AAPL', 'MSFT', 'NVDA'])}
+            className="px-4 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold transition-all active:scale-95 cursor-pointer"
+          >
+            Load Tech Titans (AAPL vs MSFT vs NVDA)
+          </button>
+        )}
+      </div>
+    );
   }
 
   const minVal = Math.min(...allPoints, 0);
@@ -406,6 +420,13 @@ function InteractiveChart({ charts, tickers }: { charts: Record<string, ChartPoi
 }
 
 // ── Main Page ───────────────────────────────────────────
+const PRESET_COMPARISONS = [
+  { label: "⚡ Tech Titans", tickers: ["AAPL", "MSFT", "NVDA"], desc: "Apple vs Microsoft vs Nvidia" },
+  { label: "🪙 Crypto vs Gold", tickers: ["BTC-USD", "ETH-USD", "GC=F"], desc: "Bitcoin vs Ethereum vs Gold" },
+  { label: "🛡️ Macro Defense", tickers: ["SPY", "TLT", "GC=F"], desc: "Equities vs US Bonds vs Gold" },
+  { label: "🇮🇳 India Growth", tickers: ["RELIANCE.NS", "TCS.NS", "SPY"], desc: "Indian Leaders vs S&P 500" },
+];
+
 export default function RelativityPage() {
   const [activeTab, setActiveTab] = useState<"matrix" | "compare">("matrix");
   const [proMatrixOpen, setProMatrixOpen] = useState(false);
@@ -474,8 +495,9 @@ export default function RelativityPage() {
     setCompareData(null);
   };
 
-  const handleCompare = useCallback(async () => {
-    if (compareTickers.length < 2) return;
+  const handleCompare = useCallback(async (customTickers?: string[]) => {
+    const list = (customTickers && customTickers.length >= 2) ? customTickers : compareTickers;
+    if (list.length < 2) return;
     setCompareLoading(true);
     setCompareError("");
     setCompareData(null);
@@ -483,7 +505,7 @@ export default function RelativityPage() {
       const res = await fetch("/api/correlation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "compare", tickers: compareTickers }),
+        body: JSON.stringify({ mode: "compare", tickers: list }),
       });
       const data = await res.json();
       if (data.error) {
@@ -497,6 +519,11 @@ export default function RelativityPage() {
       setCompareLoading(false);
     }
   }, [compareTickers]);
+
+  const handleLoadPreset = (presetTickers: string[]) => {
+    setCompareTickers(presetTickers);
+    handleCompare(presetTickers);
+  };
 
   return (
     <div className="space-y-12 relative">
@@ -894,6 +921,22 @@ export default function RelativityPage() {
                 </button>
               </div>
 
+              {/* Popular Matchup Presets */}
+              <div className="flex flex-wrap items-center gap-2 mb-6">
+                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mr-1">One-Click Matchups:</span>
+                {PRESET_COMPARISONS.map(p => (
+                  <button
+                    key={p.label}
+                    onClick={() => handleLoadPreset(p.tickers)}
+                    className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 hover:bg-zinc-800/80 text-xs text-zinc-300 hover:text-white transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-sm"
+                    title={p.desc}
+                  >
+                    <span>{p.label}</span>
+                    <span className="text-[10px] font-mono text-zinc-500">({p.tickers.join(', ')})</span>
+                  </button>
+                ))}
+              </div>
+
               {/* Selected Tickers - Magnetic Chips */}
               {compareTickers.length > 0 && (
                 <div className="flex flex-wrap gap-3 mb-8">
@@ -930,7 +973,7 @@ export default function RelativityPage() {
               )}
 
               <button
-                onClick={handleCompare}
+                onClick={() => handleCompare()}
                 disabled={compareTickers.length < 2 || compareLoading}
                 className="w-full px-6 py-4 bg-emerald-500 hover:bg-emerald-400 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:border-transparent border border-emerald-400 text-black font-black uppercase tracking-widest rounded-2xl text-sm transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] disabled:shadow-none"
               >
@@ -965,13 +1008,37 @@ export default function RelativityPage() {
                     <MousePointer2 className="w-12 h-12 text-zinc-500 animate-bounce" />
                   </div>
                   
-                  <h3 className="text-xl font-bold mb-1">Normalized Trajectory</h3>
-                  <p className="text-xs text-zinc-500 font-mono mb-8">
-                    Interactive path analysis — mouse over chart for exact daily figures
-                  </p>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                      <h3 className="text-xl font-bold mb-1">Normalized Trajectory</h3>
+                      <p className="text-xs text-zinc-500 font-mono">
+                        Interactive path analysis — mouse over chart for exact daily figures
+                      </p>
+                    </div>
+
+                    {/* Legend Chips with Return % */}
+                    {compareData && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        {compareTickers.map((t, idx) => {
+                          const pts = compareData.charts[t] || [];
+                          const lastVal = pts.length > 0 ? pts[pts.length - 1].value : 0;
+                          const color = CHART_COLORS[idx % CHART_COLORS.length];
+                          return (
+                            <div key={t} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/60 border border-zinc-800 text-xs font-mono">
+                              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                              <span className="font-bold text-white">{t}</span>
+                              <span className={lastVal >= 0 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
+                                {lastVal >= 0 ? "+" : ""}{lastVal.toFixed(1)}%
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
                   <div className="relative h-[400px] bg-black/20 rounded-2xl border border-zinc-800/50 shadow-inner">
-                    <InteractiveChart charts={compareData.charts} tickers={compareTickers} />
+                    <InteractiveChart charts={compareData.charts} tickers={compareTickers} onLoadPreset={handleLoadPreset} />
                   </div>
                 </div>
 
