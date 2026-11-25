@@ -3,6 +3,7 @@ import React, { useRef } from "react";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useCountUp } from "@/hooks/useCountUp";
+import { getCurrencySymbol } from "@/lib/asset-utils";
 
 const Sparkline = dynamic(() => import("@/components/Sparkline"), { ssr: false });
 
@@ -104,6 +105,7 @@ export const formatNumber = (num: number | undefined | null | string) => {
 
 export const getMetric = (id: string, asset: any, customFormatNumber?: any) => {
   const formatter = customFormatNumber || formatNumber;
+  const sym = getCurrencySymbol(asset.currency || asset.symbol, asset.assetClass);
   switch(id) {
     case "volume": return formatter(asset.volume);
     case "avgVolume": return formatter(asset.avgVolume);
@@ -113,22 +115,22 @@ export const getMetric = (id: string, asset: any, customFormatNumber?: any) => {
     case "priceToBook": return asset.priceToBook != null ? asset.priceToBook.toFixed(2) : "—";
     case "priceToSales": return asset.priceToSales != null ? asset.priceToSales.toFixed(2) : "—";
     case "evToEbitda": return asset.evToEbitda != null ? asset.evToEbitda.toFixed(2) : "—";
-    case "dividendYield": return asset.dividendYield != null ? (asset.dividendYield * 100).toFixed(2) + "%" : "—";
+    case "dividendYield": return asset.dividendYield != null ? `${Number(asset.dividendYield).toFixed(2)}%` : "—";
     case "earningsGrowth": return asset.earningsGrowth != null ? (asset.earningsGrowth * 100).toFixed(2) + "%" : "—";
     case "revenueGrowth": return asset.revenueGrowth != null ? (asset.revenueGrowth * 100).toFixed(2) + "%" : "—";
     case "profitMargins": return asset.profitMargins != null ? (asset.profitMargins * 100).toFixed(2) + "%" : "—";
-    case "high52Week": return asset.high52Week != null ? "$" + asset.high52Week.toFixed(2) : "—";
-    case "low52Week": return asset.low52Week != null ? "$" + asset.low52Week.toFixed(2) : "—";
-    case "ma50Day": return asset.ma50Day != null ? "$" + asset.ma50Day.toFixed(2) : "—";
-    case "ma200Day": return asset.ma200Day != null ? "$" + asset.ma200Day.toFixed(2) : "—";
+    case "high52Week": return asset.high52Week != null ? sym + asset.high52Week.toFixed(2) : "—";
+    case "low52Week": return asset.low52Week != null ? sym + asset.low52Week.toFixed(2) : "—";
+    case "ma50Day": return asset.ma50Day != null ? sym + asset.ma50Day.toFixed(2) : "—";
+    case "ma200Day": return asset.ma200Day != null ? sym + asset.ma200Day.toFixed(2) : "—";
     case "beta": return asset.beta != null ? asset.beta.toFixed(2) : "—";
-    case "dayHigh": return asset.dayHigh != null ? "$" + asset.dayHigh.toFixed(2) : "—";
-    case "dayLow": return asset.dayLow != null ? "$" + asset.dayLow.toFixed(2) : "—";
+    case "dayHigh": return asset.dayHigh != null ? sym + asset.dayHigh.toFixed(2) : "—";
+    case "dayLow": return asset.dayLow != null ? sym + asset.dayLow.toFixed(2) : "—";
     case "sector": return asset.sector || "—";
-    case "previousClose": return asset.previousClose != null ? "$" + asset.previousClose.toFixed(2) : "—";
+    case "previousClose": return asset.previousClose != null ? sym + asset.previousClose.toFixed(2) : "—";
     case "enterpriseValue": return formatter(asset.enterpriseValue);
     case "pegRatio": return asset.pegRatio != null ? asset.pegRatio.toFixed(2) : "—";
-    case "dividendRate": return asset.dividendRate != null ? "$" + asset.dividendRate.toFixed(2) : "—";
+    case "dividendRate": return asset.dividendRate != null ? sym + asset.dividendRate.toFixed(2) : "—";
     case "payoutRatio": return asset.payoutRatio != null ? (asset.payoutRatio * 100).toFixed(2) + "%" : "—";
     case "grossMargins": return asset.grossMargins != null ? (asset.grossMargins * 100).toFixed(2) + "%" : "—";
     case "operatingMargins": return asset.operatingMargins != null ? (asset.operatingMargins * 100).toFixed(2) + "%" : "—";
@@ -138,15 +140,15 @@ export const getMetric = (id: string, asset: any, customFormatNumber?: any) => {
     case "ebitda": return formatter(asset.ebitda);
     case "totalDebt": return formatter(asset.totalDebt);
     case "freeCashflow": return formatter(asset.freeCashflow);
-    case "allTimeHigh": return asset.allTimeHigh != null ? "$" + asset.allTimeHigh.toFixed(2) : "—";
-    case "allTimeLow": return asset.allTimeLow != null ? "$" + asset.allTimeLow.toFixed(2) : "—";
+    case "allTimeHigh": return asset.allTimeHigh != null ? sym + asset.allTimeHigh.toFixed(2) : "—";
+    case "allTimeLow": return asset.allTimeLow != null ? sym + asset.allTimeLow.toFixed(2) : "—";
     case "sharesOutstanding": return formatter(asset.sharesOutstanding);
     case "heldPercentInsiders": return asset.heldPercentInsiders != null ? (asset.heldPercentInsiders * 100).toFixed(2) + "%" : "—";
     case "heldPercentInstitutions": return asset.heldPercentInstitutions != null ? (asset.heldPercentInstitutions * 100).toFixed(2) + "%" : "—";
     case "recommendationMean": return asset.recommendationMean != null ? asset.recommendationMean.toFixed(2) : "—";
-    case "targetMeanPrice": return asset.targetMeanPrice != null ? "$" + asset.targetMeanPrice.toFixed(2) : "—";
-    case "trailingEps": return asset.trailingEps != null ? "$" + asset.trailingEps.toFixed(2) : "—";
-    case "forwardEps": return asset.forwardEps != null ? "$" + asset.forwardEps.toFixed(2) : "—";
+    case "targetMeanPrice": return asset.targetMeanPrice != null ? sym + asset.targetMeanPrice.toFixed(2) : "—";
+    case "trailingEps": return asset.trailingEps != null ? sym + asset.trailingEps.toFixed(2) : "—";
+    case "forwardEps": return asset.forwardEps != null ? sym + asset.forwardEps.toFixed(2) : "—";
     case "currency": return asset.currency || "USD";
     default: return "—";
   }
@@ -236,9 +238,15 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
           <span className="text-3xl font-light font-mono tracking-tighter text-white">
             <AnimatedPrice price={displayPrice} currency={asset.currency} />
           </span>
-          <span className={`flex items-center gap-1 font-mono text-xs font-bold ${displayIsUp ? "text-emerald-400" : "text-rose-400"}`}>
-            {displayIsUp ? '▲' : '▼'} {displayChange ? displayChange.replace('-','') : '0.00%'}
-          </span>
+          {displayChange && displayChange !== "—" ? (
+            <span className={`flex items-center gap-1 font-mono text-xs font-bold ${displayIsUp ? "text-emerald-400" : "text-rose-400"}`}>
+              {displayIsUp ? '▲' : '▼'} {displayChange.replace('-', '')}
+            </span>
+          ) : (
+            <span className="font-mono text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
+              {asset.assetClass}
+            </span>
+          )}
         </div>
 
         <div className="absolute right-0 bottom-2 w-[100px] h-[35px] pointer-events-none transition-opacity duration-300 opacity-60 group-hover:opacity-100">

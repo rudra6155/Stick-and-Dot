@@ -1,24 +1,25 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
+import {
+  normalizeAssetClass,
+  normalizeDividendYieldPct,
+  deduplicateAssetRows,
+} from '@/lib/asset-utils';
 
 const supabase = createClient(
   getSupabaseUrl(),
   getSupabaseServiceKey()
 );
 
-const SELECT_COLS = 'id, ticker, short_name, price, asset_class, sector, market_cap, pe_ratio, revenue_growth, dividend_yield, beta, return_on_equity, profit_margins, high_52_week, low_52_week';
+const SELECT_COLS = 'id, ticker, short_name, price, asset_class, sector, market_cap, pe_ratio, revenue_growth, dividend_yield, dividend_rate, beta, return_on_equity, profit_margins, high_52_week, low_52_week';
 
-function deduplicateTickers(rows: any[] | null | undefined, maxCount: number = 5): any[] {
-  const seen = new Set<string>();
-  const unique: any[] = [];
-  for (const r of rows || []) {
-    if (!r || !r.ticker || seen.has(r.ticker)) continue;
-    seen.add(r.ticker);
-    unique.push(r);
-    if (unique.length >= maxCount) break;
-  }
-  return unique;
+function normalizeSuggestionRows(rows: any[] | null | undefined, maxCount: number = 5): any[] {
+  return deduplicateAssetRows(rows, maxCount).map((r) => ({
+    ...r,
+    asset_class: normalizeAssetClass(r.asset_class),
+    dividend_yield: normalizeDividendYieldPct(r.dividend_yield, r.dividend_rate, r.price),
+  }));
 }
 
 export async function GET() {
@@ -34,6 +35,9 @@ export async function GET() {
       supabase
         .from('asset_snapshots')
         .select(SELECT_COLS)
+        .not('ticker', 'like', 'BOND-%')
+        .not('ticker', 'like', 'REIT-%')
+        .not('ticker', 'like', 'COMM-%')
         .gt('price', 5)
         .lt('revenue_growth', 5.0)
         .gt('revenue_growth', 0.1)
@@ -41,12 +45,15 @@ export async function GET() {
         .order('revenue_growth', { ascending: false, nullsFirst: false })
         .limit(25),
 
-      // 2. Safe Bets (Large cap, good dividend, low beta)
+      // 2. Safe Bets (Large cap, >=2% dividend yield, low beta)
       supabase
         .from('asset_snapshots')
         .select(SELECT_COLS)
-        .gte('dividend_yield', 0.02)
-        .lt('dividend_yield', 0.25)
+        .not('ticker', 'like', 'BOND-%')
+        .not('ticker', 'like', 'REIT-%')
+        .not('ticker', 'like', 'COMM-%')
+        .gte('dividend_yield', 2)
+        .lte('dividend_yield', 25)
         .lte('beta', 1.0)
         .gte('market_cap', 1_000_000_000)
         .order('market_cap', { ascending: false, nullsFirst: false })
@@ -56,6 +63,9 @@ export async function GET() {
       supabase
         .from('asset_snapshots')
         .select(SELECT_COLS)
+        .not('ticker', 'like', 'BOND-%')
+        .not('ticker', 'like', 'REIT-%')
+        .not('ticker', 'like', 'COMM-%')
         .gte('pe_ratio', 1)
         .lte('pe_ratio', 15)
         .gte('market_cap', 500_000_000)
@@ -79,10 +89,10 @@ export async function GET() {
 
     return NextResponse.json(
       {
-        topPerformers: deduplicateTickers(topPerformersRaw, 5),
-        safeBets: deduplicateTickers(safeBetsRaw, 5),
-        discounted: deduplicateTickers(discountedRaw, 5),
-        trendingCrypto: deduplicateTickers(trendingCryptoRaw, 5)
+        topPerformers: normalizeSuggestionRows(topPerformersRaw, 5),
+        safeBets: normalizeSuggestionRows(safeBetsRaw, 5),
+        discounted: normalizeSuggestionRows(discountedRaw, 5),
+        trendingCrypto: normalizeSuggestionRows(trendingCryptoRaw, 5)
       },
       {
         headers: {

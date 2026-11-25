@@ -23,25 +23,36 @@ export async function POST(req: NextRequest) {
     // Limit to 50 tickers per request to prevent timeouts / rate limits
     const requestedTickers = uniqueTickers.slice(0, 50);
 
-    // Yahoo Finance can batch request via an array
-    const quotes = await yf.quote(requestedTickers);
-    
+    // Fetch quotes via batch request, isolating invalid/delisted ticker failures
+    let quotes: any[] = [];
+    try {
+      const batchRes = await yf.quote(requestedTickers);
+      quotes = Array.isArray(batchRes) ? batchRes : [batchRes];
+    } catch {
+      const settled = await Promise.allSettled(
+        requestedTickers.map((t) => yf.quote(t))
+      );
+      quotes = settled
+        .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled' && Boolean(r.value))
+        .map((r) => r.value);
+    }
+
     // Create a mapping of ticker -> { price, marketCap, change, isUp }
     const liveData: Record<string, any> = {};
-    
+
     for (const quote of quotes) {
       if (quote && quote.symbol) {
+        const pct = quote.regularMarketChangePercent;
+        const hasPct = typeof pct === 'number' && Number.isFinite(pct);
         liveData[quote.symbol] = {
-          price: quote.regularMarketPrice || null,
-          marketCap: quote.marketCap || null,
-          change: quote.regularMarketChangePercent !== undefined && quote.regularMarketChangePercent !== null 
-            ? quote.regularMarketChangePercent.toFixed(2) + "%" 
-            : null,
-          isUp: quote.regularMarketChangePercent !== undefined && quote.regularMarketChangePercent >= 0,
-          quoteTime: quote.regularMarketTime 
-            ? (quote.regularMarketTime instanceof Date 
-                ? quote.regularMarketTime.toISOString() 
-                : new Date(typeof quote.regularMarketTime === 'number' && quote.regularMarketTime < 1e11 ? quote.regularMarketTime * 1000 : quote.regularMarketTime).toISOString()) 
+          price: quote.regularMarketPrice ?? null,
+          marketCap: quote.marketCap ?? null,
+          change: hasPct ? Math.abs(pct).toFixed(2) + "%" : null,
+          isUp: hasPct ? pct >= 0 : true,
+          quoteTime: quote.regularMarketTime
+            ? (quote.regularMarketTime instanceof Date
+                ? quote.regularMarketTime.toISOString()
+                : new Date(typeof quote.regularMarketTime === 'number' && quote.regularMarketTime < 1e11 ? quote.regularMarketTime * 1000 : quote.regularMarketTime).toISOString())
             : new Date().toISOString(),
         };
       }

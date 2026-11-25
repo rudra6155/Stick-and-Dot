@@ -217,12 +217,10 @@ function deduplicateScenarios(scenarios: any[]): any[] {
 
 // ── Main handler ────────────────────────────────────
 async function handler(req: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET || 'super_fin_hub_cron_secret_2026';
+  const cronSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.get('authorization');
-  const queryKey = req.nextUrl?.searchParams?.get('key');
-  const force = req.nextUrl?.searchParams?.get('force') === 'true';
 
-  const isAuthorized = force || (authHeader === `Bearer ${cronSecret}`) || (queryKey === cronSecret) || process.env.NODE_ENV !== 'production';
+  const isAuthorized = Boolean(cronSecret && authHeader === `Bearer ${cronSecret}`);
   if (!isAuthorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -311,14 +309,28 @@ async function handler(req: NextRequest) {
       return NextResponse.json({ error: 'Insert failed, kept existing scenarios' }, { status: 500 });
     }
 
-    // Step 7: Deactivate old scenarios only after new ones are safely inserted
+    // Step 7: Deactivate old scenarios only when a healthy batch is inserted;
+    // otherwise keep the newest 20 active scenarios so the UI never shrinks to 1-2 cards.
     const newIds = insertedRows?.map((r: { id: string | number }) => r.id) || [];
-    if (newIds.length > 0) {
+    if (newIds.length >= 8) {
       await supabase
         .from('dynamic_scenarios')
         .update({ is_active: false })
         .eq('is_active', true)
         .not('id', 'in', `(${newIds.join(',')})`);
+    } else if (newIds.length > 0) {
+      const { data: activeList } = await supabase
+        .from('dynamic_scenarios')
+        .select('id')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      const overflowIds = (activeList || []).slice(20).map((r: { id: string | number }) => r.id);
+      if (overflowIds.length > 0) {
+        await supabase
+          .from('dynamic_scenarios')
+          .update({ is_active: false })
+          .in('id', overflowIds);
+      }
     }
 
     console.log(`[Scenarios] Successfully inserted ${rows.length} real-time scenarios!`);

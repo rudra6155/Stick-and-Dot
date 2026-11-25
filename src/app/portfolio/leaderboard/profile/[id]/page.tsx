@@ -1,23 +1,40 @@
-import { createClient } from "@/utils/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { getSupabaseUrl, getSupabaseServiceKey } from "@/lib/supabase-config";
+import { normalizeAssetClass } from "@/lib/asset-utils";
 import { ArrowLeft, User as UserIcon, Brain, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createClient();
+  if (!UUID_REGEX.test(id)) {
+    return notFound();
+  }
 
-  // Fetch user picks
-  const { data: picks, error } = await supabase
-    .from('user_picks')
-    .select('*')
-    .eq('user_id', id);
+  const adminClient = createAdminClient(getSupabaseUrl(), getSupabaseServiceKey());
+
+  // Fetch user picks + public leaderboard username in parallel (bypasses RLS safely for read-only public profile)
+  const [{ data: picks, error }, { data: lbPicks }] = await Promise.all([
+    adminClient
+      .from('user_picks')
+      .select('ticker, asset_class, created_at')
+      .eq('user_id', id)
+      .order('created_at', { ascending: false }),
+    adminClient
+      .from('leaderboard_picks')
+      .select('username')
+      .eq('user_id', id)
+      .limit(1),
+  ]);
 
   if (error || !picks || picks.length === 0) {
     return notFound();
   }
 
-  const username = picks[0].username || "Anonymous";
+  const rawUsername = lbPicks?.[0]?.username;
+  const username = rawUsername ? String(rawUsername).split('@')[0] : `Investor-${id.slice(0, 6)}`;
 
   // Simple LLM prompt mock for strategy (Groq API is typically called via client/API, but since we are server-side, we can just fetch from Groq here if we have GROQ_API_KEY)
   const groqApiKey = process.env.GROQ_API_KEY;
@@ -84,12 +101,19 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
         <TrendingUp className="w-6 h-6 text-emerald-400" /> Current Holdings
       </h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {picks.map((pick, i) => (
-          <div key={i} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
-            <div className="font-bold text-white text-lg">{pick.ticker}</div>
-            <div className="text-xs text-zinc-500 font-mono">{pick.asset_class}</div>
-          </div>
-        ))}
+        {picks.map((pick, i) => {
+          const navClass = normalizeAssetClass(pick.asset_class);
+          return (
+            <Link
+              key={`${pick.ticker}-${i}`}
+              href={`/portfolio/explore/${encodeURIComponent(navClass)}/${encodeURIComponent(pick.ticker)}`}
+              className="bg-zinc-950 border border-zinc-800 hover:border-emerald-500/40 rounded-xl p-4 transition-colors block"
+            >
+              <div className="font-bold text-white text-lg">{pick.ticker}</div>
+              <div className="text-xs text-zinc-500 font-mono">{navClass}</div>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

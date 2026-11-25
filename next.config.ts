@@ -9,12 +9,16 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      { source: '/screener', destination: '/portfolio/screener', permanent: true },
+      { source: '/screener', destination: '/portfolio/suggestions/screener', permanent: true },
+      { source: '/portfolio/screener', destination: '/portfolio/suggestions/screener', permanent: true },
       { source: '/scenarios', destination: '/portfolio/scenarios', permanent: true },
-      { source: '/backtest', destination: '/portfolio/backtest', permanent: true },
-      { source: '/news', destination: '/portfolio/news', permanent: true },
+      { source: '/backtest', destination: '/portfolio/suggestions/backtest', permanent: true },
+      { source: '/portfolio/backtest', destination: '/portfolio/suggestions/backtest', permanent: true },
+      { source: '/news', destination: '/portfolio/scenarios', permanent: true },
+      { source: '/portfolio/news', destination: '/portfolio/scenarios', permanent: true },
       { source: '/risk-score', destination: '/portfolio/risk-score', permanent: true },
-      { source: '/opportunities', destination: '/portfolio/opportunities', permanent: true },
+      { source: '/opportunities', destination: '/portfolio/suggestions/opportunities', permanent: true },
+      { source: '/portfolio/opportunities', destination: '/portfolio/suggestions/opportunities', permanent: true },
       { source: '/explore', destination: '/portfolio/explore', permanent: true },
       { source: '/explore/:path*', destination: '/portfolio/explore/:path*', permanent: true },
     ];

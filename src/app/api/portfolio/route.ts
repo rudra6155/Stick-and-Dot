@@ -2,6 +2,12 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
+import {
+  deduplicateAssetRows,
+  normalizeAssetClass,
+  normalizeDividendYieldPct,
+  toPortfolioModelClass,
+} from '@/lib/asset-utils';
 
 const supabase = createClient(
   getSupabaseUrl(),
@@ -41,23 +47,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Too many tickers requested (max ${MAX_TICKERS})` }, { status: 400 });
   }
 
+  const uniqueTickers = Array.from(new Set(tickers.map((t: string) => t.trim())));
+
   // Fetch asset snapshots
-  const { data: assets, error: assetsError } = await supabase
+  const { data: rawAssets, error: assetsError } = await supabase
     .from('asset_snapshots')
     .select('*')
-    .in('ticker', tickers);
+    .in('ticker', uniqueTickers);
 
   if (assetsError) {
     console.error('api/portfolio: asset_snapshots query error:', assetsError);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
-  if (!assets || assets.length === 0) return NextResponse.json({ error: 'No assets found' }, { status: 404 });
+  const assets = deduplicateAssetRows(rawAssets);
+  if (assets.length === 0) return NextResponse.json({ error: 'No assets found' }, { status: 404 });
 
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-  const historyPromises = tickers.map((ticker: string) =>
+  const resolvedTickers = assets.map((a: any) => a.ticker);
+  const historyPromises = resolvedTickers.map((ticker: string) =>
     supabase
       .from('price_history')
       .select('ticker, date, close')
@@ -74,7 +84,7 @@ export async function POST(req: NextRequest) {
   const failedTickers: string[] = [];
   const history: any[] = [];
   historySettled.forEach((settled, i) => {
-    const ticker = tickers[i];
+    const ticker = resolvedTickers[i];
     if (settled.status === 'rejected') {
       console.error(`api/portfolio: price_history query rejected for ${ticker}:`, settled.reason);
       failedTickers.push(ticker);
@@ -107,7 +117,13 @@ export async function POST(req: NextRequest) {
     const return_6m = hist.length >= 2
       ? ((first != null && first !== 0) ? ((hist[hist.length - 1].close - first) / first) * 100 : 0)
       : 0;
-    return { ...a, weight, return_6m: parseFloat(return_6m.toFixed(2)) };
+    return {
+      ...a,
+      asset_class: normalizeAssetClass(a.asset_class),
+      dividend_yield: normalizeDividendYieldPct(a.dividend_yield, a.dividend_rate, a.price),
+      weight,
+      return_6m: parseFloat(return_6m.toFixed(2)),
+    };
   });
 
   // Portfolio metrics
@@ -127,7 +143,8 @@ export async function POST(req: NextRequest) {
   // Stress tests
   const stress_tests = Object.entries(SCENARIO_IMPACTS).map(([scenario, impacts]) => {
     const scenario_return = assetDetails.reduce((s: number, a: any) => {
-      const impact = impacts[a.asset_class] !== undefined ? impacts[a.asset_class] : -0.1;
+      const modelClass = toPortfolioModelClass(a.asset_class);
+      const impact = impacts[modelClass] !== undefined ? impacts[modelClass] : -0.1;
       return s + impact * weight * 100;
     }, 0);
     const labels: Record<string, string> = {
@@ -150,7 +167,7 @@ export async function POST(req: NextRequest) {
     summary: {
       portfolio_return: parseFloat(portfolio_return.toFixed(2)),
       avg_beta: parseFloat(avg_beta.toFixed(2)),
-      avg_dividend_yield: parseFloat((avg_dividend * 100).toFixed(2)),
+      avg_dividend_yield: parseFloat(avg_dividend.toFixed(2)),
       avg_pe: parseFloat(avg_pe.toFixed(1)),
       diversification_score,
       asset_count: assets.length,

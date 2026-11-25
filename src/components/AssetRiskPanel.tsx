@@ -23,8 +23,11 @@ const formatMarketCap = (cap: number | null | undefined) => {
   return `$${(cap / 1e3).toFixed(1)}K`;
 };
 
+import { getCurrencySymbol } from "@/lib/asset-utils";
+
 export function AssetRiskPanel({ result }: { result: any }) {
   if (!result || !result.score) return null;
+  const sym = getCurrencySymbol(result.asset.currency || result.asset.ticker, result.asset.asset_class);
 
   return (
     <div className="space-y-6">
@@ -34,7 +37,7 @@ export function AssetRiskPanel({ result }: { result: any }) {
           <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest mb-1">{result.asset.asset_class} · {result.asset.sector || "—"}</p>
           <h2 className="text-3xl font-black">{result.asset.ticker}</h2>
           <p className="text-zinc-400 mt-1">{result.asset.short_name}</p>
-          <p className="text-2xl font-mono font-bold mt-2">{result.asset.price != null ? `$${result.asset.price.toFixed(2)}` : "—"}</p>
+          <p className="text-2xl font-mono font-bold mt-2">{result.asset.price != null ? `${sym}${result.asset.price.toFixed(2)}` : "—"}</p>
         </div>
         <div className="text-left sm:text-center">
           <div className={`text-6xl md:text-8xl font-black ${GRADE_COLORS[result.score.grade] ?? GRADE_COLORS.default}`}>
@@ -76,10 +79,10 @@ export function AssetRiskPanel({ result }: { result: any }) {
           { label: "P/E Ratio", value: result.asset.pe_ratio != null ? result.asset.pe_ratio.toFixed(1) : "—" },
           { label: "Revenue Growth", value: result.asset.revenue_growth != null ? `${(result.asset.revenue_growth*100).toFixed(1)}%` : "—" },
           { label: "Beta", value: result.asset.beta != null ? result.asset.beta.toFixed(2) : "—" },
-          { label: "Dividend Yield", value: result.asset.dividend_yield != null ? `${(result.asset.dividend_yield*100).toFixed(1)}%` : "—" },
+          { label: "Dividend Yield", value: result.asset.dividend_yield != null ? `${Number(result.asset.dividend_yield).toFixed(2)}%` : "—" },
           { label: "Profit Margin", value: result.asset.profit_margins != null ? `${(result.asset.profit_margins*100).toFixed(1)}%` : "—" },
           { label: "ROE", value: result.asset.return_on_equity != null ? `${(result.asset.return_on_equity*100).toFixed(1)}%` : "—" },
-          { label: "Analyst Target", value: result.asset.target_mean_price != null ? `$${result.asset.target_mean_price.toFixed(2)}` : "—" },
+          { label: "Analyst Target", value: result.asset.target_mean_price != null ? `${sym}${result.asset.target_mean_price.toFixed(2)}` : "—" },
         ].map(m => (
           <div key={m.label} className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
             <p className="text-xs text-zinc-500 font-mono uppercase tracking-wider mb-1">{m.label}</p>

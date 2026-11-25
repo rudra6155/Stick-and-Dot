@@ -1,6 +1,14 @@
 "use server";
 import { DEFAULT_ASSET_CLASS_COUNTS } from "@/lib/constants";
 import { getSupabaseUrl, getSupabasePublishableKey, getSupabaseServiceKey } from "@/lib/supabase-config";
+import {
+  normalizeAssetClass,
+  expandAssetClassFilter,
+  inferCurrency,
+  normalizeDividendYieldPct,
+  pickCanonicalAssetRow,
+  isSyntheticTicker,
+} from "@/lib/asset-utils";
 import { createClient } from "@supabase/supabase-js";
 import { unstable_cache } from "next/cache";
 
@@ -132,51 +140,11 @@ export type Asset = {
   communityRedditSubscribers: number;
 };
 
-const normalizeClass = (raw: unknown): string => {
-  if (!raw) return 'US Stock';
-  // DB rows are typed `any`, so a non-string value (number/boolean) could
-  // reach here — coerce before calling string methods to avoid a crash.
-  const str = typeof raw === 'string' ? raw : String(raw);
-  const map: Record<string, string> = {
-    'us stock': 'US Stock', 'stock': 'US Stock', 'stocks': 'US Stock',
-    'equity': 'US Stock', 'equities': 'US Stock',
-    'us tech': 'US Stock', 'us blue chip': 'US Stock',
-    'etf': 'ETF', 'etfs': 'ETF',
-    'reit': 'REIT', 'reits': 'REIT',
-    'crypto': 'Crypto', 'cryptocurrency': 'Crypto',
-    'commodity': 'Commodity', 'commodities': 'Commodity',
-    'bond': 'Bond', 'bonds': 'Bond',
-    'indian stock': 'Indian Stock', 'indian stocks': 'Indian Stock',
-    'international': 'International',
-    'forex': 'Forex',
-    'index': 'Index', 'indices': 'Index',
-  };
-  return map[str.toLowerCase()] ?? str;
-};
-
-function inferCurrency(ticker: string, assetClass?: string): string {
-  if (!ticker) return 'USD';
-  if (assetClass === 'Indian Stock' || ticker.endsWith('.NS') || ticker.endsWith('.BO')) return 'INR';
-  if (ticker.endsWith('.T')) return 'JPY';
-  if (ticker.endsWith('.KS')) return 'KRW';
-  if (ticker.endsWith('.L') || ticker.endsWith('.IL')) return 'GBP';
-  if (ticker.endsWith('.DE') || ticker.endsWith('.PA') || ticker.endsWith('.AS') || ticker.endsWith('.MI') || ticker.endsWith('.MC') || ticker.endsWith('.BR') || ticker.endsWith('.LS') || ticker.endsWith('.VI')) return 'EUR';
-  if (ticker.endsWith('.TO') || ticker.endsWith('.V')) return 'CAD';
-  if (ticker.endsWith('.AX')) return 'AUD';
-  if (ticker.endsWith('.HK')) return 'HKD';
-  if (ticker.endsWith('.SW')) return 'CHF';
-  if (ticker.endsWith('.SA')) return 'BRL';
-  if (ticker.endsWith('.BA')) return 'ARS';
-  if (ticker.endsWith('.JK')) return 'IDR';
-  if (ticker.endsWith('.MX')) return 'MXN';
-  return 'USD';
-}
-
 const mapRowToAsset = (row: any) => ({
   id: `trad_${row.id || row.ticker}`,
   name: row.short_name || row.ticker,
   symbol: row.ticker,
-  assetClass: normalizeClass(row.asset_class),
+  assetClass: normalizeAssetClass(row.asset_class),
   price: row.price || 0,
   open: row.open || 0,
   dayHigh: row.day_high || 0,
@@ -189,7 +157,7 @@ const mapRowToAsset = (row: any) => ({
   priceToBook: row.price_to_book ?? null,
   priceToSales: row.price_to_sales ?? null,
   evToEbitda: row.ev_to_ebitda ?? null,
-  dividendYield: row.dividend_yield ?? null,
+  dividendYield: normalizeDividendYieldPct(row.dividend_yield, row.dividend_rate, row.price),
   earningsGrowth: row.earnings_growth ?? null,
   revenueGrowth: row.revenue_growth ?? null,
   profitMargins: row.profit_margins ?? null,
@@ -299,20 +267,21 @@ export async function fetchAssetsByTickers(tickers: string[]): Promise<Asset[]> 
     }
   }
 
-  // Deduplicate by ticker, preferring row with sector/details or US Stock
-  const tickerMap = new Map<string, any>();
+  // Group by ticker and resolve deterministically to canonical row
+  const grouped = new Map<string, any[]>();
   for (const row of data || []) {
-    const existing = tickerMap.get(row.ticker);
-    if (!existing) {
-      tickerMap.set(row.ticker, row);
-    } else {
-      if (row.asset_class === 'US Stock' || (row.sector && !existing.sector)) {
-        tickerMap.set(row.ticker, row);
-      }
-    }
+    if (!row || !row.ticker || isSyntheticTicker(row.ticker)) continue;
+    const list = grouped.get(row.ticker);
+    if (list) list.push(row);
+    else grouped.set(row.ticker, [row]);
+  }
+  const canonicalRows: any[] = [];
+  for (const rows of grouped.values()) {
+    const picked = pickCanonicalAssetRow(rows);
+    if (picked) canonicalRows.push(picked);
   }
 
-  const mappedAssets: Asset[] = Array.from(tickerMap.values()).map(mapRowToAsset);
+  const mappedAssets: Asset[] = canonicalRows.map(mapRowToAsset);
   await enrichAssetsWithHistory(mappedAssets).catch(() => {});
   return mappedAssets;
 }
@@ -336,10 +305,11 @@ export async function fetchAssetsPaginated(params: {
         .select('id, ticker, asset_class, short_name, price, market_cap, pe_ratio, forward_pe, peg_ratio, price_to_book, price_to_sales, ev_to_ebitda, dividend_yield, dividend_rate, payout_ratio, earnings_growth, revenue_growth, profit_margins, gross_margins, operating_margins, return_on_equity, return_on_assets, total_revenue, ebitda, total_debt, free_cashflow, high_52_week, low_52_week, ma_50_day, ma_200_day, beta, recommendation_mean, target_mean_price, trailing_eps, forward_eps, held_percent_insiders, held_percent_institutions, sector, industry, country, fetched_at, coin_id', { count: 'exact' });
 
       if (params.activeClass !== 'All') {
-        if (params.activeClass === 'Stock' || params.activeClass === 'US Stock') {
-          q = q.in('asset_class', ['US Stock', 'Stock', 'Equity']);
+        const variants = expandAssetClassFilter(params.activeClass);
+        if (variants.length > 1) {
+          q = q.in('asset_class', variants);
         } else {
-          q = q.eq('asset_class', params.activeClass);
+          q = q.eq('asset_class', variants[0]);
         }
       }
       if ((params.activeClass === 'US Stock' || params.activeClass === 'Stock') && params.activeSector !== 'All Sectors') {
@@ -368,6 +338,9 @@ export async function fetchAssetsPaginated(params: {
         'Beta': 'beta'
       };
       const sortCol = sortMap[params.sortBy] ?? 'market_cap';
+      if (sortCol === 'dividend_yield') {
+        q = q.or('dividend_yield.is.null,dividend_yield.lte.50');
+      }
       q = q.order(sortCol, { ascending: params.sortDir === 'asc', nullsFirst: false });
       q = q.order('ticker', { ascending: true });
       q = q.range(safeOffset, safeOffset + safeLimit - 1);
@@ -394,7 +367,15 @@ export async function fetchAssetsPaginated(params: {
       }
     }
 
-    const mappedAssets: Asset[] = (data || []).map(mapRowToAsset);
+    // Deduplicate duplicate ticker rows while preserving SQL sort order
+    const seenPageTickers = new Set<string>();
+    const dedupedRows: any[] = [];
+    for (const r of data || []) {
+      if (!r || !r.ticker || seenPageTickers.has(r.ticker)) continue;
+      seenPageTickers.add(r.ticker);
+      dedupedRows.push(r);
+    }
+    const mappedAssets: Asset[] = dedupedRows.map(mapRowToAsset);
 
     // Bounded sparkline history enrichment
     await enrichAssetsWithHistory(mappedAssets).catch((err) =>
@@ -422,7 +403,10 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
           const { count, error } = await supabase
             .from('asset_snapshots')
             .select('*', { count: 'exact', head: true })
-            .eq('asset_class', cls);
+            .eq('asset_class', cls)
+            .not('ticker', 'like', 'BOND-%')
+            .not('ticker', 'like', 'REIT-%')
+            .not('ticker', 'like', 'COMM-%');
             
           if (error) {
             throw new Error(`Count failed for ${cls}: ${error.message}`);
@@ -443,7 +427,7 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
 
         return counts;
       },
-      ['asset-class-counts'],
+      ['asset-class-counts-v2'],
       { revalidate: 3600 } // Cache for 1 hour
     )();
   } catch (err: any) {
@@ -522,62 +506,59 @@ export async function fetchTickerTapeAssets(): Promise<Asset[]> {
   }
 }
 
+// Per-ticker history lookup avoids PostgREST's 1000-row cap letting Crypto/Forex dates starve US Stocks.
 async function enrichAssetsWithHistory(assets: Asset[]) {
   if (assets.length === 0) return assets;
-  const tickers = assets.map(a => a.symbol);
+  const tickers = Array.from(new Set(assets.map(a => a.symbol).filter(Boolean))).slice(0, 60);
+  if (tickers.length === 0) return assets;
 
-  // price_history has RLS enabled with no public SELECT policy, so this must
-  // go through supabaseAdmin (service role) rather than the anon `supabase` client.
-  // Instead of up to 100 individual parallel queries (N+1), fetch all history in a single bounded query.
-  let historyData: { ticker: string; date: string; close: number }[] = [];
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('price_history')
-      .select('ticker, date, close')
-      .in('ticker', tickers)
-      .order('date', { ascending: false })
-      .limit(Math.min(tickers.length * 7, 1000));
+  const histByTicker: Record<string, { date: string; close: number }[]> = {};
+  const CONCURRENCY = 15;
 
-    if (error) {
-      console.error('enrichAssetsWithHistory: query error:', error.message);
-      return assets;
-    }
-    historyData = data || [];
-  } catch (err) {
-    console.error('enrichAssetsWithHistory: query threw:', err);
-    return assets;
-  }
-
-  if (historyData && historyData.length > 0) {
-    const histByTicker: Record<string, { date: string, close: number }[]> = {};
-    for (const row of historyData) {
-      if (!histByTicker[row.ticker]) histByTicker[row.ticker] = [];
-      // Keep only up to 7 most recent entries per ticker
-      if (histByTicker[row.ticker].length < 7) {
-        histByTicker[row.ticker].push(row);
+  for (let i = 0; i < tickers.length; i += CONCURRENCY) {
+    const batch = tickers.slice(i, i + CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.map(async (ticker) => {
+        const { data, error } = await supabaseAdmin
+          .from('price_history')
+          .select('date, close')
+          .eq('ticker', ticker)
+          .order('date', { ascending: false })
+          .limit(8);
+        if (error || !data) return { ticker, rows: [] as { date: string; close: number }[] };
+        return {
+          ticker,
+          rows: data.filter((r: any) => typeof r.close === 'number' && Number.isFinite(r.close)),
+        };
+      })
+    );
+    for (const res of results) {
+      if (res.status === 'fulfilled' && res.value.rows.length > 0) {
+        histByTicker[res.value.ticker] = res.value.rows;
       }
     }
-
-    assets.forEach(asset => {
-      const h = histByTicker[asset.symbol] || [];
-      if (h.length < 2) {
-        asset.history = [];
-        asset.change = "0.00%";
-        asset.isUp = true;
-        return;
-      }
-
-      // Reverse so oldest-first for sparkline display and calculation
-      const chronological = [...h].reverse();
-      asset.history = chronological.map(r => r.close);
-
-      const first = chronological[0].close;
-      const last = chronological[chronological.length - 1].close;
-      const changePct = (first != null && first !== 0) ? ((last - first) / first) * 100 : 0;
-
-      asset.change = (Math.abs(changePct)).toFixed(2) + "%";
-      asset.isUp = changePct >= 0;
-    });
   }
+
+  assets.forEach(asset => {
+    const h = histByTicker[asset.symbol] || [];
+    if (h.length < 2) {
+      asset.history = [];
+      asset.change = "0.00%";
+      asset.isUp = true;
+      return;
+    }
+
+    // Reverse so oldest-first for sparkline display and calculation
+    const chronological = [...h].reverse();
+    asset.history = chronological.map(r => r.close);
+
+    const first = chronological[0].close;
+    const last = chronological[chronological.length - 1].close;
+    const changePct = (first != null && first !== 0) ? ((last - first) / first) * 100 : 0;
+
+    asset.change = (Math.abs(changePct)).toFixed(2) + "%";
+    asset.isUp = changePct >= 0;
+  });
+
   return assets;
 }

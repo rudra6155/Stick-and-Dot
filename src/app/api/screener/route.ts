@@ -2,6 +2,12 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
+import {
+  expandAssetClassFilter,
+  normalizeAssetClass,
+  normalizeDividendYieldPct,
+  deduplicateAssetRows,
+} from '@/lib/asset-utils';
 
 const supabase = createClient(
   getSupabaseUrl(),
@@ -47,7 +53,16 @@ export async function POST(req: NextRequest) {
 
   let query = supabase
     .from('asset_snapshots')
-    .select('id, ticker, short_name, asset_class, sector, industry, price, market_cap, pe_ratio, forward_pe, price_to_book, price_to_sales, ev_to_ebitda, dividend_yield, earnings_growth, revenue_growth, profit_margins, high_52_week, low_52_week, ma_50_day, ma_200_day, beta, return_on_equity, return_on_assets, free_cashflow', { count: 'exact' })
+    .select('id, ticker, short_name, asset_class, sector, industry, price, market_cap, pe_ratio, forward_pe, price_to_book, price_to_sales, ev_to_ebitda, dividend_yield, dividend_rate, earnings_growth, revenue_growth, profit_margins, high_52_week, low_52_week, ma_50_day, ma_200_day, beta, return_on_equity, return_on_assets, free_cashflow', { count: 'exact' })
+    .not('ticker', 'like', 'BOND-%')
+    .not('ticker', 'like', 'REIT-%')
+    .not('ticker', 'like', 'COMM-%');
+
+  if (sort_by === 'dividend_yield') {
+    query = query.or('dividend_yield.is.null,dividend_yield.lte.50');
+  }
+
+  query = query
     .order(sort_by, { ascending: sort_dir === 'asc', nullsFirst: false })
     .order('ticker', { ascending: true })
     .range(offset, offset + limit - 1);
@@ -60,16 +75,16 @@ export async function POST(req: NextRequest) {
   }
 
   if (asset_class) {
-    if (asset_class === 'Stock') {
-      query = query.in('asset_class', ['US Stock', 'Stock', 'Equity']);
-    } else {
-      query = query.eq('asset_class', asset_class);
-    }
+    const variants = expandAssetClassFilter(asset_class);
+    query = variants.length > 1 ? query.in('asset_class', variants) : query.eq('asset_class', variants[0]);
   }
   if (sector) query = query.eq('sector', sector);
   if (min_market_cap !== undefined && Number.isFinite(Number(min_market_cap))) query = query.gte('market_cap', Number(min_market_cap));
   if (max_pe !== undefined && Number.isFinite(Number(max_pe))) query = query.lte('pe_ratio', Number(max_pe)).gt('pe_ratio', 0);
-  if (min_dividend_yield !== undefined && Number.isFinite(Number(min_dividend_yield))) query = query.gte('dividend_yield', Number(min_dividend_yield));
+  if (min_dividend_yield !== undefined && Number.isFinite(Number(min_dividend_yield))) {
+    const minYieldPct = Number(min_dividend_yield);
+    query = query.gte('dividend_yield', minYieldPct).lte('dividend_yield', 50);
+  }
   if (min_revenue_growth !== undefined && Number.isFinite(Number(min_revenue_growth))) query = query.gte('revenue_growth', Number(min_revenue_growth));
   if (min_profit_margins !== undefined && Number.isFinite(Number(min_profit_margins))) query = query.gte('profit_margins', Number(min_profit_margins));
   if (max_beta !== undefined && Number.isFinite(Number(max_beta))) query = query.lte('beta', Number(max_beta));
@@ -81,14 +96,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error: ' + error.message }, { status: 500 });
   }
 
-  // Deduplicate by ticker
-  const seen = new Set<string>();
-  const uniqueData: any[] = [];
-  for (const r of data || []) {
-    if (!r || !r.ticker || seen.has(r.ticker)) continue;
-    seen.add(r.ticker);
-    uniqueData.push(r);
-  }
+  // Deduplicate by ticker deterministically
+  const uniqueData = deduplicateAssetRows(data);
 
   // Compute investment scores for each result
   const scored = uniqueData.map((r: any) => {
@@ -104,6 +113,8 @@ export async function POST(req: NextRequest) {
       : '—';
     return {
       ...r,
+      asset_class: normalizeAssetClass(r.asset_class),
+      dividend_yield: normalizeDividendYieldPct(r.dividend_yield, r.dividend_rate, r.price),
       investment_score: Math.round(total_score),
       what_can_earn: growthDisplay,
       what_can_lose: r.beta ? `Beta ${r.beta.toFixed(2)} (${r.beta < 1 ? 'Low' : r.beta < 1.5 ? 'Medium' : 'High'} risk)` : '—',

@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { getSupabaseUrl, getSupabaseServiceKey } from "@/lib/supabase-config";
+import { toPortfolioModelClass, pickCanonicalAssetRow } from "@/lib/asset-utils";
 import Link from "next/link";
 import { Trophy, TrendingUp, TrendingDown } from "lucide-react";
 import { LeaderboardClient } from "./LeaderboardClient";
@@ -12,7 +13,8 @@ export default async function LeaderboardPage({
 }: {
   searchParams: Promise<{ window?: string }>;
 }) {
-  const { window = "daily" } = await searchParams;
+  const { window: rawWindow = "all" } = await searchParams;
+  const window = ["daily", "weekly", "monthly", "all"].includes(rawWindow) ? rawWindow : "all";
   const supabase = await createClient();
   let error: string | null = null;
 
@@ -31,7 +33,7 @@ export default async function LeaderboardPage({
       .eq('user_id', user.id);
       
     if (userPicks) {
-      const pickedClasses = new Set(userPicks.map(p => p.asset_class));
+      const pickedClasses = new Set(userPicks.map(p => toPortfolioModelClass(p.asset_class)));
       missingClasses = requiredClasses.filter(c => !pickedClasses.has(c));
       hasAllAssetClasses = missingClasses.length === 0;
     } else {
@@ -41,28 +43,36 @@ export default async function LeaderboardPage({
 
   // Determine time threshold
   const now = new Date();
-  let threshold = new Date();
-  
-  if (window === "weekly") {
-    threshold.setDate(now.getDate() - 7);
-  } else if (window === "monthly") {
-    threshold.setDate(now.getDate() - 30);
-  } else {
-    // Default: Daily
-    threshold.setDate(now.getDate() - 1);
-  }
+  let thresholdIso: string | null = null;
 
-  const thresholdIso = threshold.toISOString();
+  if (window === "daily") {
+    const t = new Date(now);
+    t.setDate(t.getDate() - 1);
+    thresholdIso = t.toISOString();
+  } else if (window === "weekly") {
+    const t = new Date(now);
+    t.setDate(t.getDate() - 7);
+    thresholdIso = t.toISOString();
+  } else if (window === "monthly") {
+    const t = new Date(now);
+    t.setDate(t.getDate() - 30);
+    thresholdIso = t.toISOString();
+  }
 
   const adminClient = createAdminClient(getSupabaseUrl(), getSupabaseServiceKey());
 
-  // 1. Fetch picks within the time window (using admin to bypass RLS for global leaderboard)
-  const { data: picks, error: picksError } = await adminClient
-    .from('user_picks')
-    .select('*')
-    .gte('created_at', thresholdIso)
+  // 1. Fetch picks from leaderboard_picks view (includes safe username + picked_at_price)
+  let picksQuery = adminClient
+    .from('leaderboard_picks')
+    .select('pick_id, user_id, username, ticker, picked_at_price, created_at')
     .not('picked_at_price', 'is', null)
     .gt('picked_at_price', 0);
+
+  if (thresholdIso) {
+    picksQuery = picksQuery.gte('created_at', thresholdIso);
+  }
+
+  const { data: picks, error: picksError } = await picksQuery;
 
   if (picksError) {
     console.error("Error fetching leaderboard picks:", picksError);
@@ -71,23 +81,31 @@ export default async function LeaderboardPage({
 
   const validPicks = picks || [];
 
-  // 2. Extract unique tickers to fetch current prices
+  // 2. Extract unique tickers to fetch current prices deterministically
   const tickers = Array.from(new Set(validPicks.map(p => p.ticker)));
-  let currentPrices: Record<string, number> = {};
+  const currentPrices: Record<string, number> = {};
 
   if (tickers.length > 0) {
     const { data: assets, error: assetsError } = await adminClient
       .from('asset_snapshots')
-      .select('ticker, price')
+      .select('ticker, asset_class, market_cap, price')
       .in('ticker', tickers);
       
     if (assetsError) {
       console.error("Error fetching assets:", assetsError);
       error = assetsError.message || 'Something went wrong';
     } else if (assets) {
+      const grouped = new Map<string, any[]>();
       assets.forEach(a => {
-        currentPrices[a.ticker] = a.price;
+        if (!grouped.has(a.ticker)) grouped.set(a.ticker, [a]);
+        else grouped.get(a.ticker)!.push(a);
       });
+      for (const [t, rows] of grouped.entries()) {
+        const canonical = pickCanonicalAssetRow(rows);
+        if (canonical && typeof canonical.price === 'number') {
+          currentPrices[t] = canonical.price;
+        }
+      }
     }
   }
 
@@ -98,9 +116,10 @@ export default async function LeaderboardPage({
     const currentPrice = currentPrices[pick.ticker];
     if (currentPrice !== undefined && currentPrice !== 0 && pick.picked_at_price) {
       const roi = ((currentPrice - pick.picked_at_price) / pick.picked_at_price) * 100;
-      
+      const cleanName = pick.username ? String(pick.username).split('@')[0] : `Investor-${String(pick.user_id).slice(0, 6)}`;
+
       if (!userStats[pick.user_id]) {
-        userStats[pick.user_id] = { userId: pick.user_id, username: pick.username || 'Anonymous', totalRoi: 0, picksCount: 0 };
+        userStats[pick.user_id] = { userId: pick.user_id, username: cleanName, totalRoi: 0, picksCount: 0 };
       }
       
       userStats[pick.user_id].totalRoi += roi;
@@ -152,9 +171,10 @@ export default async function LeaderboardPage({
         
         {/* Tabs */}
         <div className="flex items-center gap-2 p-1 bg-zinc-950/50 border border-zinc-800 rounded-full">
-          <TabLink id="daily" label="Daily" />
-          <TabLink id="weekly" label="Weekly" />
+          <TabLink id="all" label="All Time" />
           <TabLink id="monthly" label="Monthly" />
+          <TabLink id="weekly" label="Weekly" />
+          <TabLink id="daily" label="Daily" />
         </div>
       </div>
 

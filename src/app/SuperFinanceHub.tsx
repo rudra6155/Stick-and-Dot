@@ -5,7 +5,6 @@ import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
 import { Search, ChevronDown, Filter, Settings2, Check } from "lucide-react";
 import { fetchAssetsPaginated, fetchAssetClassCounts, fetchTickerTapeAssets, type Asset } from "./actions";
 import dynamic from 'next/dynamic';
-import { useCountUp } from "@/hooks/useCountUp";
 import { AssetCard, AVAILABLE_METRICS } from "@/components/AssetCard";
 
 const TickerHeartbeat = dynamic(() => import('@/components/TickerHeartbeat'), { ssr: false });
@@ -182,27 +181,16 @@ export default function SuperFinanceHub({
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([
     "marketCap", "volume", "peRatio", "dividendYield", "high52Week", "beta"
   ]);
-  const [scanlineText, setScanlineText] = useState("");
-  const placeholder = "Search tickers, assets...";
   const [offset, setOffset] = useState(0);
   const [totalCount, setTotalCount] = useState(initialTotalCount || initialAssetClassCounts['All'] || 0);
   const [assetClassCounts, setAssetClassCounts] = useState<Record<string, number>>(initialAssetClassCounts);
   const [liveDataMap, setLiveDataMap] = useState<Record<string, any>>({});
-  const cacheRef = useRef<Record<string, { assets: Asset[]; totalCount: number }>>({});
+  const fetchedLiveTickersRef = useRef<Set<string>>(new Set());
+  const isInitialMountRef = useRef(true);
 
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0]);
   const heroScale = useTransform(scrollY, [0, 400], [1, 0.95]);
-
-  useEffect(() => {
-    let i = 0;
-    const timer = setInterval(() => {
-      setScanlineText(placeholder.substring(0, i));
-      i++;
-      if (i > placeholder.length) clearInterval(timer);
-    }, 50);
-    return () => clearInterval(timer);
-  }, []);
 
   const fetchData = async (currentOffset: number, append: boolean) => {
     setIsRefreshing(true);
@@ -237,16 +225,17 @@ export default function SuperFinanceHub({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Fetch real-time live prices for visible assets
+  // Fetch real-time live prices for newly visible assets (tracking attempted tickers so failed symbols aren't re-polled)
   useEffect(() => {
     if (!assets || assets.length === 0) return;
-    
-    // Extract tickers that we don't already have live data for
+
     const tickersToFetch = assets
       .map(a => a.symbol)
-      .filter(ticker => !liveDataMap[ticker]);
-      
+      .filter(ticker => ticker && !liveDataMap[ticker] && !fetchedLiveTickersRef.current.has(ticker))
+      .slice(0, 50);
+
     if (tickersToFetch.length === 0) return;
+    tickersToFetch.forEach(t => fetchedLiveTickersRef.current.add(t));
 
     let isMounted = true;
     fetch('/api/live-prices', {
@@ -261,11 +250,23 @@ export default function SuperFinanceHub({
       }
     })
     .catch(err => console.error("Failed to fetch live prices:", err));
-    
+
     return () => { isMounted = false; };
-  }, [assets]); // This intentionally only depends on assets to run whenever new pages load
+  }, [assets]);
 
   useEffect(() => {
+    if (
+      isInitialMountRef.current &&
+      initialAssets.length > 0 &&
+      activeClass === "All" &&
+      activeSector === "All Sectors" &&
+      sortBy === "Market Cap" &&
+      debouncedSearchQuery === ""
+    ) {
+      isInitialMountRef.current = false;
+      return;
+    }
+    isInitialMountRef.current = false;
     setOffset(0);
     // fetchAssetsPaginated is a Server Action rather than a raw fetch(), so its
     // network call itself can't be cancelled — but we still guard against
@@ -578,14 +579,7 @@ export default function SuperFinanceHub({
               {availableSectors.map(sector => (
                 <button
                   key={sector}
-                  onClick={() => {
-                    setActiveSector(sector);
-                    const key = `${activeClass}_${sector}_${sortBy}_${debouncedSearchQuery}`;
-                    if (cacheRef.current[key]) {
-                      setAssets(cacheRef.current[key].assets);
-                      setTotalCount(cacheRef.current[key].totalCount);
-                    }
-                  }}
+                  onClick={() => setActiveSector(sector)}
                   className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors shrink-0 ${
                     activeSector === sector
                       ? "bg-white text-black font-medium"

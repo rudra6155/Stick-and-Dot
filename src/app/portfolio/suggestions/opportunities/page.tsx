@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { getCurrencySymbol, normalizeAssetClass } from "@/lib/asset-utils";
 
 const TYPE_FILTERS = [
   { id: "all", label: "All Opportunities" },
@@ -22,10 +24,8 @@ export default function OpportunitiesPage() {
   const [opportunities, setOpportunities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeFilter, useStateFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState("all");
   const [search, setSearch] = useState("");
-
-  const setActiveFilter = useStateFilter; // mapped due to previous error if existing
 
   useEffect(() => {
     const controller = new AbortController();
@@ -129,8 +129,15 @@ export default function OpportunitiesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((o, i) => (
-              <div key={`${o.ticker}-${o.type}-${i}`} className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-600 transition-colors">
+            {filtered.map((o, i) => {
+              const sym = getCurrencySymbol(o.ticker, o.asset_class);
+              const normClass = normalizeAssetClass(o.asset_class);
+              return (
+              <Link
+                key={`${o.ticker}-${o.type}-${i}`}
+                href={`/portfolio/explore/${encodeURIComponent(normClass)}/${encodeURIComponent(o.ticker)}`}
+                className="block bg-zinc-950 border border-zinc-800 rounded-2xl p-6 hover:border-emerald-500/40 transition-colors"
+              >
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <span className={`inline-block px-2 py-1 rounded-lg text-xs font-mono border mb-2 ${COLOR_MAP[o.color]}`}>
@@ -138,12 +145,12 @@ export default function OpportunitiesPage() {
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="font-black text-lg font-mono text-emerald-400">{o.ticker}</span>
-                      <span className="text-xs text-zinc-500">{o.asset_class}</span>
+                      <span className="text-xs text-zinc-500">{normClass}</span>
                     </div>
                     <p className="text-xs text-zinc-500 truncate max-w-[180px]">{o.short_name}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-mono font-bold">${(o.price || 0).toFixed(2)}</p>
+                    <p className="font-mono font-bold">{sym}{(o.price || 0).toFixed(2)}</p>
                     <p className="text-xs text-zinc-500">{o.sector || "—"}</p>
                   </div>
                 </div>
@@ -152,38 +159,37 @@ export default function OpportunitiesPage() {
                   <div>
                     <p className="text-[10px] text-zinc-600 uppercase font-mono">Rev Growth</p>
                     <p className="text-xs font-mono text-emerald-400 font-medium leading-relaxed">
-                      {o.revenue_growth != null 
-                        ? o.revenue_growth > 5 
-                          ? ">500%" 
-                          : `${(o.revenue_growth * 100).toFixed(1)}%` 
+                      {o.revenue_growth != null
+                        ? o.revenue_growth > 5
+                          ? ">500%"
+                          : `${(o.revenue_growth * 100).toFixed(1)}%`
                         : "—"}
                     </p>
                   </div>
                   <div>
                     <p className="text-[10px] text-zinc-600 uppercase font-mono">Div Yield</p>
                     <p className="text-xs font-mono text-zinc-300 font-medium leading-relaxed">
-                      {o.dividend_yield != null 
-                        ? o.dividend_yield > 0.3 
-                          ? ">30%" 
-                          : `${(o.dividend_yield * 100).toFixed(1)}%` 
+                      {o.dividend_yield != null
+                        ? `${Number(o.dividend_yield).toFixed(2)}%`
                         : "—"}
                     </p>
                   </div>
                   <div>
                     <p className="text-[10px] text-zinc-600 uppercase font-mono">Market Cap</p>
                     <p className="text-xs font-mono text-zinc-300 font-medium leading-relaxed">
-                      {o.market_cap 
-                        ? o.market_cap > 1e12 
-                          ? `${(o.market_cap / 1e12).toFixed(1)}T` 
-                          : o.market_cap > 1e9 
-                            ? `${(o.market_cap / 1e9).toFixed(1)}B` 
-                            : `${(o.market_cap / 1e6).toFixed(0)}M` 
+                      {o.market_cap
+                        ? o.market_cap > 1e12
+                          ? `${(o.market_cap / 1e12).toFixed(1)}T`
+                          : o.market_cap > 1e9
+                            ? `${(o.market_cap / 1e9).toFixed(1)}B`
+                            : `${(o.market_cap / 1e6).toFixed(0)}M`
                         : "—"}
                     </p>
                   </div>
                 </div>
-              </div>
-            ))}
+              </Link>
+              );
+            })}
             {filtered.length === 0 && (
               <div className="col-span-full py-20 text-center text-zinc-500">
                 No opportunities match this filter right now.

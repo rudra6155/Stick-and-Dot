@@ -377,7 +377,17 @@ export default function PredictionsDashboard() {
     setLoadError(null);
     try {
       const data = await fetchLiveMarkets();
-      setMarkets(data);
+      let customMarkets: PredictionEvent[] = [];
+      try {
+        const raw = localStorage.getItem("sfh_custom_markets");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) customMarkets = parsed;
+        }
+      } catch {}
+      const liveIds = new Set(data.map((m) => m.id));
+      const uniqueCustom = customMarkets.filter((m) => m?.id && !liveIds.has(m.id));
+      setMarkets([...uniqueCustom, ...data]);
     } catch {
       setLoadError("Unable to reach the oracle feed. Check your connection and try again.");
       setMarkets([]);
@@ -416,7 +426,16 @@ export default function PredictionsDashboard() {
       ],
       poolSize: data.amount,
     };
-    setMarkets((prev) => [newEvent, ...prev]);
+    setMarkets((prev) => {
+      const next = [newEvent, ...prev];
+      try {
+        const existingRaw = localStorage.getItem("sfh_custom_markets");
+        const existing = existingRaw ? JSON.parse(existingRaw) : [];
+        const list = Array.isArray(existing) ? existing : [];
+        localStorage.setItem("sfh_custom_markets", JSON.stringify([newEvent, ...list].slice(0, 50)));
+      } catch {}
+      return next;
+    });
     if (addActiveBet) {
       addActiveBet({
         id: `bet-${Date.now()}`,

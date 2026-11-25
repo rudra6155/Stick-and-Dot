@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { AssetCard } from "@/components/AssetCard";
+import { inferCurrency, normalizeAssetClass } from "@/lib/asset-utils";
 
 export default function SuggestionsPage() {
   const [data, setData] = useState<{
@@ -65,17 +67,33 @@ export default function SuggestionsPage() {
           <p className="text-zinc-400 mt-2 font-mono text-sm uppercase tracking-widest">{subtitle}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-          {items.map((asset) => (
-            <AssetCard key={asset.id || asset.ticker} asset={{
-              id: asset.id || asset.ticker,
-              symbol: asset.ticker,
-              name: asset.short_name,
-              price: asset.price,
-              change: "—", // Simplified for suggestions
-              isUp: true,
-              assetClass: asset.asset_class,
-            } as any} />
-          ))}
+          {items.map((asset) => {
+            const normClass = normalizeAssetClass(asset.asset_class);
+            return (
+              <Link
+                key={asset.id || asset.ticker}
+                href={`/portfolio/explore/${encodeURIComponent(normClass)}/${encodeURIComponent(asset.ticker)}`}
+                className="block"
+              >
+                <AssetCard asset={{
+                  id: asset.id || asset.ticker,
+                  symbol: asset.ticker,
+                  name: asset.short_name || asset.ticker,
+                  price: asset.price,
+                  change: "—",
+                  isUp: true,
+                  assetClass: normClass,
+                  currency: inferCurrency(asset.ticker, normClass),
+                  marketCap: asset.market_cap ?? 0,
+                  peRatio: asset.pe_ratio ?? null,
+                  dividendYield: asset.dividend_yield ?? null,
+                  revenueGrowth: asset.revenue_growth ?? null,
+                  beta: asset.beta ?? null,
+                  sector: asset.sector ?? "",
+                } as any} />
+              </Link>
+            );
+          })}
         </div>
       </section>
     );

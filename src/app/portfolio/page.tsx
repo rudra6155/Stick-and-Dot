@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Crosshair, ChevronDown, Sparkles, ArrowRight, Vault } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { fetchAssetsByTickers } from "@/app/actions";
+import { toPortfolioModelClass } from "@/lib/asset-utils";
 import { PickItem } from "@/components/PickItem";
 import VaultHeader from "@/components/VaultHeader";
 import PortfolioPerformance from "@/components/PortfolioPerformance";
@@ -286,7 +287,7 @@ export default function MyPortfolioPage() {
     setAlignmentData(null);
     setError("");
     try {
-      const userHoldings = Array.from(new Set(picks.map((p) => p.asset_class)));
+      const userHoldings = Array.from(new Set(picks.map((p) => toPortfolioModelClass(p.asset_class))));
       const res = await fetch("/api/scenario", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

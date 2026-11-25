@@ -1,7 +1,14 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
+import {
+  expandAssetClassFilter,
+  normalizeAssetClass,
+  normalizeDividendYieldPct,
+  toPortfolioModelClass,
+  deduplicateAssetRows,
+} from '@/lib/asset-utils';
 
 const supabase = createClient(
   getSupabaseUrl(),
@@ -90,32 +97,35 @@ export async function POST(req: NextRequest) {
 
   const groupedResults = await Promise.all(
     scenario.queries.map(async (q) => {
-      if (q.filters.asset_class) recommendedClasses.add(q.filters.asset_class);
-      
+      if (q.filters.asset_class) recommendedClasses.add(toPortfolioModelClass(q.filters.asset_class));
+
       let query = supabase
         .from('asset_snapshots')
-        .select('ticker, short_name, price, revenue_growth, dividend_yield, market_cap, beta, asset_class, sector')
-        .order(q.sort_by, { ascending: q.sort_dir === 'asc' })
+        .select('ticker, short_name, price, revenue_growth, dividend_yield, dividend_rate, market_cap, beta, asset_class, sector')
+        .not('ticker', 'like', 'BOND-%')
+        .not('ticker', 'like', 'REIT-%')
+        .not('ticker', 'like', 'COMM-%');
+
+      if (q.sort_by === 'dividend_yield') {
+        query = query.or('dividend_yield.is.null,dividend_yield.lte.50');
+      }
+
+      query = query
+        .order(q.sort_by, { ascending: q.sort_dir === 'asc', nullsFirst: false })
         .limit(q.limit * 2);
 
       if (q.filters.asset_class) {
-        if (q.filters.asset_class === 'Stock') {
-          query = query.in('asset_class', ['US Stock', 'Stock', 'Equity']);
-        } else {
-          query = query.eq('asset_class', q.filters.asset_class);
-        }
+        const variants = expandAssetClassFilter(q.filters.asset_class);
+        query = variants.length > 1 ? query.in('asset_class', variants) : query.eq('asset_class', variants[0]);
       }
       if (q.filters.sector) query = query.eq('sector', q.filters.sector);
 
       const { data } = await query;
-      const seen = new Set<string>();
-      const uniqueAssets: any[] = [];
-      for (const a of data || []) {
-        if (!a || !a.ticker || seen.has(a.ticker)) continue;
-        seen.add(a.ticker);
-        uniqueAssets.push(a);
-        if (uniqueAssets.length >= q.limit) break;
-      }
+      const uniqueAssets = deduplicateAssetRows(data, q.limit).map((a: any) => ({
+        ...a,
+        asset_class: normalizeAssetClass(a.asset_class),
+        dividend_yield: normalizeDividendYieldPct(a.dividend_yield, a.dividend_rate, a.price),
+      }));
       return { label: q.label, assets: uniqueAssets };
     })
   );
@@ -124,13 +134,13 @@ export async function POST(req: NextRequest) {
 
   if (user_holdings) {
     if (!Array.isArray(user_holdings)) {
-        return NextResponse.json({ error: 'user_holdings must be an array' }, { status: 400 });
+      return NextResponse.json({ error: 'user_holdings must be an array' }, { status: 400 });
     }
-    const holdings = new Set(user_holdings);
+    const holdings = new Set(user_holdings.map((c: unknown) => toPortfolioModelClass(c)));
     const wellAligned = Array.from(holdings).filter(c => recommendedClasses.has(c));
     const considerAdding = Array.from(recommendedClasses).filter(c => !holdings.has(c));
     const considerReducing = Array.from(holdings).filter(c => !recommendedClasses.has(c));
-    
+
     alignment = {
       wellAligned,
       considerAdding,

@@ -2,13 +2,20 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
+import {
+  normalizeAssetClass,
+  normalizeDividendYieldPct,
+  isSyntheticTicker,
+  pickCanonicalAssetRow,
+  getCurrencySymbol,
+} from '@/lib/asset-utils';
 
 const supabase = createClient(
   getSupabaseUrl(),
   getSupabaseServiceKey()
 );
 
-const SELECT_COLS = 'ticker, short_name, asset_class, sector, price, market_cap, pe_ratio, revenue_growth, dividend_yield, profit_margins, payout_ratio, return_on_equity, low_52_week, high_52_week, target_mean_price, recommendation_mean';
+const SELECT_COLS = 'ticker, short_name, asset_class, sector, price, market_cap, pe_ratio, revenue_growth, dividend_yield, dividend_rate, profit_margins, payout_ratio, return_on_equity, low_52_week, high_52_week, target_mean_price, recommendation_mean';
 
 export async function GET() {
   const [
@@ -21,6 +28,9 @@ export async function GET() {
     // Dip Buy: revenue_growth > 0.1 and < 5.0 (max 500%), market_cap >= $500M, profit_margins > 0, price < low_52_week * 1.1
     supabase.from('asset_snapshots')
       .select(SELECT_COLS)
+      .not('ticker', 'like', 'BOND-%')
+      .not('ticker', 'like', 'REIT-%')
+      .not('ticker', 'like', 'COMM-%')
       .gt('revenue_growth', 0.1)
       .lt('revenue_growth', 5.0)
       .gte('market_cap', 500_000_000)
@@ -33,6 +43,9 @@ export async function GET() {
     // Momentum: revenue_growth > 0.15 and < 5.0, market_cap >= $500M, price >= high_52_week * 0.95
     supabase.from('asset_snapshots')
       .select(SELECT_COLS)
+      .not('ticker', 'like', 'BOND-%')
+      .not('ticker', 'like', 'REIT-%')
+      .not('ticker', 'like', 'COMM-%')
       .gt('revenue_growth', 0.15)
       .lt('revenue_growth', 5.0)
       .gte('market_cap', 500_000_000)
@@ -41,11 +54,14 @@ export async function GET() {
       .order('revenue_growth', { ascending: false, nullsFirst: false })
       .limit(100),
 
-    // Income: dividend_yield > 0.04 and < 0.25 (max 25%), payout_ratio 0 to 0.7, market_cap >= $500M, profit_margins > 0
+    // Income: dividend_yield >= 4.0 and <= 25.0 (percentage points), payout_ratio 0 to 0.7, market_cap >= $500M, profit_margins > 0
     supabase.from('asset_snapshots')
       .select(SELECT_COLS)
-      .gt('dividend_yield', 0.04)
-      .lt('dividend_yield', 0.25)
+      .not('ticker', 'like', 'BOND-%')
+      .not('ticker', 'like', 'REIT-%')
+      .not('ticker', 'like', 'COMM-%')
+      .gte('dividend_yield', 4)
+      .lte('dividend_yield', 25)
       .gte('market_cap', 500_000_000)
       .gt('payout_ratio', 0)
       .lt('payout_ratio', 0.7)
@@ -57,6 +73,9 @@ export async function GET() {
     // Undervalued: pe_ratio 0 to 15, revenue_growth 0.1 to 5.0, roe > 0.15, market_cap >= $500M
     supabase.from('asset_snapshots')
       .select(SELECT_COLS)
+      .not('ticker', 'like', 'BOND-%')
+      .not('ticker', 'like', 'REIT-%')
+      .not('ticker', 'like', 'COMM-%')
       .gt('pe_ratio', 0)
       .lt('pe_ratio', 15)
       .gt('revenue_growth', 0.1)
@@ -70,6 +89,9 @@ export async function GET() {
     // Analyst Upside: recommendation_mean < 2.5, target_mean_price > price * 1.2, market_cap >= $500M
     supabase.from('asset_snapshots')
       .select(SELECT_COLS)
+      .not('ticker', 'like', 'BOND-%')
+      .not('ticker', 'like', 'REIT-%')
+      .not('ticker', 'like', 'COMM-%')
       .lt('recommendation_mean', 2.5)
       .gt('target_mean_price', 0)
       .gte('market_cap', 500_000_000)
@@ -88,16 +110,27 @@ export async function GET() {
     return NextResponse.json({ opportunities: [], total: 0 });
   }
 
-  // Combine and deduplicate
-  const allDataMap = new Map();
+  // Combine and deduplicate deterministically
+  const grouped = new Map<string, any[]>();
   [...(dips || []), ...(momentum || []), ...(income || []), ...(undervalued || []), ...(analyst || [])].forEach(r => {
-    if (!allDataMap.has(r.ticker)) allDataMap.set(r.ticker, r);
+    if (!r || !r.ticker || isSyntheticTicker(r.ticker)) return;
+    const arr = grouped.get(r.ticker);
+    if (arr) arr.push(r);
+    else grouped.set(r.ticker, [r]);
   });
-  const data = Array.from(allDataMap.values());
+  const data = Array.from(grouped.values())
+    .map(rows => pickCanonicalAssetRow(rows))
+    .filter((r): r is any => r !== null);
 
   const opportunities: any[] = [];
 
   for (const r of data) {
+    const normalizedRow = {
+      ...r,
+      asset_class: normalizeAssetClass(r.asset_class),
+      dividend_yield: normalizeDividendYieldPct(r.dividend_yield, r.dividend_rate, r.price),
+    };
+    const sym = getCurrencySymbol(r.ticker, normalizedRow.asset_class);
     const growthDisplay = r.revenue_growth != null 
       ? Math.min(r.revenue_growth * 100, 500).toFixed(1) 
       : '0.0';
@@ -115,7 +148,7 @@ export async function GET() {
         label: "📉 Near 52W Low — Strong Fundamentals",
         desc: `Price near yearly low but revenue growing at ${growthDisplay}%`,
         color: "emerald",
-        ...r,
+        ...normalizedRow,
       });
     }
 
@@ -131,14 +164,16 @@ export async function GET() {
         label: "🚀 Near 52W High — Strong Momentum",
         desc: `Breaking out with ${growthDisplay}% revenue growth`,
         color: "blue",
-        ...r,
+        ...normalizedRow,
       });
     }
 
-    // Opportunity 3 — High sustainable dividend
+    // Opportunity 3 — High sustainable dividend (4% - 25%)
+    const normDy = normalizedRow.dividend_yield;
     if (
-      r.dividend_yield > 0.04 &&
-      r.dividend_yield < 0.25 &&
+      normDy != null &&
+      normDy >= 4 &&
+      normDy <= 25 &&
       r.payout_ratio > 0 &&
       r.payout_ratio < 0.7 &&
       r.profit_margins > 0
@@ -146,9 +181,9 @@ export async function GET() {
       opportunities.push({
         type: "income",
         label: "💵 High Sustainable Dividend",
-        desc: `${(r.dividend_yield * 100).toFixed(1)}% yield with ${(r.payout_ratio * 100).toFixed(0)}% payout ratio`,
+        desc: `${normDy.toFixed(1)}% yield with ${(r.payout_ratio * 100).toFixed(0)}% payout ratio`,
         color: "amber",
-        ...r,
+        ...normalizedRow,
       });
     }
 
@@ -164,7 +199,7 @@ export async function GET() {
         label: "🔍 Undervalued Growth",
         desc: `P/E of ${r.pe_ratio.toFixed(1)} with ${growthDisplay}% growth and ${(r.return_on_equity * 100).toFixed(1)}% ROE`,
         color: "violet",
-        ...r,
+        ...normalizedRow,
       });
     }
 
@@ -177,9 +212,9 @@ export async function GET() {
       opportunities.push({
         type: "analyst_upside",
         label: "🎯 Strong Analyst Upside",
-        desc: `Analysts target $${r.target_mean_price.toFixed(2)} — ${((r.target_mean_price / r.price - 1) * 100).toFixed(0)}% upside`,
+        desc: `Analysts target ${sym}${r.target_mean_price.toFixed(2)} — ${((r.target_mean_price / r.price - 1) * 100).toFixed(0)}% upside`,
         color: "cyan",
-        ...r,
+        ...normalizedRow,
       });
     }
   }

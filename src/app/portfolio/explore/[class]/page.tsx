@@ -7,6 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import { Search, Filter, ArrowUp, ArrowDown, ArrowLeft, Settings2, Check, ChevronDown } from "lucide-react";
 import { AssetCard, AVAILABLE_METRICS } from "@/components/AssetCard";
 import { motion, AnimatePresence } from "framer-motion";
+import { normalizeAssetClass } from "@/lib/asset-utils";
 
 type Asset = any;
 
@@ -52,8 +53,10 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
   // We use selectedMetrics from state now
 
   useEffect(() => {
+    const normalized = normalizeAssetClass(assetClass);
     fetchAssetClassCounts().catch(() => ({} as Record<string, number>)).then(counts => {
-      setLiveCount((counts as Record<string, number>)[assetClass] || 0);
+      const countMap = counts as Record<string, number>;
+      setLiveCount(countMap[normalized] ?? countMap[assetClass] ?? 0);
     });
   }, [assetClass]);
 
@@ -87,11 +90,14 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
         });
         if (active) {
           setAssets(prev => {
-            if (offset === 0) return newAssets;
-            // Deduplicate to avoid React key errors if StrictMode double-fetches
-            const existing = new Set(prev.map((a: any) => a.symbol));
-            const distinctNew = newAssets.filter((a: any) => !existing.has(a.symbol));
-            return [...prev, ...distinctNew];
+            const base = offset === 0 ? [] : prev;
+            const existing = new Set(base.map((a: any) => a.symbol));
+            const distinctNew = newAssets.filter((a: any) => {
+              if (!a?.symbol || existing.has(a.symbol)) return false;
+              existing.add(a.symbol);
+              return true;
+            });
+            return [...base, ...distinctNew];
           });
           setTotalCount(newTotal);
         }

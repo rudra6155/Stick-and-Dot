@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { getCurrencySymbol, normalizeAssetClass } from "@/lib/asset-utils";
 
 const PRACTICAL_FILTERS = [
   {
@@ -23,8 +25,8 @@ const PRACTICAL_FILTERS = [
   {
     id: "income",
     label: "💵 Passive income",
-    desc: "High dividend yield",
-    filters: { sort_by: "dividend_yield", sort_dir: "desc", min_dividend_yield: 0.02 }
+    desc: "High dividend yield (>2%)",
+    filters: { sort_by: "dividend_yield", sort_dir: "desc", min_dividend_yield: 2 }
   },
   {
     id: "undervalued",
@@ -55,7 +57,10 @@ const SORT_OPTIONS = [
 
 const formatMetric = (val: any, key: string) => {
   if (val === null || val === undefined) return "—";
-  if (["revenue_growth", "earnings_growth", "profit_margins", "dividend_yield", "return_on_equity"].includes(key)) {
+  if (key === "dividend_yield") {
+    return typeof val === "number" ? val.toFixed(2) + "%" : String(val);
+  }
+  if (["revenue_growth", "earnings_growth", "profit_margins", "return_on_equity"].includes(key)) {
     if (typeof val === "number") {
       if (val > 5) return ">500%";
       if (val < -1) return "<-100%";
@@ -95,7 +100,7 @@ export default function ScreenerPage() {
     sort_dir: sortDir,
     min_market_cap: minMarketCap ? Number(minMarketCap) * 1e9 : undefined,
     max_pe: maxPe ? Number(maxPe) : undefined,
-    min_dividend_yield: minDiv ? Number(minDiv) / 100 : undefined,
+    min_dividend_yield: minDiv ? Number(minDiv) : undefined,
     min_revenue_growth: minRevGrowth ? Number(minRevGrowth) / 100 : undefined,
     max_beta: maxBeta ? Number(maxBeta) : undefined,
     min_roe: minRoe ? Number(minRoe) / 100 : undefined,
@@ -156,6 +161,7 @@ export default function ScreenerPage() {
       }
     } catch (e: any) {
       console.error(e);
+      setError(e.message || 'Something went wrong');
     } finally {
       setLoadingMore(false);
     }
@@ -173,7 +179,7 @@ export default function ScreenerPage() {
     setSortDir(f.sort_dir || "desc");
     setMinMarketCap("");
     setMaxPe(f.max_pe !== undefined ? String(f.max_pe) : "");
-    setMinDiv(f.min_dividend_yield !== undefined ? String(f.min_dividend_yield * 100) : "");
+    setMinDiv(f.min_dividend_yield !== undefined ? String(f.min_dividend_yield) : "");
     setMinRevGrowth(f.min_revenue_growth !== undefined ? String(f.min_revenue_growth * 100) : "");
     setMaxBeta(f.max_beta !== undefined ? String(f.max_beta) : "");
     setMinRoe(f.min_roe !== undefined ? String(f.min_roe * 100) : "");
@@ -297,7 +303,7 @@ export default function ScreenerPage() {
               Showing top {results.length.toLocaleString()} of {totalCount.toLocaleString()} matching assets
             </span>
             <span className="text-zinc-600">
-              Database: 36,000+ assets screened
+              Database: 150,000+ global assets
             </span>
           </div>
         )}
@@ -342,17 +348,28 @@ export default function ScreenerPage() {
                   </td>
                 </tr>
               ) : (
-                results.map((r, i) => (
+                results.map((r, i) => {
+                  const sym = getCurrencySymbol(r.ticker, r.asset_class);
+                  const detailHref = `/portfolio/explore/${encodeURIComponent(normalizeAssetClass(r.asset_class))}/${encodeURIComponent(r.ticker)}`;
+                  return (
                   <tr key={r.ticker} className="hover:bg-zinc-900/30 transition-colors font-medium leading-relaxed">
                     <td className="p-4 text-zinc-500 font-mono">#{i + 1}</td>
-                    <td className="p-4 font-bold text-emerald-400 font-mono">{r.ticker}</td>
-                    <td className="p-4 text-zinc-300 truncate max-w-[180px]">{r.short_name || r.ticker}</td>
+                    <td className="p-4 font-bold font-mono">
+                      <Link href={detailHref} className="text-emerald-400 hover:text-emerald-300 hover:underline">
+                        {r.ticker}
+                      </Link>
+                    </td>
+                    <td className="p-4 text-zinc-300 truncate max-w-[180px]">
+                      <Link href={detailHref} className="hover:text-white transition-colors">
+                        {r.short_name || r.ticker}
+                      </Link>
+                    </td>
                     <td className="p-4 text-zinc-500 text-xs">
                       <span className="text-zinc-400">{r.asset_class}</span>
                       {r.sector && <span className="text-zinc-700 mx-1">·</span>}
                       {r.sector && <span>{r.sector}</span>}
                     </td>
-                    <td className="p-4 text-right font-mono">{r.price != null ? `$${r.price.toFixed(2)}` : "—"}</td>
+                    <td className="p-4 text-right font-mono">{r.price != null ? `${sym}${r.price.toFixed(2)}` : "—"}</td>
                     <td className="p-4 text-right font-mono text-emerald-400">
                       {formatMetric(r[sortBy], sortBy)}
                     </td>
@@ -376,7 +393,8 @@ export default function ScreenerPage() {
                       </span>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

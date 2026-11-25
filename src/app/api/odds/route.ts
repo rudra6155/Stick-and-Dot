@@ -22,14 +22,14 @@ const NEWS_GROUNDED_MARKETS: Omit<PredictionEvent, 'id'>[] = [
     newsSource: 'Reuters / Bloomberg',
   },
   {
-    title: 'Will Apple announce an M6-powered Mac or Touchscreen MacBook at its upcoming October event?',
+    title: 'Will Apple unveil an M6-powered Mac or Touchscreen MacBook hardware refresh before Q2 2027?',
     category: 'Equities',
     status: 'Open',
-    resolutionDate: 'October Event',
+    resolutionDate: 'Q1 2027',
     outcomes: [{ label: 'Yes', odds: 2.10, probability: 48 }, { label: 'No', odds: 1.75, probability: 57 }],
     poolSize: 520000,
-    newsHeadline: 'Apple October 2026 launches: Touchscreen MacBook Pro, M6 iMac, OLED iPad Mini expected',
-    newsSource: 'Livemint',
+    newsHeadline: 'Apple Mac roadmap signals Touchscreen OLED MacBook Pro and M6 iMac cycle into 2027',
+    newsSource: 'Livemint / Bloomberg',
   },
   {
     title: 'Will Nvidia announce next-generation industrial robotics and European sovereign AI cloud partnerships at GTC Berlin?',
@@ -104,19 +104,20 @@ const NEWS_GROUNDED_MARKETS: Omit<PredictionEvent, 'id'>[] = [
 ];
 
 // Curated high-signal real-world tech startup prediction markets
-const STARTUP_MARKETS: Omit<PredictionEvent, 'id'>[] = [
+const STARTUP_MARKETS: Array<Omit<PredictionEvent, 'id'> & { id?: string }> = [
   {
-    title: 'Will OpenAI complete conversion to a Delaware for-profit corporation before Q4 2026?',
+    id: 'startup-0',
+    title: 'Will OpenAI complete full conversion to a public-benefit for-profit corporation and file S-1 groundwork before mid-2027?',
     category: 'Startup',
     status: 'Open',
-    resolutionDate: 'Q4 2026',
+    resolutionDate: 'Mid 2027',
     outcomes: [{ label: 'Yes', odds: 1.70, probability: 59 }, { label: 'No', odds: 2.20, probability: 45 }],
     poolSize: 420000,
     newsHeadline: 'OpenAI restructuring advances toward Delaware public-benefit corporate conversion',
     newsSource: 'Wall Street Journal',
   },
   {
-    title: 'Will OpenAI release GPT-5 / Orion frontier model before June 2027?',
+    title: 'Will OpenAI release its next frontier Orion / GPT-next flagship model before June 2027?',
     category: 'Startup',
     status: 'Open',
     resolutionDate: 'Mid 2027',
@@ -126,6 +127,7 @@ const STARTUP_MARKETS: Omit<PredictionEvent, 'id'>[] = [
     newsSource: 'The Information',
   },
   {
+    id: 'startup-14',
     title: 'Will SpaceX Starship achieve successful orbital catch on Tower 2 before Q2 2027?',
     category: 'Startup',
     status: 'Open',
@@ -146,6 +148,7 @@ const STARTUP_MARKETS: Omit<PredictionEvent, 'id'>[] = [
     newsSource: 'Bloomberg',
   },
   {
+    id: 'startup-9',
     title: 'Will Stripe file official S-1 IPO documents on NASDAQ before mid-2027?',
     category: 'Startup',
     status: 'Open',
@@ -156,23 +159,24 @@ const STARTUP_MARKETS: Omit<PredictionEvent, 'id'>[] = [
     newsSource: 'Financial Times',
   },
   {
-    title: 'Will Stripe achieve $1.5 Trillion in annual total payment volume (TPV) in 2026?',
+    title: 'Will Stripe surpass $1.5 Trillion in annualized total payment volume (TPV) before Q2 2027?',
     category: 'Startup',
     status: 'Open',
-    resolutionDate: 'End of 2026',
+    resolutionDate: 'Q1 2027',
     outcomes: [{ label: 'Yes', odds: 1.50, probability: 67 }, { label: 'No', odds: 2.60, probability: 38 }],
     poolSize: 280000,
     newsHeadline: 'Enterprise billing migration accelerates Stripe transaction volume',
     newsSource: 'TechCrunch',
   },
   {
-    title: 'Will Anthropic Claude 4 surpass OpenAI frontier models on GPQA and SWE-bench by Q2 2027?',
+    id: 'startup-1',
+    title: 'Will Anthropic Claude 4+ surpass rival frontier models on SWE-bench Verified by Q2 2027?',
     category: 'Startup',
     status: 'Open',
     resolutionDate: 'Q2 2027',
     outcomes: [{ label: 'Yes', odds: 1.95, probability: 51 }, { label: 'No', odds: 1.85, probability: 54 }],
     poolSize: 340000,
-    newsHeadline: 'Anthropic deploys Sonnet 3.5 computer use and scales Claude 4 cluster',
+    newsHeadline: 'Anthropic scales Claude computer-use and next-generation reasoning clusters',
     newsSource: 'VentureBeat',
   },
   {
@@ -186,63 +190,66 @@ const STARTUP_MARKETS: Omit<PredictionEvent, 'id'>[] = [
     newsSource: 'Reuters',
   },
   {
+    id: 'startup-11',
     title: 'Will Databricks complete an IPO at an initial public valuation exceeding $65 Billion?',
     category: 'Startup',
     status: 'Open',
-    resolutionDate: 'Late 2026',
+    resolutionDate: 'Mid 2027',
     outcomes: [{ label: 'Yes', odds: 1.75, probability: 57 }, { label: 'No', odds: 2.10, probability: 48 }],
     poolSize: 315000,
-    newsHeadline: 'Databricks ARR reaches $2.4B driven by MosaicML generative AI demand',
+    newsHeadline: 'Databricks ARR accelerates driven by enterprise lakehouse and AI adoption',
     newsSource: 'Forbes',
   },
   {
-    title: 'Will ByteDance finalize a US joint venture restructuring for TikTok operations in 2026?',
+    title: 'Will ByteDance finalize a US joint venture restructuring for TikTok operations by Q1 2027?',
     category: 'Startup',
     status: 'Open',
-    resolutionDate: 'End of 2026',
+    resolutionDate: 'Q1 2027',
     outcomes: [{ label: 'Yes', odds: 1.90, probability: 53 }, { label: 'No', odds: 1.90, probability: 53 }],
     poolSize: 450000,
     newsHeadline: 'US court reviews TikTok divestment timeline amid ongoing national security talks',
     newsSource: 'CNBC',
   },
   {
-    title: 'Will Revolut secure a full US national bank charter or acquire a US FDIC bank before 2027?',
+    title: 'Will Revolut secure a full US national bank charter or acquire a US FDIC bank before mid-2027?',
     category: 'Startup',
     status: 'Open',
-    resolutionDate: 'Q4 2026',
+    resolutionDate: 'Mid 2027',
     outcomes: [{ label: 'Yes', odds: 2.40, probability: 42 }, { label: 'No', odds: 1.58, probability: 63 }],
     poolSize: 290000,
-    newsHeadline: 'Revolut receives UK banking license with restrictions, eyes US OCC expansion',
+    newsHeadline: 'Revolut advances UK banking rollout and eyes US OCC charter expansion',
     newsSource: 'Sky News',
   },
   {
-    title: 'Will Canva file for an Initial Public Offering on the New York Stock Exchange in 2026?',
+    id: 'startup-12',
+    title: 'Will Canva file publicly for an Initial Public Offering on the NYSE or NASDAQ before Q3 2027?',
     category: 'Startup',
     status: 'Open',
-    resolutionDate: 'Q3 2026',
+    resolutionDate: 'Q2 2027',
     outcomes: [{ label: 'Yes', odds: 1.85, probability: 54 }, { label: 'No', odds: 1.95, probability: 51 }],
     poolSize: 240000,
-    newsHeadline: 'Canva completes $1.6B secondary share sale as public market roadmap emerges',
+    newsHeadline: 'Canva completes secondary share sale as public market roadmap advances',
     newsSource: 'Bloomberg',
   },
   {
     title: 'Will Scale AI surpass $1 Billion in cumulative annualized defense and intelligence contracts?',
     category: 'Startup',
     status: 'Open',
-    resolutionDate: 'End of 2026',
+    resolutionDate: 'Q1 2027',
     outcomes: [{ label: 'Yes', odds: 1.68, probability: 60 }, { label: 'No', odds: 2.20, probability: 45 }],
     poolSize: 275000,
     newsHeadline: 'DoD expands Thunderdome and algorithmic warfare labeling mandates',
     newsSource: 'Defense News',
   },
   {
-    title: 'Will xAI expand its Colossus supercluster to 200,000 GPUs before mid-2027?',
+    id: 'startup-2',
+    title: 'Will xAI expand its Colossus supercluster to 200,000+ GPUs before mid-2027?',
     category: 'Startup',
     status: 'Open',
     resolutionDate: 'Mid 2027',
     outcomes: [{ label: 'Yes', odds: 1.60, probability: 63 }, { label: 'No', odds: 2.35, probability: 43 }],
     poolSize: 360000,
-    newsHeadline: 'xAI Memphis datacenter brings 100k H100s online in record 122 days',
+    newsHeadline: 'xAI Memphis datacenter expands liquid-cooled GPU capacity for Grok training',
     newsSource: 'Tomshardware',
   },
   {
@@ -256,6 +263,7 @@ const STARTUP_MARKETS: Omit<PredictionEvent, 'id'>[] = [
     newsSource: 'Aviation Week',
   },
   {
+    id: 'startup-3',
     title: 'Will Perplexity AI reach 100 Million daily active queries before Q3 2027?',
     category: 'Startup',
     status: 'Open',
@@ -266,64 +274,199 @@ const STARTUP_MARKETS: Omit<PredictionEvent, 'id'>[] = [
     newsSource: 'TechCrunch',
   },
   {
-    title: 'Will Figma re-file for an independent public IPO listing on NASDAQ before end of 2026?',
+    id: 'startup-4',
+    title: 'Will Mistral AI raise a new funding round above $12B valuation or enter a strategic EU cloud partnership in 2027?',
     category: 'Startup',
     status: 'Open',
-    resolutionDate: 'Late 2026',
+    resolutionDate: 'Mid 2027',
+    outcomes: [{ label: 'Yes', odds: 1.85, probability: 54 }, { label: 'No', odds: 1.95, probability: 51 }],
+    poolSize: 215000,
+    newsHeadline: 'Mistral AI expands European sovereign model deployments for enterprise banking',
+    newsSource: 'Financial Times',
+  },
+  {
+    id: 'startup-5',
+    title: 'Will Figure AI deploy 1,000+ humanoid robots in commercial manufacturing facilities before end of 2027?',
+    category: 'Startup',
+    status: 'Open',
+    resolutionDate: 'End of 2027',
+    outcomes: [{ label: 'Yes', odds: 2.15, probability: 47 }, { label: 'No', odds: 1.72, probability: 58 }],
+    poolSize: 280000,
+    newsHeadline: 'Figure AI expands automotive factory trials with high-speed Vision-Language-Action control',
+    newsSource: 'Reuters',
+  },
+  {
+    id: 'startup-8',
+    title: 'Will Runway ML cross $300M ARR driven by enterprise AI film & ad studio licensing by Q3 2027?',
+    category: 'Startup',
+    status: 'Open',
+    resolutionDate: 'Q3 2027',
+    outcomes: [{ label: 'Yes', odds: 1.90, probability: 53 }, { label: 'No', odds: 1.90, probability: 53 }],
+    poolSize: 195000,
+    newsHeadline: 'Runway deepens major studio production partnerships for controllable video generation',
+    newsSource: 'Variety',
+  },
+  {
+    id: 'startup-10',
+    title: 'Will Klarna sustain GAAP profitability for four consecutive quarters post-listing through 2027?',
+    category: 'Startup',
+    status: 'Open',
+    resolutionDate: 'Late 2027',
+    outcomes: [{ label: 'Yes', odds: 1.74, probability: 57 }, { label: 'No', odds: 2.12, probability: 47 }],
+    poolSize: 225000,
+    newsHeadline: 'Klarna BNPL transaction volume expands across US merchants with AI underwriting',
+    newsSource: 'Bloomberg',
+  },
+  {
+    title: 'Will Figma re-file for an independent public IPO listing on NASDAQ before mid-2027?',
+    category: 'Startup',
+    status: 'Open',
+    resolutionDate: 'Mid 2027',
     outcomes: [{ label: 'Yes', odds: 1.78, probability: 56 }, { label: 'No', odds: 2.05, probability: 49 }],
     poolSize: 230000,
-    newsHeadline: 'Figma introduces AI design generative tooling following Adobe termination',
+    newsHeadline: 'Figma expands AI design-to-code platform ahead of public market preparations',
     newsSource: 'The Verge',
   },
   {
-    title: 'Will Groq achieve enterprise hardware and cloud LPU revenue exceeding $500M in FY2026?',
+    title: 'Will Groq surpass $500M in annualized enterprise & sovereign AI inference revenue?',
     category: 'Startup',
     status: 'Open',
-    resolutionDate: 'FY2026',
+    resolutionDate: 'Q2 2027',
     outcomes: [{ label: 'Yes', odds: 2.25, probability: 44 }, { label: 'No', odds: 1.65, probability: 61 }],
     poolSize: 185000,
     newsHeadline: 'Groq LPUs gain adoption for high-speed open-source inference token delivery',
     newsSource: 'SemiAnalysis',
   },
   {
-    title: 'Will Waymo commercial autonomous rides surpass 250,000 paid rides per week in 2026?',
+    id: 'startup-6',
+    title: 'Will Waymo commercial autonomous rides surpass 250,000 paid rides per week in 2027?',
     category: 'Startup',
     status: 'Open',
-    resolutionDate: 'End of 2026',
+    resolutionDate: 'Mid 2027',
     outcomes: [{ label: 'Yes', odds: 1.52, probability: 66 }, { label: 'No', odds: 2.50, probability: 40 }],
     poolSize: 340000,
-    newsHeadline: 'Alphabet commits $5B multi-year investment as Waymo robotaxis scale to LA and Austin',
+    newsHeadline: 'Alphabet commits $5B multi-year investment as Waymo robotaxis scale to US metros',
     newsSource: 'Reuters',
   },
   {
-    title: 'Will Cursor (Anysphere) surpass $200 Million in Annual Recurring Revenue before Q4 2026?',
+    title: 'Will Cursor (Anysphere) surpass $300 Million in Annual Recurring Revenue before mid-2027?',
     category: 'Startup',
     status: 'Open',
-    resolutionDate: 'Q4 2026',
+    resolutionDate: 'Mid 2027',
     outcomes: [{ label: 'Yes', odds: 1.65, probability: 61 }, { label: 'No', odds: 2.25, probability: 44 }],
     poolSize: 320000,
-    newsHeadline: 'Cursor captures developer market share with rapid codebase indexing and models',
+    newsHeadline: 'Cursor captures enterprise developer market share with multi-agent code indexing',
     newsSource: 'Business Insider',
   },
   {
+    id: 'startup-15',
     title: 'Will Zepto complete an Indian stock exchange (BSE/NSE) public listing before mid-2027?',
     category: 'Startup',
     status: 'Open',
     resolutionDate: 'Mid 2027',
     outcomes: [{ label: 'Yes', odds: 1.72, probability: 58 }, { label: 'No', odds: 2.15, probability: 47 }],
     poolSize: 220000,
-    newsHeadline: 'Zepto closes $340M round and accelerates domestic Indian headquarters relocation',
+    newsHeadline: 'Zepto expands dark store footprint and accelerates domestic Indian IPO planning',
     newsSource: 'Economic Times',
   },
   {
+    id: 'startup-16',
+    title: 'Will PhonePe file its DRHP for a Mumbai (NSE/BSE) listing at a $15B+ valuation in 2027?',
+    category: 'Startup',
+    status: 'Open',
+    resolutionDate: 'Mid 2027',
+    outcomes: [{ label: 'Yes', odds: 1.68, probability: 60 }, { label: 'No', odds: 2.20, probability: 45 }],
+    poolSize: 265000,
+    newsHeadline: 'Walmart-backed PhonePe scales UPI merchant lending and wealth distribution',
+    newsSource: 'Mint',
+  },
+  {
+    id: 'startup-17',
     title: 'Will Razorpay finalize its reverse-flip to India and file a draft red herring prospectus (DRHP)?',
     category: 'Startup',
     status: 'Open',
-    resolutionDate: 'Late 2026',
+    resolutionDate: 'Q1 2027',
     outcomes: [{ label: 'Yes', odds: 1.60, probability: 63 }, { label: 'No', odds: 2.35, probability: 43 }],
     poolSize: 245000,
     newsHeadline: 'Fintech unicorn Razorpay clears Indian regulatory milestones for domestic IPO filing',
     newsSource: 'Mint',
+  },
+  {
+    id: 'startup-18',
+    title: 'Will Groww cross 50 Million NSE/CDSL registered investors and file for an India IPO by late 2027?',
+    category: 'Startup',
+    status: 'Open',
+    resolutionDate: 'Late 2027',
+    outcomes: [{ label: 'Yes', odds: 1.76, probability: 57 }, { label: 'No', odds: 2.08, probability: 48 }],
+    poolSize: 205000,
+    newsHeadline: 'Groww leads Indian retail broking active client share on NSE',
+    newsSource: 'Moneycontrol',
+  },
+  {
+    id: 'startup-19',
+    title: 'Will Swiggy Instamart achieve contribution-margin profitability across top-8 Indian metros in 2027?',
+    category: 'Startup',
+    status: 'Open',
+    resolutionDate: 'Q2 2027',
+    outcomes: [{ label: 'Yes', odds: 1.88, probability: 53 }, { label: 'No', odds: 1.92, probability: 52 }],
+    poolSize: 210000,
+    newsHeadline: 'Swiggy Instamart expands dark-store average order values against Blinkit and Zepto',
+    newsSource: 'Economic Times',
+  },
+  {
+    id: 'startup-20',
+    title: 'Will Meesho debut on Indian exchanges (NSE/BSE) at a valuation above $4.5 Billion?',
+    category: 'Startup',
+    status: 'Open',
+    resolutionDate: 'Q2 2027',
+    outcomes: [{ label: 'Yes', odds: 1.72, probability: 58 }, { label: 'No', odds: 2.15, probability: 47 }],
+    poolSize: 190000,
+    newsHeadline: 'Meesho turns cash-flow positive as Tier 2/3 Indian e-commerce orders surge',
+    newsSource: 'Inc42',
+  },
+  {
+    id: 'startup-22',
+    title: 'Will Ola Electric reclaim >25% monthly Indian EV two-wheeler registration market share in 2027?',
+    category: 'Startup',
+    status: 'Open',
+    resolutionDate: 'Mid 2027',
+    outcomes: [{ label: 'Yes', odds: 2.25, probability: 44 }, { label: 'No', odds: 1.65, probability: 61 }],
+    poolSize: 230000,
+    newsHeadline: 'Ola Electric ramps Gigafactory cell integration amid intense EV competition',
+    newsSource: 'Mint',
+  },
+  {
+    id: 'startup-23',
+    title: 'Will Zerodha launch new international GIFT City global investing rails while staying bootstrapped through 2027?',
+    category: 'Startup',
+    status: 'Open',
+    resolutionDate: 'End of 2027',
+    outcomes: [{ label: 'Yes', odds: 1.48, probability: 68 }, { label: 'No', odds: 2.65, probability: 38 }],
+    poolSize: 175000,
+    newsHeadline: 'Bootstrapped Zerodha expands Kite and Coin retail ecosystem across India',
+    newsSource: 'Economic Times',
+  },
+  {
+    id: 'startup-24',
+    title: 'Will CRED turn full-year EBITDA positive ahead of a targeted 2027 IPO window?',
+    category: 'Startup',
+    status: 'Open',
+    resolutionDate: 'End of 2027',
+    outcomes: [{ label: 'Yes', odds: 2.10, probability: 48 }, { label: 'No', odds: 1.75, probability: 57 }],
+    poolSize: 195000,
+    newsHeadline: 'CRED expands secured credit, UPI RuPay lines, and wealth products for affluent members',
+    newsSource: 'YourStory',
+  },
+  {
+    id: 'startup-29',
+    title: 'Will BharatPe achieve full-year operational profitability across merchant lending and Unity SFB before Q4 2027?',
+    category: 'Startup',
+    status: 'Open',
+    resolutionDate: 'Late 2027',
+    outcomes: [{ label: 'Yes', odds: 1.95, probability: 51 }, { label: 'No', odds: 1.85, probability: 54 }],
+    poolSize: 165000,
+    newsHeadline: 'BharatPe expands NBFC merchant loan book and post-governance growth plan',
+    newsSource: 'Entrackr',
   },
 ];
 
@@ -661,17 +804,27 @@ export async function GET() {
     const { data: usStocks } = await supabase
       .from('asset_snapshots')
       .select('ticker, short_name, price, market_cap, high_52_week')
-      .in('asset_class', ['US Stock', 'Stock'])
+      .in('asset_class', ['US Stock', 'Stock', 'Equity'])
+      .not('ticker', 'like', 'BOND-%')
       .order('market_cap', { ascending: false, nullsFirst: false })
       .limit(250);
 
     if (usStocks && usStocks.length > 0) {
-      usStocks.forEach((eq: any, idx: number) => {
+      const seenLiveCompanies = new Set<string>();
+      const seenEqTickers = new Set<string>();
+      let liveEqCount = 0;
+
+      usStocks.forEach((eq: any) => {
+        if (!eq.ticker || seenEqTickers.has(eq.ticker)) return;
+        seenEqTickers.add(eq.ticker);
+
         const price = eq.price || 100;
         const target = Math.round(price * 1.07 * 10) / 10;
-        
-        // Top 8 mega-cap tech stocks get Live Session markets
-        if (idx < 8) {
+        const companyKey = (eq.short_name || eq.ticker).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
+
+        // Top 8 distinct mega-cap companies get Live Session markets (avoid duplicate GOOG + GOOGL live cards)
+        if (liveEqCount < 8 && !seenLiveCompanies.has(companyKey)) {
+          seenLiveCompanies.add(companyKey);
           realEvents.push({
             id: `eq-live-${eq.ticker.toLowerCase()}`,
             title: `[LIVE] ${eq.short_name || eq.ticker} Session: Will ${eq.ticker} finish trading in the green (+0.5% or higher)?`,
@@ -682,8 +835,9 @@ export async function GET() {
               { label: 'Yes', odds: 1.90, probability: 51 },
               { label: 'No', odds: 1.90, probability: 51 },
             ],
-            poolSize: 380000 - idx * 25000,
+            poolSize: 380000 - liveEqCount * 25000,
           });
+          liveEqCount++;
         }
 
         realEvents.push({
@@ -744,6 +898,8 @@ export async function GET() {
       .from('asset_snapshots')
       .select('ticker, short_name, price, asset_class')
       .in('asset_class', ['Forex', 'Commodity'])
+      .not('ticker', 'like', 'COMM-%')
+      .gt('price', 0)
       .limit(50);
 
     if (forexComm && forexComm.length > 0) {
@@ -811,11 +967,11 @@ export async function GET() {
     console.warn('Dynamic scenarios load warning:', e.message);
   }
 
-  // Add Curated Startups
+  // Add Curated Startups (preserving explicit startup-* IDs linked by /api/startups)
   STARTUP_MARKETS.forEach((m, i) => {
     curatedEvents.push({
-      id: `startup-curated-${i}`,
       ...m,
+      id: m.id || `startup-curated-${i}`,
     });
   });
 
@@ -827,39 +983,34 @@ export async function GET() {
     });
   });
 
-  // Replicate high-demand real-world startup/macro thesis variants to hit exact target 150
-  const basePool = [...NEWS_GROUNDED_MARKETS, ...STARTUP_MARKETS, ...MACRO_MARKETS];
-  let fillerIndex = 0;
-  while (curatedEvents.length < 150) {
-    const base = basePool[fillerIndex % basePool.length];
-    curatedEvents.push({
-      id: `curated-derived-${curatedEvents.length}`,
-      ...base,
-      poolSize: (base.poolSize || 250000) + (fillerIndex * 750),
-    });
-    fillerIndex++;
-  }
+  // Keep only unique curated/news markets (no artificial cloned duplicates)
+  const finalCurated = curatedEvents;
 
-  // Trim or slice to EXACTLY 150 Curated & News-Grounded events
-  const finalCurated = curatedEvents.slice(0, 150);
-
-  // Ensure realEvents reaches EXACTLY 850 even on quiet sports days (e.g. Mondays)
+  // Ensure realEvents reaches target 850 unique real assets
   if (realEvents.length < 850) {
     const needed = 850 - realEvents.length;
     try {
       const { data: extraAssets } = await supabase
         .from('asset_snapshots')
         .select('ticker, short_name, price, market_cap, asset_class')
+        .not('ticker', 'like', 'BOND-%')
+        .not('ticker', 'like', 'REIT-%')
+        .not('ticker', 'like', 'COMM-%')
         .gt('market_cap', 1000000000)
         .order('market_cap', { ascending: false, nullsFirst: false })
-        .range(300, 300 + needed + 30);
+        .range(300, 300 + needed + 40);
 
       if (extraAssets) {
-        extraAssets.slice(0, needed).forEach((asset: any) => {
+        const existingTitles = new Set(realEvents.map(e => e.id));
+        extraAssets.forEach((asset: any) => {
+          if (realEvents.length >= 850) return;
+          const id = `eq-dyn-${asset.ticker.toLowerCase()}`;
+          if (existingTitles.has(id)) return;
+          existingTitles.add(id);
           const price = asset.price || 100;
           const target = Math.round(price * 1.05 * 10) / 10;
           realEvents.push({
-            id: `eq-dyn-${asset.ticker.toLowerCase()}`,
+            id,
             title: `Will ${asset.short_name || asset.ticker} (${asset.ticker}) break above $${target} this trading month?`,
             category: 'Equities',
             status: 'Open',
@@ -877,10 +1028,8 @@ export async function GET() {
     }
   }
 
-  // Trim or slice real events to EXACTLY 850
+  // Trim or slice real events to 850 and combine with unique curated markets
   const finalReal = realEvents.slice(0, 850);
-
-  // Combine into EXACTLY 1,000 total events (850 Real + 150 Curated)
   const allEvents = [...finalReal, ...finalCurated];
 
   const liveEventsCount = allEvents.filter(e => e.status === 'Live' || e.title.includes('[LIVE')).length;

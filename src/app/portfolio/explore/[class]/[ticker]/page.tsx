@@ -8,15 +8,13 @@ import { AssetBacktestPanel } from "@/components/AssetBacktestPanel";
 import { PickModal } from "@/components/PickModal";
 import { createClient } from "@/utils/supabase/client";
 import RelatedMarketsPanel from "@/components/RelatedMarketsPanel";
-
-const getCurrencySymbol = (ticker: string, currency?: string) => {
-  if (currency === 'INR' || ticker?.endsWith('.NS') || ticker?.endsWith('.BO')) return '₹';
-  if (currency === 'GBP' || ticker?.endsWith('.L')) return '£';
-  if (currency === 'EUR' || ticker?.endsWith('.DE') || ticker?.endsWith('.PA') || ticker?.endsWith('.MI')) return '€';
-  if (currency === 'JPY' || ticker?.endsWith('.T')) return '¥';
-  if (currency === 'MXN' || ticker?.endsWith('.MX')) return 'MX$';
-  return '$';
-};
+import {
+  expandAssetClassFilter,
+  normalizeAssetClass,
+  normalizeDividendYieldPct,
+  pickCanonicalAssetRow,
+  getCurrencySymbol,
+} from "@/lib/asset-utils";
 
 export default function AssetDetailPage({ params }: { params: Promise<{ class: string, ticker: string }> }) {
   const { class: encodedClass, ticker: encodedTicker } = use(params);
@@ -45,15 +43,35 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
       setError("");
 
       try {
-        // 1. Fetch raw asset first and render immediately (instant paint)
-        const { data: assetData, error: assetErr } = await supabase
+        // 1. Fetch raw asset matching ticker and assetClass variants (US Stock/Stock/Equity),
+        // falling back to ticker-only lookup if a cross-category link arrives.
+        const SELECT_COLS = 'id, ticker, short_name, asset_class, sector, industry, price, market_cap, pe_ratio, forward_pe, dividend_yield, dividend_rate, beta, high_52_week, low_52_week, ma_50_day, ma_200_day, fetched_at, revenue_growth, profit_margins, return_on_equity, currency, long_business_summary';
+        const classVariants = expandAssetClassFilter(assetClass);
+        let { data: rows, error: assetErr } = await supabase
           .from('asset_snapshots')
-          .select('id, ticker, short_name, asset_class, sector, industry, price, market_cap, pe_ratio, forward_pe, dividend_yield, beta, high_52_week, low_52_week, ma_50_day, ma_200_day, fetched_at, revenue_growth, profit_margins, return_on_equity')
+          .select(SELECT_COLS)
           .eq('ticker', ticker)
-          .eq('asset_class', assetClass)
-          .single();
+          .in('asset_class', classVariants)
+          .limit(10);
 
-        if (assetErr) throw new Error("Asset not found");
+        if (!assetErr && (!rows || rows.length === 0)) {
+          const fallbackRes = await supabase
+            .from('asset_snapshots')
+            .select(SELECT_COLS)
+            .eq('ticker', ticker)
+            .limit(10);
+          rows = fallbackRes.data;
+          assetErr = fallbackRes.error;
+        }
+
+        const picked = pickCanonicalAssetRow(rows, assetClass);
+        if (assetErr || !picked) throw new Error("Asset not found");
+
+        const assetData = {
+          ...picked,
+          asset_class: normalizeAssetClass(picked.asset_class),
+          dividend_yield: normalizeDividendYieldPct(picked.dividend_yield, picked.dividend_rate, picked.price),
+        };
 
         if (active) {
           setAsset(assetData);
@@ -119,7 +137,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
 
     loadData();
     return () => { active = false; };
-  }, [ticker, supabase]);
+  }, [ticker, assetClass, supabase]);
 
   if (loading && !asset) {
     return (
@@ -191,7 +209,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
               <div className="text-left sm:text-right">
                 <div className="flex items-baseline sm:justify-end gap-3">
                   <span className="text-3xl sm:text-4xl font-mono font-bold text-white">
-                    {getCurrencySymbol(asset.ticker, asset.currency)}{Number(asset.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {getCurrencySymbol(asset.currency || asset.ticker, asset.asset_class)}{Number(asset.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                   {asset.change && (
                     <span className={`text-sm font-mono font-bold ${asset.isUp ? 'text-emerald-400' : 'text-rose-400'}`}>

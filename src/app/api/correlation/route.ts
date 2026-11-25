@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
+import { CANONICAL_SEARCH_ALIASES, pickCanonicalAssetRow } from '@/lib/asset-utils';
 
 const supabase = createClient(
   getSupabaseUrl(),
@@ -81,49 +82,10 @@ function alignSeries(
   return { a, b };
 }
 
-const TICKER_ALIASES: Record<string, string> = {
-  'MICROSOFT': 'MSFT',
-  'APPLE': 'AAPL',
-  'GOOGLE': 'GOOGL',
-  'ALPHABET': 'GOOGL',
-  'AMAZON': 'AMZN',
-  'NVIDIA': 'NVDA',
-  'TESLA': 'TSLA',
-  'META': 'META',
-  'FACEBOOK': 'META',
-  'NETFLIX': 'NFLX',
-  'BITCOIN': 'BTC-USD',
-  'BTC': 'BTC-USD',
-  'ETHEREUM': 'ETH-USD',
-  'ETH': 'ETH-USD',
-  'SOLANA': 'SOL-USD',
-  'SOL': 'SOL-USD',
-  'DOGECOIN': 'DOGE-USD',
-  'DOGE': 'DOGE-USD',
-  'GOLD': 'GC=F',
-  'SILVER': 'SI=F',
-  'OIL': 'CL=F',
-  'CRUDE': 'CL=F',
-  'SP500': 'SPY',
-  'S&P500': 'SPY',
-  'S&P': 'SPY',
-  'DOW': 'DIA',
-  'DOWJONES': 'DIA',
-  'NASDAQ': 'QQQ',
-  'RELIANCE': 'RELIANCE.NS',
-  'TCS': 'TCS.NS',
-  'INFY': 'INFY.NS',
-  'INFOSYS': 'INFY.NS',
-  'HDFC': 'HDFCBANK.NS',
-  'HDFCBANK': 'HDFCBANK.NS',
-  'NIFTY': '^NSEI',
-  'SENSEX': '^BSESN',
-};
-
 function resolveTicker(raw: string): string {
   if (!raw) return '';
   const upper = raw.trim().toUpperCase();
-  return TICKER_ALIASES[upper] || upper;
+  return CANONICAL_SEARCH_ALIASES[upper] || upper;
 }
 
 function synthesizeTrajectory(snapshot: any, days = 60): { date: string; close: number }[] {
@@ -165,20 +127,27 @@ function synthesizeTrajectory(snapshot: any, days = 60): { date: string; close: 
 
 async function fetchPriceHistory(ticker: string): Promise<{ date: string; close: number }[]> {
   const cleanTicker = resolveTicker(ticker);
+  const staleCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  let dbPoints: { date: string; close: number }[] = [];
+
   try {
     const { data, error } = await supabase
       .from('price_history')
       .select('date, close')
       .eq('ticker', cleanTicker)
       .order('date', { ascending: true })
-      .limit(1000);
+      .limit(500);
 
-    if (!error && data && data.length >= 10) return data;
+    if (!error && data && data.length >= 10) {
+      dbPoints = data;
+      const latestDate = data[data.length - 1]?.date || '';
+      if (latestDate >= staleCutoff) return dbPoints;
+    }
   } catch (err) {
     console.warn(`Supabase price_history query error for ${cleanTicker}:`, err);
   }
 
-  // Fallback to live Yahoo Finance chart API with dynamic 1-year lookback
+  // Refresh via live Yahoo Finance chart API when missing or stale past 14 days
   try {
     const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const yfResult = await yf.chart(cleanTicker, { period1: oneYearAgo, interval: '1d' });
@@ -194,15 +163,17 @@ async function fetchPriceHistory(ticker: string): Promise<{ date: string; close:
     console.warn(`Yahoo Finance chart fallback error for ${cleanTicker}:`, err);
   }
 
+  if (dbPoints.length >= 10) return dbPoints;
+
   // Fallback to synthesized snapshot trajectory
   try {
-    const { data: snapshot } = await supabase
+    const { data: snapshots } = await supabase
       .from('asset_snapshots')
       .select('ticker, price, high_52_week, low_52_week, ma_50_day, ma_200_day, beta')
       .ilike('ticker', cleanTicker)
-      .limit(1)
-      .maybeSingle();
+      .limit(5);
 
+    const snapshot = pickCanonicalAssetRow(snapshots);
     if (snapshot) {
       return synthesizeTrajectory(snapshot);
     }
@@ -213,33 +184,44 @@ async function fetchPriceHistory(ticker: string): Promise<{ date: string; close:
   return synthesizeTrajectory({ ticker: cleanTicker, price: 100 });
 }
 
-async function fetchPriceHistoryBatch(tickers: string[]): Promise<Record<string, { date: string; close: number }[]>> {
+async function fetchPriceHistoryBatch(tickers: string[], refreshStaleWithYahoo = true): Promise<Record<string, { date: string; close: number }[]>> {
   const result: Record<string, { date: string; close: number }[]> = {};
-  const cleanTickers = tickers.map(resolveTicker);
+  const cleanTickers = Array.from(new Set(tickers.map(resolveTicker).filter(Boolean)));
+  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const staleCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-  try {
-    const { data, error } = await supabase
-      .from('price_history')
-      .select('ticker, date, close')
-      .in('ticker', cleanTickers)
-      .order('date', { ascending: true })
-      .limit(10000);
+  // Query each ticker individually in bounded parallel batches so PostgREST's 1000-row cap never truncates series
+  const CONCURRENCY = 12;
+  for (let i = 0; i < cleanTickers.length; i += CONCURRENCY) {
+    const batch = cleanTickers.slice(i, i + CONCURRENCY);
+    await Promise.allSettled(
+      batch.map(async (ticker) => {
+        try {
+          const { data, error } = await supabase
+            .from('price_history')
+            .select('date, close')
+            .eq('ticker', ticker)
+            .gte('date', oneYearAgo)
+            .order('date', { ascending: true })
+            .limit(400);
 
-    if (!error && data) {
-      for (const row of data) {
-        if (!result[row.ticker]) result[row.ticker] = [];
-        result[row.ticker].push({ date: row.date, close: row.close });
-      }
-    }
-  } catch (err) {
-    console.warn('Supabase batch price_history error:', err);
+          if (!error && data && data.length > 0) {
+            result[ticker] = data.filter(r => typeof r.close === 'number' && Number.isFinite(r.close));
+          }
+        } catch (err) {
+          console.warn(`Supabase price_history error for ${ticker}:`, err);
+        }
+      })
+    );
   }
 
-  // Fallback to Yahoo Finance with dynamic 1-year lookback
-  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  // Fallback to live Yahoo Finance for missing or stale (>14 days old) series
   await Promise.allSettled(
     cleanTickers.map(async (ticker) => {
-      if (!result[ticker] || result[ticker].length < 10) {
+      const existing = result[ticker] || [];
+      const latestDate = existing.length > 0 ? existing[existing.length - 1].date : '';
+      const needsRefresh = existing.length < 10 || (refreshStaleWithYahoo && latestDate < staleCutoff);
+      if (needsRefresh) {
         try {
           const yfResult = await yf.chart(ticker, { period1: oneYearAgo, interval: '1d' });
           if (yfResult?.quotes && yfResult.quotes.length >= 5) {
@@ -257,18 +239,24 @@ async function fetchPriceHistoryBatch(tickers: string[]): Promise<Record<string,
     })
   );
 
-  // Fallback to asset_snapshots fundamentals for any registered ticker still missing history
+  // Fallback to asset_snapshots fundamentals for any ticker still missing history
   const missingTickers = cleanTickers.filter(t => !result[t] || result[t].length < 10);
   if (missingTickers.length > 0) {
     try {
       const { data: snapshots } = await supabase
         .from('asset_snapshots')
-        .select('ticker, price, high_52_week, low_52_week, ma_50_day, ma_200_day, beta')
+        .select('ticker, asset_class, market_cap, price, high_52_week, low_52_week, ma_50_day, ma_200_day, beta')
         .in('ticker', missingTickers);
 
       if (snapshots && snapshots.length > 0) {
+        const grouped = new Map<string, any[]>();
         for (const s of snapshots) {
-          result[s.ticker] = synthesizeTrajectory(s);
+          if (!grouped.has(s.ticker)) grouped.set(s.ticker, [s]);
+          else grouped.get(s.ticker)!.push(s);
+        }
+        for (const [t, rows] of grouped.entries()) {
+          const best = pickCanonicalAssetRow(rows);
+          if (best) result[t] = synthesizeTrajectory(best);
         }
       }
     } catch (err) {
@@ -277,9 +265,8 @@ async function fetchPriceHistoryBatch(tickers: string[]): Promise<Record<string,
   }
 
   // Map raw aliases to clean results (e.g. BTC -> BTC-USD, MICROSOFT -> MSFT)
-  for (let i = 0; i < tickers.length; i++) {
-    const raw = tickers[i];
-    const clean = cleanTickers[i];
+  for (const raw of tickers) {
+    const clean = resolveTicker(raw);
     if (result[clean] && raw !== clean) {
       result[raw] = result[clean];
     }
@@ -464,29 +451,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Insufficient price history for this ticker' }, { status: 400 });
     }
 
-    // Get a diverse sample of tickers to compare against
+    // Get a diverse sample of real tickers to compare against
     const { data: sampleAssets } = await supabase
       .from('asset_snapshots')
       .select('ticker, short_name, asset_class, price')
+      .not('ticker', 'like', 'BOND-%')
+      .not('ticker', 'like', 'REIT-%')
+      .not('ticker', 'like', 'COMM-%')
       .neq('ticker', ticker)
       .order('market_cap', { ascending: false, nullsFirst: false })
-      .limit(80);
+      .limit(36);
 
     if (!sampleAssets || sampleAssets.length === 0) {
       return NextResponse.json({ correlated: [], inversely_correlated: [] });
     }
 
-    // Deduplicate sampleAssets by ticker
+    // Deduplicate sampleAssets by ticker and cap at 25 to keep response fast
     const seen = new Set<string>();
     const uniqueSampleAssets: any[] = [];
     for (const a of sampleAssets) {
       if (!a || !a.ticker || seen.has(a.ticker)) continue;
       seen.add(a.ticker);
       uniqueSampleAssets.push(a);
+      if (uniqueSampleAssets.length >= 25) break;
     }
 
     const sampleTickers = uniqueSampleAssets.map(a => a.ticker);
-    const allHistory = await fetchPriceHistoryBatch(sampleTickers);
+    const allHistory = await fetchPriceHistoryBatch(sampleTickers, false);
 
     const results: { ticker: string; name: string; asset_class: string; price: number; correlation: number }[] = [];
 

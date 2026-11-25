@@ -1,7 +1,16 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import YahooFinance from 'yahoo-finance2';
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
+import {
+  expandAssetClassFilter,
+  normalizeAssetClass,
+  normalizeDividendYieldPct,
+  deduplicateAssetRows,
+} from '@/lib/asset-utils';
+
+const yf = new YahooFinance({ suppressNotices: ['yahooSurvey', 'ripHistorical'] });
 
 const supabase = createClient(
   getSupabaseUrl(),
@@ -34,10 +43,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'tickers must be an array of strings' }, { status: 400 });
   }
 
-  // Step 1 — get matching assets from snapshots
+  // Step 1 — get matching assets from snapshots (exclude synthetic mock rows)
   let query = supabase
     .from('asset_snapshots')
-    .select('ticker, short_name, asset_class, sector, price, beta, market_cap, pe_ratio, revenue_growth, dividend_yield, return_on_equity')
+    .select('ticker, short_name, asset_class, sector, price, beta, market_cap, pe_ratio, revenue_growth, dividend_yield, dividend_rate, return_on_equity')
+    .not('ticker', 'like', 'BOND-%')
+    .not('ticker', 'like', 'REIT-%')
+    .not('ticker', 'like', 'COMM-%')
     .order('market_cap', { ascending: false, nullsFirst: false })
     .limit(MAX_TICKERS);
 
@@ -53,15 +65,14 @@ export async function POST(req: NextRequest) {
     query = query.in('ticker', validTargetTickers);
   } else {
     if (asset_class) {
-      if (asset_class === 'Stock') {
-        query = query.in('asset_class', ['US Stock', 'Stock', 'Equity']);
-      } else {
-        query = query.eq('asset_class', asset_class);
-      }
+      const variants = expandAssetClassFilter(asset_class);
+      query = variants.length > 1 ? query.in('asset_class', variants) : query.eq('asset_class', variants[0]);
     }
     if (sector) query = query.eq('sector', sector);
     if (max_pe !== undefined && Number.isFinite(Number(max_pe))) query = query.lte('pe_ratio', Number(max_pe)).gt('pe_ratio', 0);
-    if (min_dividend_yield !== undefined && Number.isFinite(Number(min_dividend_yield))) query = query.gte('dividend_yield', Number(min_dividend_yield));
+    if (min_dividend_yield !== undefined && Number.isFinite(Number(min_dividend_yield))) {
+      query = query.gte('dividend_yield', Number(min_dividend_yield)).lte('dividend_yield', 50);
+    }
     if (min_revenue_growth !== undefined && Number.isFinite(Number(min_revenue_growth))) query = query.gte('revenue_growth', Number(min_revenue_growth));
     if (max_beta !== undefined && Number.isFinite(Number(max_beta))) query = query.lte('beta', Number(max_beta));
     if (min_roe !== undefined && Number.isFinite(Number(min_roe))) query = query.gte('return_on_equity', Number(min_roe));
@@ -75,56 +86,64 @@ export async function POST(req: NextRequest) {
   }
   if (!rawAssets || rawAssets.length === 0) return NextResponse.json({ results: [] });
 
-  // Deduplicate by ticker
-  const seenTickers = new Set<string>();
-  const assets: any[] = [];
-  for (const a of rawAssets) {
-    if (!seenTickers.has(a.ticker)) {
-      seenTickers.add(a.ticker);
-      assets.push(a);
-    }
-  }
-
+  // Deduplicate by ticker deterministically
+  const assets = deduplicateAssetRows(rawAssets);
   const tickers = assets.map((a: any) => a.ticker);
 
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
   const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0];
+  const staleCutoffStr = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-  // Fetch history for filtered tickers within the 6-month window
-  const { data: allHistory, error: histError } = await supabase
-    .from('price_history')
-    .select('ticker, date, close')
-    .in('ticker', tickers)
-    .gte('date', sixMonthsAgoStr)
-    .order('date', { ascending: false });
+  // Fetch 6-month history per ticker in bounded batches so PostgREST's 1000-row cap never starves tickers,
+  // and refresh stale/missing series (<10 points or >14 days old) via Yahoo Finance.
+  const tickerHistory: Record<string, Array<{ date: string; close: number }>> = {};
+  tickers.forEach((t: string) => { tickerHistory[t] = []; });
 
-  if (histError) {
-    console.error(`api/backtest: price_history batch query error:`, histError);
-    // Continue with empty history instead of crashing the endpoint
+  const CONCURRENCY = 12;
+  for (let i = 0; i < tickers.length; i += CONCURRENCY) {
+    const batch = tickers.slice(i, i + CONCURRENCY);
+    await Promise.allSettled(
+      batch.map(async (ticker: string) => {
+        const { data: histRows, error: histErr } = await supabase
+          .from('price_history')
+          .select('date, close')
+          .eq('ticker', ticker)
+          .gte('date', sixMonthsAgoStr)
+          .order('date', { ascending: true })
+          .limit(200);
+
+        let points = !histErr && histRows ? histRows.filter(r => typeof r.close === 'number' && Number.isFinite(r.close)) : [];
+        const latestDate = points.length > 0 ? points[points.length - 1].date : '';
+
+        if (points.length < 10 || latestDate < staleCutoffStr) {
+          try {
+            const yfRes = await yf.chart(ticker, { period1: sixMonthsAgoStr, interval: '1d' });
+            if (yfRes?.quotes && yfRes.quotes.length >= 5) {
+              points = yfRes.quotes
+                .filter(q => q.close !== null && q.close !== undefined && Number.isFinite(q.close))
+                .map(q => ({
+                  date: new Date(q.date).toISOString().split('T')[0],
+                  close: q.close!,
+                }));
+            }
+          } catch {
+            // Keep available DB points on transient Yahoo error
+          }
+        }
+        tickerHistory[ticker] = points.slice(-200);
+      })
+    );
   }
 
-  // Group the flat results by ticker and sort oldest-first
-  const tickerHistory: Record<string, Array<{ date: string; close: number }>> = {};
-  tickers.forEach((t: string) => tickerHistory[t] = []);
-  
-  (allHistory || []).forEach(row => {
-    if (tickerHistory[row.ticker]) {
-      tickerHistory[row.ticker].push(row);
-    }
-  });
-  
-  // The DB query returned newest-first (descending). We need oldest-first for sparklines.
-  Object.keys(tickerHistory).forEach(t => {
-    tickerHistory[t].reverse();
-    if (tickerHistory[t].length > 200) {
-      tickerHistory[t] = tickerHistory[t].slice(-200);
-    }
-  });
-
   const results = assets.map((asset: any) => {
+    const normalizedAsset = {
+      ...asset,
+      asset_class: normalizeAssetClass(asset.asset_class),
+      dividend_yield: normalizeDividendYieldPct(asset.dividend_yield, asset.dividend_rate, asset.price),
+    };
     const hist = tickerHistory[asset.ticker] || [];
-    if (hist.length < 2) return { ...asset, return_pct: null, chart: [] };
+    if (hist.length < 2) return { ...normalizedAsset, return_pct: null, chart: [] };
 
     const first = hist[0].close;
     const last = hist[hist.length - 1].close;
@@ -158,7 +177,7 @@ export async function POST(req: NextRequest) {
     });
 
     return {
-      ...asset,
+      ...normalizedAsset,
       return_pct: parseFloat(return_pct.toFixed(2)),
       start_price: parseFloat((first ?? 0).toFixed(2)),
       end_price: parseFloat((last ?? 0).toFixed(2)),

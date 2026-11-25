@@ -1,10 +1,12 @@
 "use client";
 import { useState, useRef } from "react";
+import Link from "next/link";
+import { getCurrencySymbol, normalizeAssetClass } from "@/lib/asset-utils";
 
 const PRESETS = [
   { label: "📈 High Growth Stocks", desc: "Rev growth > 20%, any sector", filters: { min_revenue_growth: 0.2 } },
   { label: "🛡️ Low Risk Portfolio", desc: "Beta < 0.8, large cap", filters: { max_beta: 0.8, min_market_cap: 10e9 } },
-  { label: "💵 Dividend Earners", desc: "Div yield > 3%", filters: { min_dividend_yield: 0.03 } },
+  { label: "💵 Dividend Earners", desc: "Div yield > 3%", filters: { min_dividend_yield: 3 } },
   { label: "🔍 Undervalued", desc: "P/E < 15, rev growth > 10%", filters: { max_pe: 15, min_revenue_growth: 0.1 } },
   { label: "🇮🇳 India Play", desc: "Indian stocks only", filters: { asset_class: "Indian Stock" } },
   { label: "🤖 AI & Tech", desc: "Technology sector", filters: { asset_class: "US Stock", sector: "Technology" } },
@@ -228,8 +230,8 @@ export default function BacktestPage() {
             <div className="space-y-2">
               <label htmlFor="minDivYield" className="text-xs text-zinc-400">Min Div Yield (%)</label>
               <input id="minDivYield" type="number" placeholder="e.g. 3"
-                value={filters.min_dividend_yield != null ? filters.min_dividend_yield * 100 : ""}
-                onChange={e => setFilters((f: any) => ({ ...f, min_dividend_yield: e.target.value ? Number(e.target.value) / 100 : undefined }))}
+                value={filters.min_dividend_yield ?? ""}
+                onChange={e => setFilters((f: any) => ({ ...f, min_dividend_yield: e.target.value ? Number(e.target.value) : undefined }))}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100 placeholder:text-zinc-600" />
             </div>
             <div className="space-y-2 flex items-end">
@@ -269,7 +271,7 @@ export default function BacktestPage() {
                 {best ? (
                   <>
                     <p className="text-3xl font-black font-mono text-emerald-400">{best.ticker}</p>
-                    <p className="text-sm text-zinc-500 mt-1">+{best.return_pct}%</p>
+                    <p className="text-sm text-zinc-500 mt-1">{best.return_pct >= 0 ? '+' : ''}{best.return_pct}%</p>
                   </>
                 ) : (
                   <p className="text-3xl font-black font-mono text-zinc-600">N/A</p>
@@ -346,14 +348,25 @@ export default function BacktestPage() {
                       </td>
                     </tr>
                   ) : (
-                    results.map((r, i) => (
+                    results.map((r, i) => {
+                      const sym = getCurrencySymbol(r.ticker, r.asset_class);
+                      const detailHref = `/portfolio/explore/${encodeURIComponent(normalizeAssetClass(r.asset_class))}/${encodeURIComponent(r.ticker)}`;
+                      return (
                       <tr key={r.ticker} className="hover:bg-zinc-900/30 transition-colors">
                         <td className="p-4 text-zinc-600 font-mono">#{i + 1}</td>
-                        <td className="p-4 font-bold text-emerald-400 font-mono">{r.ticker}</td>
-                        <td className="p-4 text-zinc-300 truncate max-w-[160px]">{r.short_name || r.ticker}</td>
+                        <td className="p-4 font-bold font-mono">
+                          <Link href={detailHref} className="text-emerald-400 hover:text-emerald-300 hover:underline">
+                            {r.ticker}
+                          </Link>
+                        </td>
+                        <td className="p-4 text-zinc-300 truncate max-w-[160px]">
+                          <Link href={detailHref} className="hover:text-white transition-colors">
+                            {r.short_name || r.ticker}
+                          </Link>
+                        </td>
                         <td className="p-4 text-zinc-500 text-xs">{r.asset_class}</td>
-                        <td className="p-4 text-right font-mono text-zinc-400">${r.start_price}</td>
-                        <td className="p-4 text-right font-mono text-zinc-400">${r.end_price}</td>
+                        <td className="p-4 text-right font-mono text-zinc-400">{r.start_price != null ? `${sym}${r.start_price}` : '—'}</td>
+                        <td className="p-4 text-right font-mono text-zinc-400">{r.end_price != null ? `${sym}${r.end_price}` : '—'}</td>
                         <td className={`p-4 text-right font-mono font-bold ${r.return_pct === null ? 'text-zinc-600' :
                             r.return_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'
                           }`}>
@@ -369,7 +382,8 @@ export default function BacktestPage() {
                           {r.pe_ratio ? r.pe_ratio.toFixed(1) : '—'}
                         </td>
                       </tr>
-                    ))
+                    );
+                    })
                   )}
                 </tbody>
               </table>

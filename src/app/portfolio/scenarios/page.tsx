@@ -1,7 +1,9 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import DynamicScenarioCard from "@/components/DynamicScenarioCard";
 import { RefreshCw } from "lucide-react";
+import { getCurrencySymbol, normalizeAssetClass } from "@/lib/asset-utils";
 
 const SCENARIOS = [
   { key: "us_china_tension", title: "🇺🇸🇨🇳 US-China Tensions", desc: "Rotate to domestic US, gold, defense" },
@@ -14,7 +16,8 @@ const SCENARIOS = [
 
 const formatVal = (val: any, key: string) => {
   if (val === null || val === undefined || val === 0) return "—";
-  if (["revenue_growth","earnings_growth","profit_margins","dividend_yield","return_on_equity"].includes(key))
+  if (key === "dividend_yield") return Number(val).toFixed(2) + "%";
+  if (["revenue_growth","earnings_growth","profit_margins","return_on_equity"].includes(key))
     return (val * 100).toFixed(1) + "%";
   if (key === "market_cap") {
     if (val > 1e12) return `$${(val/1e12).toFixed(1)}T`;
@@ -41,7 +44,7 @@ export default function ScenariosPage() {
     if (isRefresh) setRefreshing(true);
     else setLoadingDynamic(true);
     try {
-      const res = await fetch(`/api/dynamic-scenarios${isRefresh ? "?refresh=true" : ""}`);
+      const res = await fetch("/api/dynamic-scenarios");
       const data = await res.json();
       if (data.scenarios) {
         setDynamicScenarios(data.scenarios);
@@ -210,12 +213,23 @@ export default function ScenariosPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-800/50">
-                        {group.assets.map((r, i) => (
+                        {group.assets.map((r, i) => {
+                          const sym = getCurrencySymbol(r.ticker, r.asset_class);
+                          const detailHref = `/portfolio/explore/${encodeURIComponent(normalizeAssetClass(r.asset_class))}/${encodeURIComponent(r.ticker)}`;
+                          return (
                           <tr key={r.ticker} className="hover:bg-zinc-900/30 transition-colors">
                             <td className="p-4 text-zinc-600 font-mono">#{i+1}</td>
-                            <td className="p-4 font-bold text-emerald-400 font-mono">{r.ticker}</td>
-                            <td className="p-4 text-zinc-300 truncate max-w-[200px]">{r.short_name || r.ticker}</td>
-                            <td className="p-4 text-right font-mono">{r.price != null ? `$${r.price.toFixed(2)}` : "—"}</td>
+                            <td className="p-4 font-bold font-mono">
+                              <Link href={detailHref} className="text-emerald-400 hover:text-emerald-300 hover:underline">
+                                {r.ticker}
+                              </Link>
+                            </td>
+                            <td className="p-4 text-zinc-300 truncate max-w-[200px]">
+                              <Link href={detailHref} className="hover:text-white transition-colors">
+                                {r.short_name || r.ticker}
+                              </Link>
+                            </td>
+                            <td className="p-4 text-right font-mono">{r.price != null ? `${sym}${r.price.toFixed(2)}` : "—"}</td>
                             <td className={`p-4 text-right font-mono ${
                               r.revenue_growth > 0 ? 'text-emerald-400' : r.revenue_growth < 0 ? 'text-rose-400' : 'text-zinc-400'
                             }`}>{formatVal(r.revenue_growth, "revenue_growth")}</td>
@@ -225,7 +239,8 @@ export default function ScenariosPage() {
                               {r.beta != null ? r.beta.toFixed(2) : "—"}
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
