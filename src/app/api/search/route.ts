@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
 import {
   CANONICAL_SEARCH_ALIASES,
+  classifyStockSubClass,
   normalizeAssetClass,
   pickCanonicalAssetRow,
   isSyntheticTicker,
@@ -115,14 +116,18 @@ async function handleSearch(rawQuery: string, limit: number) {
 
     scored.sort((a: any, b: any) => b.score - a.score);
 
-    const results = scored.slice(0, limit).map(({ item }) => ({
-      ticker: item.ticker,
-      short_name: item.short_name || item.ticker,
-      asset_class: normalizeAssetClass(item.asset_class),
-      price: item.price ? Number(item.price) : 0,
-      market_cap: item.market_cap ? Number(item.market_cap) : null,
-      sector: item.sector || null,
-    }));
+    const results = scored.slice(0, limit).map(({ item }) => {
+      const normCls = normalizeAssetClass(item.asset_class);
+      return {
+        ticker: item.ticker,
+        short_name: item.short_name || item.ticker,
+        asset_class: normCls,
+        sub_class: normCls === 'Stocks' ? classifyStockSubClass(item.asset_class, item.ticker) : undefined,
+        price: item.price ? Number(item.price) : 0,
+        market_cap: item.market_cap ? Number(item.market_cap) : null,
+        sector: item.sector || null,
+      };
+    });
 
     return NextResponse.json(
       { query: cleanQuery, results },

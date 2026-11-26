@@ -4,7 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 import YahooFinance from 'yahoo-finance2';
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
 import {
-  expandAssetClassFilter,
+  applySupabaseAssetClassFilter,
+  classifyStockSubClass,
   normalizeAssetClass,
   normalizeDividendYieldPct,
   deduplicateAssetRows,
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
   }
   const {
     asset_class,
+    sub_class,
     sector,
     max_pe,
     min_dividend_yield,
@@ -65,8 +67,7 @@ export async function POST(req: NextRequest) {
     query = query.in('ticker', validTargetTickers);
   } else {
     if (asset_class) {
-      const variants = expandAssetClassFilter(asset_class);
-      query = variants.length > 1 ? query.in('asset_class', variants) : query.eq('asset_class', variants[0]);
+      query = applySupabaseAssetClassFilter(query, asset_class, sub_class);
     }
     if (sector) query = query.eq('sector', sector);
     if (max_pe !== undefined && Number.isFinite(Number(max_pe))) query = query.lte('pe_ratio', Number(max_pe)).gt('pe_ratio', 0);
@@ -137,9 +138,11 @@ export async function POST(req: NextRequest) {
   }
 
   const results = assets.map((asset: any) => {
+    const normCls = normalizeAssetClass(asset.asset_class);
     const normalizedAsset = {
       ...asset,
-      asset_class: normalizeAssetClass(asset.asset_class),
+      asset_class: normCls,
+      sub_class: normCls === 'Stocks' ? classifyStockSubClass(asset.asset_class, asset.ticker) : undefined,
       dividend_yield: normalizeDividendYieldPct(asset.dividend_yield, asset.dividend_rate, asset.price),
     };
     const hist = tickerHistory[asset.ticker] || [];

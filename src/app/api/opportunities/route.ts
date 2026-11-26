@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
 import {
+  classifyStockSubClass,
   normalizeAssetClass,
   normalizeDividendYieldPct,
   isSyntheticTicker,
@@ -125,9 +126,11 @@ export async function GET() {
   const opportunities: any[] = [];
 
   for (const r of data) {
+    const normClass = normalizeAssetClass(r.asset_class);
     const normalizedRow = {
       ...r,
-      asset_class: normalizeAssetClass(r.asset_class),
+      asset_class: normClass,
+      sub_class: normClass === 'Stocks' ? classifyStockSubClass(r.asset_class, r.ticker) : undefined,
       dividend_yield: normalizeDividendYieldPct(r.dividend_yield, r.dividend_rate, r.price),
     };
     const sym = getCurrencySymbol(r.ticker, normalizedRow.asset_class);

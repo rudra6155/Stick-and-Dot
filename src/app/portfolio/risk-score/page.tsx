@@ -188,7 +188,9 @@ export default function RiskScorePage() {
             {/* Asset header + grade */}
             <div className={`border rounded-2xl p-8 flex items-center justify-between ${GRADE_BG[result.score.grade] ?? GRADE_BG.default}`}>
               <div>
-                <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest mb-1">{result.asset.asset_class} · {result.asset.sector || "—"}</p>
+                <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest mb-1">
+                  {result.asset.asset_class}{result.asset.sub_class ? ` · ${result.asset.sub_class}` : ""} · {result.asset.sector || "—"}
+                </p>
                 <h2 className="text-3xl font-black">{result.asset.ticker}</h2>
                 <p className="text-zinc-400 mt-1">{result.asset.short_name}</p>
                 <p className="text-2xl font-mono font-bold mt-2">{result.asset.price != null ? `${sym}${result.asset.price.toFixed(2)}` : "—"}</p>

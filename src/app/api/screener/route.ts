@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
 import {
-  expandAssetClassFilter,
+  applySupabaseAssetClassFilter,
+  classifyStockSubClass,
   normalizeAssetClass,
   normalizeDividendYieldPct,
   deduplicateAssetRows,
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
 
   const {
     asset_class,
+    sub_class,
     sector,
     sort_by: rawSortBy = 'revenue_growth',
     sort_dir = 'desc',
@@ -75,8 +77,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (asset_class) {
-    const variants = expandAssetClassFilter(asset_class);
-    query = variants.length > 1 ? query.in('asset_class', variants) : query.eq('asset_class', variants[0]);
+    query = applySupabaseAssetClassFilter(query, asset_class, sub_class);
   }
   if (sector) query = query.eq('sector', sector);
   if (min_market_cap !== undefined && Number.isFinite(Number(min_market_cap))) query = query.gte('market_cap', Number(min_market_cap));
@@ -111,9 +112,11 @@ export async function POST(req: NextRequest) {
         ? '>500% rev growth' 
         : `${(r.revenue_growth * 100).toFixed(1)}% rev growth` 
       : '—';
+    const normCls = normalizeAssetClass(r.asset_class);
     return {
       ...r,
-      asset_class: normalizeAssetClass(r.asset_class),
+      asset_class: normCls,
+      sub_class: normCls === 'Stocks' ? classifyStockSubClass(r.asset_class, r.ticker) : undefined,
       dividend_yield: normalizeDividendYieldPct(r.dividend_yield, r.dividend_rate, r.price),
       investment_score: Math.round(total_score),
       what_can_earn: growthDisplay,

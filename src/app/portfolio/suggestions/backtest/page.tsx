@@ -1,20 +1,20 @@
 "use client";
 import { useState, useRef } from "react";
 import Link from "next/link";
-import { getCurrencySymbol, normalizeAssetClass } from "@/lib/asset-utils";
+import { formatAssetClassBadge, getCurrencySymbol, normalizeAssetClass } from "@/lib/asset-utils";
 
 const PRESETS = [
   { label: "📈 High Growth Stocks", desc: "Rev growth > 20%, any sector", filters: { min_revenue_growth: 0.2 } },
   { label: "🛡️ Low Risk Portfolio", desc: "Beta < 0.8, large cap", filters: { max_beta: 0.8, min_market_cap: 10e9 } },
   { label: "💵 Dividend Earners", desc: "Div yield > 3%", filters: { min_dividend_yield: 3 } },
   { label: "🔍 Undervalued", desc: "P/E < 15, rev growth > 10%", filters: { max_pe: 15, min_revenue_growth: 0.1 } },
-  { label: "🇮🇳 India Play", desc: "Indian stocks only", filters: { asset_class: "Indian Stock" } },
-  { label: "🤖 AI & Tech", desc: "Technology sector", filters: { asset_class: "US Stock", sector: "Technology" } },
+  { label: "🇮🇳 India Play", desc: "Indian stocks only", filters: { asset_class: "Stocks", sub_class: "Indian" } },
+  { label: "🤖 AI & Tech", desc: "US Technology sector", filters: { asset_class: "Stocks", sub_class: "US", sector: "Technology" } },
 ];
 
 // Only these asset classes carry a meaningful "sector" — clearing it when the class changes
 // away from these prevents a stale sector (e.g. from a preset) from silently zeroing results.
-const SECTOR_CAPABLE_CLASSES = ["US Stock", "Indian Stock", "International"];
+const SECTOR_CAPABLE_CLASSES = ["Stocks", "US Stock", "Indian Stock", "International"];
 
 export default function BacktestPage() {
   const [filters, setFilters] = useState<any>({});
@@ -171,6 +171,9 @@ export default function BacktestPage() {
                   const newClass = e.target.value !== "All" ? e.target.value : undefined;
                   setFilters((f: any) => {
                     const next = { ...f, asset_class: newClass };
+                    if (newClass !== "Stocks") {
+                      delete next.sub_class;
+                    }
                     // Sector only makes sense for sector-capable classes — drop a stale
                     // preset-driven sector rather than silently zeroing out results.
                     if (!newClass || !SECTOR_CAPABLE_CLASSES.includes(newClass)) {
@@ -181,11 +184,27 @@ export default function BacktestPage() {
                 }}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100"
               >
-                {["All", "US Stock", "ETF", "REIT", "Crypto", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"].map(a => (
+                {["All", "Stocks", "ETF", "REIT", "Crypto", "Commodity", "Bond", "Forex", "Index"].map(a => (
                   <option key={a} value={a}>{a}</option>
                 ))}
               </select>
             </div>
+            {filters.asset_class === "Stocks" && (
+              <div className="space-y-2">
+                <label htmlFor="subClass" className="text-xs text-zinc-400">Stock Region</label>
+                <select
+                  id="subClass"
+                  value={filters.sub_class || "All"}
+                  onChange={e => setFilters((f: any) => ({ ...f, sub_class: e.target.value !== "All" ? e.target.value : undefined }))}
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100"
+                >
+                  <option value="All">All Stocks</option>
+                  <option value="US">🇺🇸 US</option>
+                  <option value="Indian">🇮🇳 Indian</option>
+                  <option value="International">🌍 International</option>
+                </select>
+              </div>
+            )}
             <div className="space-y-2">
               <label htmlFor="sector" className="text-xs text-zinc-400">Sector</label>
               <select
@@ -364,7 +383,7 @@ export default function BacktestPage() {
                             {r.short_name || r.ticker}
                           </Link>
                         </td>
-                        <td className="p-4 text-zinc-500 text-xs">{r.asset_class}</td>
+                        <td className="p-4 text-zinc-500 text-xs">{formatAssetClassBadge(r.asset_class, r.ticker, r.sub_class)}</td>
                         <td className="p-4 text-right font-mono text-zinc-400">{r.start_price != null ? `${sym}${r.start_price}` : '—'}</td>
                         <td className="p-4 text-right font-mono text-zinc-400">{r.end_price != null ? `${sym}${r.end_price}` : '—'}</td>
                         <td className={`p-4 text-right font-mono font-bold ${r.return_pct === null ? 'text-zinc-600' :

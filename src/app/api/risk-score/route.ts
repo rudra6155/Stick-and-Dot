@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
 import {
+  classifyStockSubClass,
   normalizeAssetClass,
   normalizeDividendYieldPct,
   pickCanonicalAssetRow,
@@ -260,9 +261,11 @@ export async function POST(req: NextRequest) {
   const canonical = pickCanonicalAssetRow(rows);
   if (error || !canonical) return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
 
+  const normCls = normalizeAssetClass(canonical.asset_class);
   const normalizedAsset = {
     ...canonical,
-    asset_class: normalizeAssetClass(canonical.asset_class),
+    asset_class: normCls,
+    sub_class: normCls === 'Stocks' ? classifyStockSubClass(canonical.asset_class, canonical.ticker) : undefined,
     dividend_yield: normalizeDividendYieldPct(canonical.dividend_yield, canonical.dividend_rate, canonical.price),
   };
 

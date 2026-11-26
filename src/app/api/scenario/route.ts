@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
 import {
-  expandAssetClassFilter,
+  applySupabaseAssetClassFilter,
+  classifyStockSubClass,
   normalizeAssetClass,
   normalizeDividendYieldPct,
   toPortfolioModelClass,
@@ -115,17 +116,20 @@ export async function POST(req: NextRequest) {
         .limit(q.limit * 2);
 
       if (q.filters.asset_class) {
-        const variants = expandAssetClassFilter(q.filters.asset_class);
-        query = variants.length > 1 ? query.in('asset_class', variants) : query.eq('asset_class', variants[0]);
+        query = applySupabaseAssetClassFilter(query, q.filters.asset_class);
       }
       if (q.filters.sector) query = query.eq('sector', q.filters.sector);
 
       const { data } = await query;
-      const uniqueAssets = deduplicateAssetRows(data, q.limit).map((a: any) => ({
-        ...a,
-        asset_class: normalizeAssetClass(a.asset_class),
-        dividend_yield: normalizeDividendYieldPct(a.dividend_yield, a.dividend_rate, a.price),
-      }));
+      const uniqueAssets = deduplicateAssetRows(data, q.limit).map((a: any) => {
+        const normCls = normalizeAssetClass(a.asset_class);
+        return {
+          ...a,
+          asset_class: normCls,
+          sub_class: normCls === 'Stocks' ? classifyStockSubClass(a.asset_class, a.ticker) : undefined,
+          dividend_yield: normalizeDividendYieldPct(a.dividend_yield, a.dividend_rate, a.price),
+        };
+      });
       return { label: q.label, assets: uniqueAssets };
     })
   );

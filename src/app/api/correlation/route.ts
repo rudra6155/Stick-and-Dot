@@ -15,14 +15,14 @@ const yf = new YahooFinance({ suppressNotices: ['yahooSurvey', 'ripHistorical'] 
 
 // Representative tickers for each asset class (highest market cap / most liquid)
 const CLASS_REPRESENTATIVES: Record<string, { ticker: string; label: string }> = {
-  'Stock':          { ticker: 'AAPL',        label: 'US Stocks' },
-  'Indian Stock':   { ticker: 'RELIANCE.NS', label: 'Indian Stocks' },
+  'Stock':          { ticker: 'AAPL',        label: 'Stocks (US)' },
+  'Indian Stock':   { ticker: 'RELIANCE.NS', label: 'Stocks (India)' },
+  'International':  { ticker: '7203.T',      label: 'Stocks (Intl)' },
   'Crypto':         { ticker: 'BTC-USD',     label: 'Bitcoin' },
   'ETF':            { ticker: 'SPY',         label: 'S&P 500 ETF' },
   'Commodity':      { ticker: 'GC=F',        label: 'Gold' },
   'Bond':           { ticker: 'TLT',         label: 'US Bonds' },
   'REIT':           { ticker: 'VNQ',         label: 'REITs' },
-  'International':  { ticker: '7203.T',      label: 'International' },
   'Forex':          { ticker: 'EURUSD=X',    label: 'EUR/USD' },
   'Index':          { ticker: '^GSPC',       label: 'S&P 500' },
 };

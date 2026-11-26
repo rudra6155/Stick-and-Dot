@@ -3,6 +3,28 @@
  * API routes, and client components.
  */
 
+export const TOP_LEVEL_ASSET_CLASSES = [
+  'Stocks',
+  'Crypto',
+  'ETF',
+  'REIT',
+  'Commodity',
+  'Bond',
+  'Forex',
+  'Index',
+] as const;
+
+export const STOCK_SUB_CLASSES = ['All', 'US', 'Indian', 'International'] as const;
+export type StockSubClass = (typeof STOCK_SUB_CLASSES)[number];
+
+export const STOCK_DB_CLASSES = [
+  'US Stock',
+  'Stock',
+  'Equity',
+  'Indian Stock',
+  'International',
+] as const;
+
 export const SYNTHETIC_TICKER_PREFIXES = ['BOND-', 'REIT-', 'COMM-'] as const;
 
 export const CANONICAL_SEARCH_ALIASES: Record<string, string> = {
@@ -45,13 +67,20 @@ export const CANONICAL_SEARCH_ALIASES: Record<string, string> = {
 };
 
 const ASSET_CLASS_NORMALIZE_MAP: Record<string, string> = {
-  'us stock': 'US Stock',
-  stock: 'US Stock',
-  stocks: 'US Stock',
-  equity: 'US Stock',
-  equities: 'US Stock',
-  'us tech': 'US Stock',
-  'us blue chip': 'US Stock',
+  stocks: 'Stocks',
+  stock: 'Stocks',
+  'us stock': 'Stocks',
+  'us stocks': 'Stocks',
+  equity: 'Stocks',
+  equities: 'Stocks',
+  'us tech': 'Stocks',
+  'us blue chip': 'Stocks',
+  'indian stock': 'Stocks',
+  'indian stocks': 'Stocks',
+  international: 'Stocks',
+  us: 'Stocks',
+  indian: 'Stocks',
+  india: 'Stocks',
   etf: 'ETF',
   etfs: 'ETF',
   reit: 'REIT',
@@ -62,9 +91,6 @@ const ASSET_CLASS_NORMALIZE_MAP: Record<string, string> = {
   commodities: 'Commodity',
   bond: 'Bond',
   bonds: 'Bond',
-  'indian stock': 'Indian Stock',
-  'indian stocks': 'Indian Stock',
-  international: 'International',
   forex: 'Forex',
   index: 'Index',
   indices: 'Index',
@@ -77,35 +103,149 @@ export function isSyntheticTicker(ticker: unknown): boolean {
   return SYNTHETIC_TICKER_PREFIXES.some((prefix) => upper.startsWith(prefix));
 }
 
-/** Normalizes legacy/raw DB asset_class labels to canonical UI class names. */
+/** Normalizes any raw/legacy DB asset_class into one of the 8 top-level UI classes. */
 export function normalizeAssetClass(raw: unknown): string {
-  if (!raw) return 'US Stock';
+  if (!raw) return 'Stocks';
   const str = typeof raw === 'string' ? raw : String(raw);
   return ASSET_CLASS_NORMALIZE_MAP[str.toLowerCase().trim()] ?? str;
 }
 
-/** Expands a UI asset class filter into all matching DB asset_class variants. */
-export function expandAssetClassFilter(assetClass: string): string[] {
-  const normalized = normalizeAssetClass(assetClass);
-  if (normalized === 'US Stock') {
-    return ['US Stock', 'Stock', 'Equity'];
+/** Classifies a stock row into one of the 3 sub-classes inside Stocks: US, Indian, or International. */
+export function classifyStockSubClass(
+  rawClass: unknown,
+  ticker?: unknown
+): 'US' | 'Indian' | 'International' {
+  const clsLower = typeof rawClass === 'string' ? rawClass.toLowerCase().trim() : '';
+  const upperTicker = typeof ticker === 'string' ? ticker.toUpperCase().trim() : '';
+
+  if (
+    clsLower === 'indian stock' ||
+    clsLower === 'indian stocks' ||
+    clsLower === 'indian' ||
+    clsLower === 'india' ||
+    upperTicker.endsWith('.NS') ||
+    upperTicker.endsWith('.BO')
+  ) {
+    return 'Indian';
   }
-  if (normalized === 'Crypto') {
-    return ['Crypto', 'Cryptocurrency'];
+
+  if (
+    clsLower === 'international' ||
+    (upperTicker.includes('.') && !upperTicker.startsWith('^'))
+  ) {
+    return 'International';
   }
-  return [normalized];
+
+  return 'US';
 }
 
-/** Normalizes any stock variant to 'Stock' for scenario/leaderboard/portfolio models. */
-export function toPortfolioModelClass(assetClass: unknown): string {
-  const normalized = normalizeAssetClass(assetClass);
-  return normalized === 'US Stock' ? 'Stock' : normalized;
+/** Infers stock sub-class when caller passes a legacy class or sub-class string. */
+export function inferStockSubClassFilter(
+  rawClass?: string | null,
+  explicitSub?: string | null
+): StockSubClass {
+  const cleanSub = (explicitSub || '').toLowerCase().trim();
+  if (cleanSub === 'us') return 'US';
+  if (cleanSub === 'indian' || cleanSub === 'india') return 'Indian';
+  if (cleanSub === 'international' || cleanSub === 'intl') return 'International';
+
+  const cleanCls = (rawClass || '').toLowerCase().trim();
+  if (cleanCls === 'us stock' || cleanCls === 'us stocks' || cleanCls === 'us') return 'US';
+  if (cleanCls === 'indian stock' || cleanCls === 'indian stocks' || cleanCls === 'indian') return 'Indian';
+  if (cleanCls === 'international') return 'International';
+
+  return 'All';
+}
+
+/** Formats human badge text for an asset, preserving sub-class for Stocks. */
+export function formatAssetClassBadge(rawClass: unknown, ticker?: unknown, explicitSub?: unknown): string {
+  const main = normalizeAssetClass(rawClass);
+  if (main !== 'Stocks') return main;
+  if (explicitSub === 'US' || explicitSub === 'Indian' || explicitSub === 'International') {
+    return `Stocks · ${explicitSub === 'International' ? 'Intl' : explicitSub}`;
+  }
+  const region = classifyStockSubClass(rawClass, ticker);
+  return `Stocks · ${region === 'International' ? 'Intl' : region}`;
+}
+
+/** Expands a UI asset class filter (main or sub-class) into matching DB asset_class values. */
+export function expandAssetClassFilter(assetClass: string, subClass?: string | null): string[] {
+  const main = normalizeAssetClass(assetClass);
+  if (main === 'Stocks') {
+    const sub = inferStockSubClassFilter(assetClass, subClass);
+    if (sub === 'US') return ['US Stock', 'Stock', 'Equity'];
+    if (sub === 'Indian') return ['Indian Stock', 'US Stock', 'Stock', 'Equity', 'International'];
+    if (sub === 'International') return ['International', 'US Stock', 'Stock', 'Equity'];
+    return [...STOCK_DB_CLASSES];
+  }
+  if (main === 'Crypto') {
+    return ['Crypto', 'Cryptocurrency'];
+  }
+  return [main];
+}
+
+interface FilterableQuery<T> {
+  in(col: string, vals: readonly string[]): T;
+  eq(col: string, val: string): T;
+  not(col: string, op: string, val: string): T;
+  or(filters: string): T;
+}
+
+/** Applies consistent Supabase filtering for unified Stocks + US/Indian/International sub-classes. */
+export function applySupabaseAssetClassFilter<T extends FilterableQuery<T>>(
+  query: T,
+  activeClass?: string | null,
+  subClass?: string | null
+): T {
+  if (!activeClass || activeClass === 'All') return query;
+
+  const main = normalizeAssetClass(activeClass);
+  if (main !== 'Stocks') {
+    const variants = expandAssetClassFilter(main);
+    return variants.length > 1 ? query.in('asset_class', variants) : query.eq('asset_class', variants[0]);
+  }
+
+  const sub = inferStockSubClassFilter(activeClass, subClass);
+  if (sub === 'US') {
+    return query.in('asset_class', ['US Stock', 'Stock', 'Equity']).not('ticker', 'like', '%.%');
+  }
+  if (sub === 'Indian') {
+    return query
+      .in('asset_class', ['US Stock', 'Stock', 'Equity', 'Indian Stock', 'International'])
+      .or('asset_class.eq.Indian Stock,ticker.like.%.NS,ticker.like.%.BO');
+  }
+  if (sub === 'International') {
+    return query
+      .in('asset_class', ['US Stock', 'Stock', 'Equity', 'International'])
+      .not('ticker', 'like', '%.NS')
+      .not('ticker', 'like', '%.BO')
+      .or('asset_class.eq.International,ticker.ilike.%.%');
+  }
+  return query.in('asset_class', [...STOCK_DB_CLASSES]);
+}
+
+/** Converts a stock/asset class + ticker into the regional stress-test key for scenario/portfolio models. */
+export function toPortfolioModelClass(assetClass: unknown, ticker?: unknown): string {
+  const main = normalizeAssetClass(assetClass);
+  if (main !== 'Stocks') return main;
+  const sub = classifyStockSubClass(assetClass, ticker);
+  if (sub === 'Indian') return 'Indian Stock';
+  if (sub === 'International') return 'International';
+  return 'Stock';
+}
+
+/** Normalizes any stock variant into unified 'Stocks' for leaderboard diversification checks. */
+export function toLeaderboardClass(assetClass: unknown): string {
+  return normalizeAssetClass(assetClass);
 }
 
 /** Infers trading currency code from ticker suffix or asset class. */
 export function inferCurrency(ticker: string, assetClass?: string): string {
   if (!ticker) return 'USD';
-  if (assetClass === 'Indian Stock' || ticker.endsWith('.NS') || ticker.endsWith('.BO')) return 'INR';
+  const clsLower = typeof assetClass === 'string' ? assetClass.toLowerCase().trim() : '';
+  if (clsLower === 'indian stock' || clsLower === 'indian' || ticker.endsWith('.NS') || ticker.endsWith('.BO')) {
+    return 'INR';
+  }
   if (ticker.endsWith('.T')) return 'JPY';
   if (ticker.endsWith('.KS')) return 'KRW';
   if (ticker.endsWith('.L') || ticker.endsWith('.IL')) return 'GBP';
@@ -156,7 +296,7 @@ export function getCurrencySymbol(currencyOrTicker?: string | null, assetClass?:
     const inferred = inferCurrency(currencyOrTicker, assetClass);
     return CURRENCY_SYMBOLS[inferred] || '$';
   }
-  if (assetClass === 'Indian Stock') return '₹';
+  if (assetClass === 'Indian Stock' || assetClass === 'Indian') return '₹';
   return '$';
 }
 
@@ -191,9 +331,6 @@ export function normalizeDividendYieldPct(
     }
   }
 
-  // Fallback heuristic when dividend_rate is absent:
-  // Legacy decimal scrapes use 3-6+ fractional digits below 0.25 (e.g., 0.058383, 0.233546),
-  // whereas Yahoo percentage-scale yields in this dataset are rounded to 2 decimal places (e.g., 0.06, 0.11).
   if (dy > 0 && dy < 0.25) {
     const isTwoDecimal = Math.abs(dy * 100 - Math.round(dy * 100)) < 1e-4;
     if (!isTwoDecimal) {

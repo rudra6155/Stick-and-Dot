@@ -9,7 +9,9 @@ import { PickModal } from "@/components/PickModal";
 import { createClient } from "@/utils/supabase/client";
 import RelatedMarketsPanel from "@/components/RelatedMarketsPanel";
 import {
+  classifyStockSubClass,
   expandAssetClassFilter,
+  formatAssetClassBadge,
   normalizeAssetClass,
   normalizeDividendYieldPct,
   pickCanonicalAssetRow,
@@ -67,9 +69,13 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
         const picked = pickCanonicalAssetRow(rows, assetClass);
         if (assetErr || !picked) throw new Error("Asset not found");
 
+        const normClass = normalizeAssetClass(picked.asset_class);
+        const subClass = normClass === 'Stocks' ? classifyStockSubClass(picked.asset_class, picked.ticker) : undefined;
         const assetData = {
           ...picked,
-          asset_class: normalizeAssetClass(picked.asset_class),
+          raw_asset_class: picked.asset_class,
+          sub_class: subClass,
+          asset_class: normClass,
           dividend_yield: normalizeDividendYieldPct(picked.dividend_yield, picked.dividend_rate, picked.price),
         };
 
@@ -166,9 +172,12 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
         
         {/* Top Nav */}
         <div className="flex items-center justify-between">
-          <Link href={`/portfolio/explore/${encodeURIComponent(assetClass)}`} className="flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors">
+          <Link
+            href={`/portfolio/explore/${encodeURIComponent(normalizeAssetClass(assetClass))}${asset?.sub_class ? `?sub=${encodeURIComponent(asset.sub_class)}` : ""}`}
+            className="flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors"
+          >
             <ArrowLeft className="w-4 h-4" />
-            Back to {assetClass}
+            Back to {normalizeAssetClass(assetClass)}{asset?.sub_class ? ` · ${asset.sub_class}` : ""}
           </Link>
           
           {(asset.asset_class?.toLowerCase() === 'index' || assetClass?.toLowerCase() === 'index' || asset.ticker?.startsWith('^')) ? (
@@ -200,7 +209,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
                     {asset.ticker}
                   </span>
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono text-emerald-400 font-bold uppercase">
-                    {asset.asset_class}
+                    {formatAssetClassBadge(asset.raw_asset_class || asset.asset_class, asset.ticker, asset.sub_class)}
                   </span>
                 </div>
                 <p className="text-sm text-zinc-400 mt-1">{asset.sector || asset.long_business_summary?.slice(0, 80) || "Global Asset"}</p>

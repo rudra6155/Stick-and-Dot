@@ -6,6 +6,7 @@ import { Search, ChevronDown, Filter, Settings2, Check } from "lucide-react";
 import { fetchAssetsPaginated, fetchAssetClassCounts, fetchTickerTapeAssets, type Asset } from "./actions";
 import dynamic from 'next/dynamic';
 import { AssetCard, AVAILABLE_METRICS } from "@/components/AssetCard";
+import { TOP_LEVEL_ASSET_CLASSES } from "@/lib/asset-utils";
 
 const TickerHeartbeat = dynamic(() => import('@/components/TickerHeartbeat'), { ssr: false });
 const StatsSection = dynamic(() => import('@/components/StatsSection'), {
@@ -174,6 +175,7 @@ export default function SuperFinanceHub({
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [activeClass, setActiveClass] = useState("All");
+  const [activeSubClass, setActiveSubClass] = useState<'All' | 'US' | 'Indian' | 'International'>("All");
   const [activeSector, setActiveSector] = useState("All Sectors");
   const [sortBy, setSortBy] = useState("Market Cap");
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -201,6 +203,7 @@ export default function SuperFinanceHub({
         offset: currentOffset,
         searchQuery: debouncedSearchQuery,
         activeClass,
+        activeSubClass: activeClass === "Stocks" ? activeSubClass : "All",
         activeSector,
         sortBy
       });
@@ -259,6 +262,7 @@ export default function SuperFinanceHub({
       isInitialMountRef.current &&
       initialAssets.length > 0 &&
       activeClass === "All" &&
+      activeSubClass === "All" &&
       activeSector === "All Sectors" &&
       sortBy === "Market Cap" &&
       debouncedSearchQuery === ""
@@ -283,6 +287,7 @@ export default function SuperFinanceHub({
           offset: 0,
           searchQuery: debouncedSearchQuery,
           activeClass,
+          activeSubClass: activeClass === "Stocks" ? activeSubClass : "All",
           activeSector,
           sortBy
         });
@@ -299,7 +304,7 @@ export default function SuperFinanceHub({
     };
     run();
     return () => controller.abort();
-  }, [debouncedSearchQuery, activeClass, activeSector, sortBy]);
+  }, [debouncedSearchQuery, activeClass, activeSubClass, activeSector, sortBy]);
 
   const handleLoadMore = () => {
     const nextOffset = offset + 40;
@@ -336,18 +341,23 @@ export default function SuperFinanceHub({
     return () => clearTimeout(timer);
   }, [assets.length]);
 
-  const assetClasses = ["All", "Crypto", "US Stock", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
+  const assetClasses = ["All", "Stocks", "Crypto", "ETF", "REIT", "Commodity", "Bond", "Forex", "Index"];
+
+  const stockSubClasses: Array<{ id: 'All' | 'US' | 'Indian' | 'International'; label: string; badge: string; countKey: string }> = [
+    { id: 'All', label: 'All Stocks', badge: '⊕', countKey: 'Stocks' },
+    { id: 'US', label: 'US', badge: '🇺🇸', countKey: 'Stocks:US' },
+    { id: 'Indian', label: 'Indian', badge: '🇮🇳', countKey: 'Stocks:Indian' },
+    { id: 'International', label: 'International', badge: '🌍', countKey: 'Stocks:International' },
+  ];
 
   const categoryDescriptions: Record<string, string> = {
     'All': 'Complete global market universe across equities, funds, digital assets, and currencies.',
-    'US Stock': 'Equities listed on US exchanges (NASDAQ, NYSE, AMEX) with fundamental financial metrics.',
+    'Stocks': 'Global listed equities across US (NASDAQ/NYSE), Indian (NSE/BSE), and International exchanges.',
     'Crypto': 'Major cryptocurrencies, decentralized tokens, and stablecoins by market valuation.',
     'ETF': 'Exchange-Traded Funds tracking broad market indices, commodities, and sectors.',
     'REIT': 'Real Estate Investment Trusts owning and operating income-producing properties.',
     'Commodity': 'Metals, energy contracts, and agricultural commodity benchmarks.',
     'Bond': 'Sovereign debt, treasury yields, and fixed-income security benchmarks.',
-    'Indian Stock': 'Equities listed on the National Stock Exchange (NSE) and Bombay Stock Exchange (BSE).',
-    'International': 'Global equities across European, Asian, and Canadian markets (ex-US).',
     'Forex': 'Global foreign exchange currency pairs with live exchange rates.',
     'Index': 'Global market benchmark indices tracking major equity performance.',
   };
@@ -393,7 +403,7 @@ export default function SuperFinanceHub({
             </div>
             <div className="flex flex-col items-center">
               <div className="text-4xl md:text-5xl font-mono text-emerald-400 font-bold tracking-tighter">
-                {Object.keys(assetClassCounts).filter(k => k !== 'All').length}
+                {TOP_LEVEL_ASSET_CLASSES.filter(k => (assetClassCounts[k] ?? 0) > 0).length || TOP_LEVEL_ASSET_CLASSES.length}
               </div>
               <div className="text-zinc-500 font-mono text-xs uppercase tracking-widest mt-2">Asset Classes</div>
             </div>
@@ -550,7 +560,7 @@ export default function SuperFinanceHub({
             {assetClasses.map(cls => (
               <button
                 key={cls}
-                onClick={() => { setActiveClass(cls); setActiveSector("All Sectors"); }}
+                onClick={() => { setActiveClass(cls); setActiveSubClass("All"); setActiveSector("All Sectors"); }}
                 className={`relative px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all shrink-0 select-none ${activeClass === cls ? "text-black" : "text-zinc-400 hover:text-white"}`}
               >
                 {activeClass === cls && (
@@ -574,9 +584,35 @@ export default function SuperFinanceHub({
           </div>
 
           {/* Sector Row — only when Stock tab active */}
-          {(activeClass === "US Stock") && (
-            <div className="w-full flex gap-2 overflow-x-auto hide-scrollbar scrollbar-none pt-1 pb-1">
-              {availableSectors.map(sector => (
+          {(activeClass === "Stocks") && (
+            <div className="w-full flex flex-col gap-2 pt-1 pb-1">
+              <div className="w-full flex gap-2 overflow-x-auto hide-scrollbar scrollbar-none">
+                {stockSubClasses.map(sub => {
+                  const subCount = assetClassCounts[sub.countKey];
+                  const isActiveSub = activeSubClass === sub.id;
+                  return (
+                    <button
+                      key={sub.id}
+                      onClick={() => setActiveSubClass(sub.id)}
+                      className={`px-3.5 py-1.5 rounded-full whitespace-nowrap text-xs font-mono transition-all shrink-0 flex items-center gap-1.5 border ${
+                        isActiveSub
+                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-semibold"
+                          : "bg-zinc-900/60 text-zinc-400 border-zinc-800 hover:text-zinc-200 hover:border-zinc-700"
+                      }`}
+                    >
+                      <span>{sub.badge}</span>
+                      <span>{sub.label}</span>
+                      {typeof subCount === "number" && (
+                        <span className={`text-[10px] ${isActiveSub ? "text-emerald-400/80" : "text-zinc-500"}`}>
+                          {subCount.toLocaleString("en-US")}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="w-full flex gap-2 overflow-x-auto hide-scrollbar scrollbar-none">
+                {availableSectors.map(sector => (
                 <button
                   key={sector}
                   onClick={() => setActiveSector(sector)}
@@ -589,6 +625,7 @@ export default function SuperFinanceHub({
                   {sector}
                 </button>
               ))}
+              </div>
             </div>
           )}
 
@@ -597,7 +634,7 @@ export default function SuperFinanceHub({
             <div className="flex items-center gap-2.5 min-w-0">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[11px] font-semibold shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                {activeClass}
+                {activeClass}{activeClass === "Stocks" && activeSubClass !== "All" ? ` · ${activeSubClass}` : ''}
               </span>
               <span className="text-zinc-400 text-[11px] truncate">
                 {categoryDescriptions[activeClass] || 'Market asset universe.'}
@@ -605,7 +642,8 @@ export default function SuperFinanceHub({
             </div>
             <div className="flex items-center gap-2 text-zinc-500 text-[11px] shrink-0 self-end sm:self-auto">
               <span>
-                {activeClass === "US Stock" && activeSector !== "All Sectors" ? `${activeSector} · ` : ''}
+                {activeClass === "Stocks" && activeSubClass !== "All" ? `${activeSubClass} · ` : ''}
+                {activeClass === "Stocks" && activeSector !== "All Sectors" ? `${activeSector} · ` : ''}
                 {totalCount.toLocaleString('en-US')} assets tracked
               </span>
             </div>

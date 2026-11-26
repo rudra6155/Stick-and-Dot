@@ -7,18 +7,31 @@ import { createClient } from "@/utils/supabase/client";
 import { Search, Filter, ArrowUp, ArrowDown, ArrowLeft, Settings2, Check, ChevronDown } from "lucide-react";
 import { AssetCard, AVAILABLE_METRICS } from "@/components/AssetCard";
 import { motion, AnimatePresence } from "framer-motion";
-import { normalizeAssetClass } from "@/lib/asset-utils";
+import { normalizeAssetClass, inferStockSubClassFilter } from "@/lib/asset-utils";
 
 type Asset = any;
 
 const sortOptions = ["Market Cap", "Price", "Revenue Growth", "P/E", "Div Yield", "52W High", "Beta"];
 
-export default function AssetClassPage({ params }: { params: Promise<{ class: string }> }) {
+export default function AssetClassPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ class: string }>;
+  searchParams: Promise<{ sub?: string }>;
+}) {
   const { class: encodedClass } = use(params);
-  let assetClass = encodedClass;
+  const resolvedSearchParams = use(searchParams);
+  let rawAssetClass = encodedClass;
   try {
-    assetClass = decodeURIComponent(encodedClass);
+    rawAssetClass = decodeURIComponent(encodedClass);
   } catch (e) {}
+  const assetClass = normalizeAssetClass(rawAssetClass);
+  const paramSub = inferStockSubClassFilter(resolvedSearchParams?.sub);
+  const routeSub = inferStockSubClassFilter(rawAssetClass);
+  const [subClass, setSubClass] = useState<'All' | 'US' | 'Indian' | 'International'>(
+    assetClass === "Stocks" ? (paramSub !== "All" ? paramSub : routeSub) : "All"
+  );
   
   const [assets, setAssets] = useState<Asset[]>([]);
   const [liveDataMap, setLiveDataMap] = useState<Record<string, any>>({});
@@ -41,6 +54,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
   const [offset, setOffset] = useState(0);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [liveCount, setLiveCount] = useState<number | null>(null);
+  const [classCounts, setClassCounts] = useState<Record<string, number> | null>(null);
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,12 +67,29 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
   // We use selectedMetrics from state now
 
   useEffect(() => {
-    const normalized = normalizeAssetClass(assetClass);
+    if (assetClass !== "Stocks") {
+      setSubClass("All");
+      return;
+    }
+    const nextParamSub = inferStockSubClassFilter(resolvedSearchParams?.sub);
+    const nextRouteSub = inferStockSubClassFilter(rawAssetClass);
+    setSubClass(nextParamSub !== "All" ? nextParamSub : nextRouteSub);
+  }, [assetClass, rawAssetClass, resolvedSearchParams?.sub]);
+
+  useEffect(() => {
     fetchAssetClassCounts().catch(() => ({} as Record<string, number>)).then(counts => {
-      const countMap = counts as Record<string, number>;
-      setLiveCount(countMap[normalized] ?? countMap[assetClass] ?? 0);
+      setClassCounts((counts as Record<string, number>) || {});
     });
-  }, [assetClass]);
+  }, []);
+
+  useEffect(() => {
+    if (!classCounts) return;
+    const countKey =
+      assetClass === "Stocks" && subClass !== "All"
+        ? `Stocks:${subClass}`
+        : assetClass;
+    setLiveCount(classCounts[countKey] ?? classCounts[rawAssetClass] ?? 0);
+  }, [classCounts, assetClass, rawAssetClass, subClass]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -71,7 +102,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
     setAssets([]);
     setOffset(0);
     setTotalCount(null);
-  }, [debouncedSearchQuery, sortBy, sortDir, assetClass]);
+  }, [debouncedSearchQuery, sortBy, sortDir, assetClass, subClass]);
 
   useEffect(() => {
     let active = true;
@@ -84,6 +115,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
           offset,
           searchQuery: debouncedSearchQuery,
           activeClass: assetClass,
+          activeSubClass: assetClass === "Stocks" ? subClass : "All",
           activeSector: "All Sectors",
           sortBy,
           sortDir
@@ -110,7 +142,7 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
     };
     loadAssets();
     return () => { active = false; };
-  }, [offset, debouncedSearchQuery, sortBy, sortDir, assetClass]);
+  }, [offset, debouncedSearchQuery, sortBy, sortDir, assetClass, subClass]);
 
   // Real-time live prices overlay for visible cards
   useEffect(() => {
@@ -188,10 +220,47 @@ export default function AssetClassPage({ params }: { params: Promise<{ class: st
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-3xl md:text-4xl font-black tracking-tight">{assetClass}</h1>
+              <h1 className="text-3xl md:text-4xl font-black tracking-tight">
+                {assetClass}{assetClass === "Stocks" && subClass !== "All" ? ` · ${subClass}` : ""}
+              </h1>
               <p className="text-sm font-mono text-zinc-500 mt-1 uppercase tracking-widest">
                 {liveCount !== null ? liveCount.toLocaleString() : "..."} Assets
               </p>
+              {assetClass === "Stocks" && (
+                <div className="flex flex-wrap items-center gap-2 mt-4">
+                  {(
+                    [
+                      { id: 'All', label: 'All Stocks', badge: '⊕', countKey: 'Stocks' },
+                      { id: 'US', label: 'US', badge: '🇺🇸', countKey: 'Stocks:US' },
+                      { id: 'Indian', label: 'Indian', badge: '🇮🇳', countKey: 'Stocks:Indian' },
+                      { id: 'International', label: 'International', badge: '🌍', countKey: 'Stocks:International' },
+                    ] as const
+                  ).map(tab => {
+                    const activeTab = subClass === tab.id;
+                    const tabCount = classCounts?.[tab.countKey];
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setSubClass(tab.id)}
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-mono transition-all flex items-center gap-1.5 border ${
+                          activeTab
+                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-semibold"
+                            : "bg-zinc-900/70 text-zinc-400 border-zinc-800 hover:text-white hover:border-zinc-700"
+                        }`}
+                      >
+                        <span>{tab.badge}</span>
+                        <span>{tab.label}</span>
+                        {typeof tabCount === "number" && (
+                          <span className={`text-[10px] ${activeTab ? "text-emerald-400/80" : "text-zinc-500"}`}>
+                            {tabCount.toLocaleString()}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>

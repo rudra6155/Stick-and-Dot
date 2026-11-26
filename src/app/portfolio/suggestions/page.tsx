@@ -83,6 +83,7 @@ export default function SuggestionsPage() {
                   change: "—",
                   isUp: true,
                   assetClass: normClass,
+                  subClass: asset.sub_class,
                   currency: inferCurrency(asset.ticker, normClass),
                   marketCap: asset.market_cap ?? 0,
                   peRatio: asset.pe_ratio ?? null,

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { getCurrencySymbol, normalizeAssetClass } from "@/lib/asset-utils";
+import { formatAssetClassBadge, getCurrencySymbol, normalizeAssetClass } from "@/lib/asset-utils";
 
 const PRACTICAL_FILTERS = [
   {
@@ -38,7 +38,7 @@ const PRACTICAL_FILTERS = [
     id: "best_fintech",
     label: "📱 Best Fintech",
     desc: "Top financial services by growth",
-    filters: { asset_class: "Stock", sector: "Financial Services", sort_by: "revenue_growth", sort_dir: "desc" }
+    filters: { asset_class: "Stocks", sector: "Financial Services", sort_by: "revenue_growth", sort_dir: "desc" }
   },
 ];
 
@@ -76,6 +76,7 @@ const formatMetric = (val: any, key: string) => {
 
 export default function ScreenerPage() {
   const [assetClass, setAssetClass] = useState("All");
+  const [subClass, setSubClass] = useState("All");
   const [sector, setSector] = useState("All Sectors");
   const [sortBy, setSortBy] = useState("revenue_growth");
   const [sortDir, setSortDir] = useState("desc");
@@ -95,6 +96,7 @@ export default function ScreenerPage() {
 
   const buildFilters = () => ({
     asset_class: assetClass !== "All" ? assetClass : undefined,
+    sub_class: assetClass === "Stocks" && subClass !== "All" ? subClass : undefined,
     sector: sector !== "All Sectors" ? sector : undefined,
     sort_by: sortBy,
     sort_dir: sortDir,
@@ -174,6 +176,7 @@ export default function ScreenerPage() {
     setActivePreset(preset.id);
     const f = preset.filters as any;
     setAssetClass(f.asset_class || "All");
+    setSubClass(f.sub_class || "All");
     setSector(f.sector || "All Sectors");
     setSortBy(f.sort_by || "revenue_growth");
     setSortDir(f.sort_dir || "desc");
@@ -216,17 +219,37 @@ export default function ScreenerPage() {
 
         {/* Advanced Filters */}
         <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6">
-          <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-6">Filter through all tracked assets across 11 classes instantly.</p>
+          <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-6">Filter through all tracked assets across 8 asset classes &amp; 3 stock regions instantly.</p>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             <div className="space-y-2">
               <label htmlFor="assetClass" className="text-xs text-zinc-400">Asset Class</label>
-              <select id="assetClass" value={assetClass} onChange={e => setAssetClass(e.target.value)}
+              <select id="assetClass" value={assetClass} onChange={e => {
+                const v = e.target.value;
+                setAssetClass(v);
+                if (v !== "Stocks") setSubClass("All");
+              }}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100">
-                {["All","US Stock","ETF","REIT","Crypto","Commodity","Bond","Indian Stock","International","Forex","Index"].map(a => (
+                {["All","Stocks","ETF","REIT","Crypto","Commodity","Bond","Forex","Index"].map(a => (
                   <option key={a} value={a}>{a}</option>
                 ))}
               </select>
             </div>
+            {assetClass === "Stocks" && (
+              <div className="space-y-2">
+                <label htmlFor="subClass" className="text-xs text-zinc-400">Stock Region</label>
+                <select
+                  id="subClass"
+                  value={subClass}
+                  onChange={e => setSubClass(e.target.value)}
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-zinc-100"
+                >
+                  <option value="All">All Stocks</option>
+                  <option value="US">🇺🇸 US</option>
+                  <option value="Indian">🇮🇳 Indian</option>
+                  <option value="International">🌍 International</option>
+                </select>
+              </div>
+            )}
             <div className="space-y-2">
               <label htmlFor="sector" className="text-xs text-zinc-400">Sector</label>
               <select id="sector" value={sector} onChange={e => setSector(e.target.value)}
@@ -365,7 +388,7 @@ export default function ScreenerPage() {
                       </Link>
                     </td>
                     <td className="p-4 text-zinc-500 text-xs">
-                      <span className="text-zinc-400">{r.asset_class}</span>
+                      <span className="text-zinc-400">{formatAssetClassBadge(r.asset_class, r.ticker, r.sub_class)}</span>
                       {r.sector && <span className="text-zinc-700 mx-1">·</span>}
                       {r.sector && <span>{r.sector}</span>}
                     </td>

@@ -3,13 +3,13 @@ import React, { useRef } from "react";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useCountUp } from "@/hooks/useCountUp";
-import { getCurrencySymbol } from "@/lib/asset-utils";
+import { formatAssetClassBadge, getCurrencySymbol } from "@/lib/asset-utils";
 
 const Sparkline = dynamic(() => import("@/components/Sparkline"), { ssr: false });
 
 const classIcons: Record<string, string> = {
   Crypto: "◈",
-  Stock: "▸", "US Stock": "▸",
+  Stocks: "▸", Stock: "▸", "US Stock": "▸",
   ETF: "◎",
   REIT: "▣",
   Commodity: "◆",
@@ -22,7 +22,7 @@ const classIcons: Record<string, string> = {
 
 const classColors: Record<string, string> = {
   Crypto: "bg-violet-500/10 text-violet-400 border-violet-500/20",
-  Stock: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", "US Stock": "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+  Stocks: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", Stock: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", "US Stock": "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
   ETF: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   REIT: "bg-amber-500/10 text-amber-400 border-amber-500/20",
   Commodity: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
@@ -212,8 +212,16 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
         </div>
         
         <div className="flex flex-col items-end gap-2">
-          <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium font-mono uppercase tracking-wider ${classColors[asset.assetClass] || classColors["Stock"]}`}>
-            {asset.assetClass}
+          <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium font-mono uppercase tracking-wider ${
+            classColors[
+              (asset as any).subClass === 'Indian'
+                ? 'Indian Stock'
+                : (asset as any).subClass === 'International'
+                  ? 'International'
+                  : asset.assetClass
+            ] || classColors["Stocks"]
+          }`}>
+            {formatAssetClassBadge(asset.assetClass, asset.symbol, (asset as any).subClass)}
           </span>
           <div className="flex items-center gap-1.5">
             <div className={`w-1.5 h-1.5 rounded-full ${displayIsUp ? "bg-emerald-500" : "bg-rose-500"} ${isLive ? "animate-pulse" : ""}`} />

@@ -3,7 +3,22 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 export default function StatsSection({ assetClassCounts = {} }: { assetClassCounts?: Record<string, number> }) {
-  const maxCount = Math.max(1, ...Object.values(assetClassCounts));
+  const usCount = assetClassCounts['Stocks:US'] ?? assetClassCounts['US Stock'] ?? 0;
+  const indianCount = assetClassCounts['Stocks:Indian'] ?? assetClassCounts['Indian Stock'] ?? 0;
+  const intlCount = assetClassCounts['Stocks:International'] ?? assetClassCounts['International'] ?? 0;
+  const stocksTotal = assetClassCounts['Stocks'] ?? (usCount + indianCount + intlCount);
+
+  const chartItems = [
+    { label: "Stocks", count: stocksTotal, color: "bg-cyan-500" },
+    { label: "Indices", count: assetClassCounts['Index'] || 0, color: "bg-indigo-500" },
+    { label: "Bonds", count: assetClassCounts['Bond'] || 0, color: "bg-emerald-500" },
+    { label: "Crypto", count: assetClassCounts['Crypto'] || 0, color: "bg-violet-500" },
+    { label: "Commodities", count: assetClassCounts['Commodity'] || 0, color: "bg-yellow-500" },
+    { label: "ETFs", count: assetClassCounts['ETF'] || 0, color: "bg-blue-500" },
+    { label: "REITs", count: assetClassCounts['REIT'] || 0, color: "bg-pink-500" },
+    { label: "Forex", count: assetClassCounts['Forex'] || 0, color: "bg-rose-500" },
+  ];
+  const maxCount = Math.max(1, ...chartItems.map(i => i.count));
 
   return (
     <section className="relative z-10 py-32 px-4 md:px-8 max-w-7xl mx-auto">
@@ -32,33 +47,39 @@ export default function StatsSection({ assetClassCounts = {} }: { assetClassCoun
       <div className="mb-24">
         <p className="font-mono text-xs text-zinc-500 uppercase tracking-widest mb-8 text-center">Asset Breakdown</p>
         <div className="flex flex-col gap-3 max-w-2xl mx-auto">
-          {[
-            { label: "Intl Stocks", count: assetClassCounts['International'] || 0, color: "bg-purple-500" },
-            { label: "Crypto", count: assetClassCounts['Crypto'] || 0, color: "bg-violet-500" },
-            { label: "US Stocks", count: assetClassCounts['US Stock'] || 0, color: "bg-cyan-500" },
-            { label: "India", count: assetClassCounts['Indian Stock'] || 0, color: "bg-orange-500" },
-            { label: "ETFs", count: assetClassCounts['ETF'] || 0, color: "bg-blue-500" },
-            { label: "Forex", count: assetClassCounts['Forex'] || 0, color: "bg-rose-500" },
-            { label: "Commodities", count: assetClassCounts['Commodity'] || 0, color: "bg-yellow-500" },
-            { label: "Indices", count: assetClassCounts['Index'] || 0, color: "bg-indigo-500" },
-            { label: "REITs", count: assetClassCounts['REIT'] || 0, color: "bg-pink-500" },
-            { label: "Bonds", count: assetClassCounts['Bond'] || 0, color: "bg-emerald-500" },
-          ].map((item, i) => {
-            return (
-            <div key={item.label} className="flex items-center gap-4">
-              <span className="font-mono text-xs text-zinc-500 w-24 text-right shrink-0">{item.label}</span>
-              <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  whileInView={{ width: `${Math.max((item.count / maxCount) * 100, 1.5)}%` }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.8, delay: i * 0.1 }}
-                  className={`h-full rounded-full ${item.color}`}
-                />
+          {chartItems.map((item, i) => (
+            <div key={item.label} className="space-y-1.5">
+              <div className="flex items-center gap-4">
+                <span className="font-mono text-xs text-zinc-400 w-24 text-right shrink-0 font-semibold">{item.label}</span>
+                <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    whileInView={{ width: `${Math.max((item.count / maxCount) * 100, 1.5)}%` }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.8, delay: i * 0.08 }}
+                    className={`h-full rounded-full ${item.color}`}
+                  />
+                </div>
+                <span className="font-mono text-xs text-zinc-400 min-w-[4rem] text-right shrink-0">{item.count ? item.count.toLocaleString('en-US') : "—"}</span>
               </div>
-              <span className="font-mono text-xs text-zinc-400 min-w-[3.5rem] text-right shrink-0">{item.count ? item.count.toLocaleString('en-US') : "—"}</span>
+              {item.label === "Stocks" && stocksTotal > 0 && (
+                <div className="flex items-center gap-4 pl-28 pr-[4.5rem]">
+                  <div className="flex-1 flex flex-col gap-1.5 bg-white/[0.02] border border-white/5 rounded-xl px-3 py-2">
+                    <div className="w-full h-1.5 rounded-full overflow-hidden flex bg-zinc-900">
+                      <div className="bg-cyan-400 h-full" style={{ width: `${(usCount / stocksTotal) * 100}%` }} />
+                      <div className="bg-orange-400 h-full" style={{ width: `${(indianCount / stocksTotal) * 100}%` }} />
+                      <div className="bg-purple-400 h-full" style={{ width: `${(intlCount / stocksTotal) * 100}%` }} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-mono text-zinc-400">
+                      <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />US {usCount.toLocaleString('en-US')}</span>
+                      <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-orange-400" />Indian {indianCount.toLocaleString('en-US')}</span>
+                      <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-purple-400" />International {intlCount.toLocaleString('en-US')}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          )})}
+          ))}
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getCurrencySymbol, normalizeAssetClass } from "@/lib/asset-utils";
+import { formatAssetClassBadge, getCurrencySymbol, normalizeAssetClass } from "@/lib/asset-utils";
 
 const TYPE_FILTERS = [
   { id: "all", label: "All Opportunities" },
@@ -145,7 +145,7 @@ export default function OpportunitiesPage() {
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="font-black text-lg font-mono text-emerald-400">{o.ticker}</span>
-                      <span className="text-xs text-zinc-500">{normClass}</span>
+                      <span className="text-xs text-zinc-500">{formatAssetClassBadge(o.asset_class, o.ticker, o.sub_class)}</span>
                     </div>
                     <p className="text-xs text-zinc-500 truncate max-w-[180px]">{o.short_name}</p>
                   </div>

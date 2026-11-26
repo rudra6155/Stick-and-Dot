@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import { classifyStockSubClass, normalizeAssetClass } from "@/lib/asset-utils";
 
 export function PickModal({ 
   isOpen, 
@@ -84,10 +85,21 @@ export function PickModal({
         return;
       }
 
+      const rawClass = asset.raw_asset_class || asset.asset_class;
+      const savedClass =
+        normalizeAssetClass(rawClass) === 'Stocks'
+          ? (() => {
+              const reg = asset.sub_class || classifyStockSubClass(rawClass, asset.ticker);
+              if (reg === 'Indian') return 'Indian Stock';
+              if (reg === 'International') return 'International';
+              return 'US Stock';
+            })()
+          : rawClass;
+
       const { error: dbError } = await supabase.from('user_picks').insert({
         user_id: user.id,
         ticker: asset.ticker,
-        asset_class: asset.asset_class,
+        asset_class: savedClass,
         amount: Number(amount),
         quantity: Number(quantity),
         holding_period: holdingPeriod,

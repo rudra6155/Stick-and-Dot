@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import ScrollTrigger from "gsap/dist/ScrollTrigger";
 import { TrendingUp, TrendingDown, Activity, Shield, Zap, Target } from "lucide-react";
+import { formatAssetClassBadge } from "@/lib/asset-utils";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -49,7 +50,7 @@ export default function PortfolioPerformance({ picks, assets, totalValue }: Perf
         betaCount++;
       }
 
-      classSet.add(p.asset_class || "US Stock");
+      classSet.add(formatAssetClassBadge(p.asset_class || "Stocks", p.ticker));
     });
 
     const pnlPct = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0;

@@ -1,7 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { getSupabaseUrl, getSupabaseServiceKey } from "@/lib/supabase-config";
-import { toPortfolioModelClass, pickCanonicalAssetRow } from "@/lib/asset-utils";
+import { toLeaderboardClass, pickCanonicalAssetRow } from "@/lib/asset-utils";
 import Link from "next/link";
 import { Trophy, TrendingUp, TrendingDown } from "lucide-react";
 import { LeaderboardClient } from "./LeaderboardClient";
@@ -24,7 +24,7 @@ export default async function LeaderboardPage({
   let hasAllAssetClasses = false;
   let missingClasses: string[] = [];
 
-  const requiredClasses = ["Stock", "Crypto", "ETF", "Commodity"];
+  const requiredClasses = ["Stocks", "Crypto", "ETF", "Commodity"];
 
   if (user) {
     const { data: userPicks } = await supabase
@@ -33,7 +33,7 @@ export default async function LeaderboardPage({
       .eq('user_id', user.id);
       
     if (userPicks) {
-      const pickedClasses = new Set(userPicks.map(p => toPortfolioModelClass(p.asset_class)));
+      const pickedClasses = new Set(userPicks.map(p => toLeaderboardClass(p.asset_class)));
       missingClasses = requiredClasses.filter(c => !pickedClasses.has(c));
       hasAllAssetClasses = missingClasses.length === 0;
     } else {

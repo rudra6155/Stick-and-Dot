@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
   // Stress tests
   const stress_tests = Object.entries(SCENARIO_IMPACTS).map(([scenario, impacts]) => {
     const scenario_return = assetDetails.reduce((s: number, a: any) => {
-      const modelClass = toPortfolioModelClass(a.asset_class);
+      const modelClass = toPortfolioModelClass(a.asset_class, a.ticker);
       const impact = impacts[modelClass] !== undefined ? impacts[modelClass] : -0.1;
       return s + impact * weight * 100;
     }, 0);

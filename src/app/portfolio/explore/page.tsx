@@ -7,6 +7,7 @@ export const metadata = {
 
 const classIcons: Record<string, string> = {
   Crypto: "◈",
+  Stocks: "▸",
   Stock: "▸",
   "US Stock": "▸",
   ETF: "◎",
@@ -21,7 +22,7 @@ const classIcons: Record<string, string> = {
 
 export default async function ExplorePage() {
   const counts = await fetchAssetClassCounts();
-  const assetClasses = ["US Stock", "Crypto", "ETF", "REIT", "Commodity", "Bond", "Indian Stock", "International", "Forex", "Index"];
+  const assetClasses = ["Crypto", "ETF", "REIT", "Commodity", "Bond", "Forex", "Index"];
 
   return (
     <div className="bg-black text-white font-sans min-h-screen">
@@ -51,9 +52,50 @@ export default async function ExplorePage() {
         </div>
 
         {/* Asset Class Grid */}
-        <div>
+        <div className="space-y-4">
           <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-6 text-center">Browse by Asset Class</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+
+          {/* Featured Unified Stocks Card with 3 Regional Sub-Classes */}
+          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <Link
+              href="/portfolio/explore/Stocks"
+              className="flex items-center gap-4 group"
+            >
+              <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xl text-zinc-400 group-hover:text-emerald-400 group-hover:border-emerald-500/30 transition-all shrink-0">
+                {classIcons["Stocks"]}
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-zinc-200 group-hover:text-white transition-colors">Stocks</h3>
+                <p className="text-xs font-mono text-zinc-500 mt-0.5">
+                  {counts["Stocks"]?.toLocaleString() || 0} Global Equities
+                </p>
+              </div>
+            </Link>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1 lg:max-w-2xl">
+              {[
+                { key: "US", label: "US", badge: "🇺🇸", countKey: "Stocks:US" },
+                { key: "Indian", label: "Indian", badge: "🇮🇳", countKey: "Stocks:Indian" },
+                { key: "International", label: "International", badge: "🌍", countKey: "Stocks:International" },
+              ].map((sub) => (
+                <Link
+                  key={sub.key}
+                  href={`/portfolio/explore/Stocks?sub=${encodeURIComponent(sub.key)}`}
+                  className="bg-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-3 flex items-center justify-between hover:bg-zinc-900 hover:border-emerald-500/40 transition-colors group"
+                >
+                  <span className="flex items-center gap-2 text-sm font-semibold text-zinc-300 group-hover:text-white">
+                    <span>{sub.badge}</span>
+                    <span>{sub.label}</span>
+                  </span>
+                  <span className="text-xs font-mono text-zinc-500 group-hover:text-emerald-400">
+                    {counts[sub.countKey]?.toLocaleString() || 0}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             {assetClasses.map(cls => (
               <Link 
                 key={cls}

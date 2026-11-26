@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
 import {
+  classifyStockSubClass,
   normalizeAssetClass,
   normalizeDividendYieldPct,
   deduplicateAssetRows,
@@ -15,11 +16,15 @@ const supabase = createClient(
 const SELECT_COLS = 'id, ticker, short_name, price, asset_class, sector, market_cap, pe_ratio, revenue_growth, dividend_yield, dividend_rate, beta, return_on_equity, profit_margins, high_52_week, low_52_week';
 
 function normalizeSuggestionRows(rows: any[] | null | undefined, maxCount: number = 5): any[] {
-  return deduplicateAssetRows(rows, maxCount).map((r) => ({
-    ...r,
-    asset_class: normalizeAssetClass(r.asset_class),
-    dividend_yield: normalizeDividendYieldPct(r.dividend_yield, r.dividend_rate, r.price),
-  }));
+  return deduplicateAssetRows(rows, maxCount).map((r) => {
+    const normCls = normalizeAssetClass(r.asset_class);
+    return {
+      ...r,
+      asset_class: normCls,
+      sub_class: normCls === 'Stocks' ? classifyStockSubClass(r.asset_class, r.ticker) : undefined,
+      dividend_yield: normalizeDividendYieldPct(r.dividend_yield, r.dividend_rate, r.price),
+    };
+  });
 }
 
 export async function GET() {

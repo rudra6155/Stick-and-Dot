@@ -8,8 +8,14 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(useGSAP);
 }
 
+import { formatAssetClassBadge } from "@/lib/asset-utils";
+
 const CLASS_COLORS: Record<string, string> = {
   Crypto: "#8b5cf6",
+  "Stocks · US": "#06b6d4",
+  "Stocks · Indian": "#f97316",
+  "Stocks · Intl": "#a855f7",
+  Stocks: "#06b6d4",
   "US Stock": "#06b6d4",
   ETF: "#3b82f6",
   REIT: "#f59e0b",
@@ -53,7 +59,7 @@ export default function PortfolioRing({
 
     const classMap: Record<string, number> = {};
     picks.forEach((p) => {
-      const cls = p.asset_class || "Stock";
+      const cls = formatAssetClassBadge(p.asset_class, p.ticker);
       classMap[cls] = (classMap[cls] || 0) + Number(p.amount);
     });
 

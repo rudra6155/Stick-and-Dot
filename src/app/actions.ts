@@ -2,8 +2,9 @@
 import { DEFAULT_ASSET_CLASS_COUNTS } from "@/lib/constants";
 import { getSupabaseUrl, getSupabasePublishableKey, getSupabaseServiceKey } from "@/lib/supabase-config";
 import {
+  applySupabaseAssetClassFilter,
+  classifyStockSubClass,
   normalizeAssetClass,
-  expandAssetClassFilter,
   inferCurrency,
   normalizeDividendYieldPct,
   pickCanonicalAssetRow,
@@ -42,6 +43,7 @@ export type Asset = {
   name: string;
   symbol: string;
   assetClass: string;
+  subClass?: 'US' | 'Indian' | 'International';
   price: number;
   open: number;
   dayHigh: number;
@@ -140,11 +142,14 @@ export type Asset = {
   communityRedditSubscribers: number;
 };
 
-const mapRowToAsset = (row: any) => ({
+const mapRowToAsset = (row: any) => {
+  const normClass = normalizeAssetClass(row.asset_class);
+  return {
   id: `trad_${row.id || row.ticker}`,
   name: row.short_name || row.ticker,
   symbol: row.ticker,
-  assetClass: normalizeAssetClass(row.asset_class),
+  assetClass: normClass,
+  subClass: normClass === 'Stocks' ? classifyStockSubClass(row.asset_class, row.ticker) : undefined,
   price: row.price || 0,
   open: row.open || 0,
   dayHigh: row.day_high || 0,
@@ -241,7 +246,8 @@ const mapRowToAsset = (row: any) => ({
   sentimentVotesDownPct: row.sentiment_votes_down_pct || 0,
   communityTwitterFollowers: row.community_twitter_followers || 0,
   communityRedditSubscribers: row.community_reddit_subscribers || 0,
-});
+  };
+};
 
 export async function fetchAssetsByTickers(tickers: string[]): Promise<Asset[]> {
   if (!tickers || tickers.length === 0) return [];
@@ -291,6 +297,7 @@ export async function fetchAssetsPaginated(params: {
   offset: number;
   searchQuery: string;
   activeClass: string;
+  activeSubClass?: string;
   activeSector: string;
   sortBy: string;
   sortDir?: 'asc' | 'desc';
@@ -305,14 +312,9 @@ export async function fetchAssetsPaginated(params: {
         .select('id, ticker, asset_class, short_name, price, market_cap, pe_ratio, forward_pe, peg_ratio, price_to_book, price_to_sales, ev_to_ebitda, dividend_yield, dividend_rate, payout_ratio, earnings_growth, revenue_growth, profit_margins, gross_margins, operating_margins, return_on_equity, return_on_assets, total_revenue, ebitda, total_debt, free_cashflow, high_52_week, low_52_week, ma_50_day, ma_200_day, beta, recommendation_mean, target_mean_price, trailing_eps, forward_eps, held_percent_insiders, held_percent_institutions, sector, industry, country, fetched_at, coin_id', { count: 'exact' });
 
       if (params.activeClass !== 'All') {
-        const variants = expandAssetClassFilter(params.activeClass);
-        if (variants.length > 1) {
-          q = q.in('asset_class', variants);
-        } else {
-          q = q.eq('asset_class', variants[0]);
-        }
+        q = applySupabaseAssetClassFilter(q, params.activeClass, params.activeSubClass);
       }
-      if ((params.activeClass === 'US Stock' || params.activeClass === 'Stock') && params.activeSector !== 'All Sectors') {
+      if (normalizeAssetClass(params.activeClass) === 'Stocks' && params.activeClass !== 'All' && params.activeSector !== 'All Sectors') {
         q = q.eq('sector', params.activeSector);
       }
 
@@ -396,30 +398,46 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
   try {
     return await unstable_cache(
       async () => {
-        const assetClasses = ['Crypto', 'US Stock', 'ETF', 'REIT', 'Commodity', 'Bond', 'Indian Stock', 'International', 'Forex', 'Index', 'Equity'];
+        const nonStockClasses = ['Crypto', 'ETF', 'REIT', 'Commodity', 'Bond', 'Forex', 'Index'];
         const counts: Record<string, number> = { All: 0 };
-        
-        await Promise.all(assetClasses.map(async (cls) => {
-          const { count, error } = await supabase
-            .from('asset_snapshots')
-            .select('*', { count: 'exact', head: true })
-            .eq('asset_class', cls)
-            .not('ticker', 'like', 'BOND-%')
-            .not('ticker', 'like', 'REIT-%')
-            .not('ticker', 'like', 'COMM-%');
-            
-          if (error) {
-            throw new Error(`Count failed for ${cls}: ${error.message}`);
-          }
-          if (count !== null) {
-            counts[cls] = count;
-            counts['All'] += count;
-          }
-        }));
 
-        // Combine 'Equity' (generic US equities) into 'US Stock'
-        counts['US Stock'] = (counts['US Stock'] || 0) + (counts['Equity'] || 0);
-        delete counts['Equity'];
+        const baseCountQuery = (applyFilter: (q: any) => any) =>
+          applyFilter(
+            supabase
+              .from('asset_snapshots')
+              .select('*', { count: 'exact', head: true })
+              .not('ticker', 'like', 'BOND-%')
+              .not('ticker', 'like', 'REIT-%')
+              .not('ticker', 'like', 'COMM-%')
+          );
+
+        const [
+          stockAllRes,
+          stockUsRes,
+          stockInRes,
+          stockIntlRes,
+          ...otherRes
+        ] = await Promise.all([
+          baseCountQuery((q) => applySupabaseAssetClassFilter(q, 'Stocks', 'All')),
+          baseCountQuery((q) => applySupabaseAssetClassFilter(q, 'Stocks', 'US')),
+          baseCountQuery((q) => applySupabaseAssetClassFilter(q, 'Stocks', 'Indian')),
+          baseCountQuery((q) => applySupabaseAssetClassFilter(q, 'Stocks', 'International')),
+          ...nonStockClasses.map((cls) => baseCountQuery((q) => q.eq('asset_class', cls))),
+        ]);
+
+        if (stockAllRes.error) throw new Error(`Count failed for Stocks: ${stockAllRes.error.message}`);
+        counts['Stocks'] = stockAllRes.count ?? 0;
+        counts['Stocks:US'] = stockUsRes.count ?? 0;
+        counts['Stocks:Indian'] = stockInRes.count ?? 0;
+        counts['Stocks:International'] = stockIntlRes.count ?? 0;
+        counts['All'] += counts['Stocks'];
+
+        nonStockClasses.forEach((cls, i) => {
+          const res = otherRes[i];
+          if (res.error) throw new Error(`Count failed for ${cls}: ${res.error.message}`);
+          counts[cls] = res.count ?? 0;
+          counts['All'] += counts[cls];
+        });
 
         if (counts.All === 0) {
           throw new Error('All asset class counts returned 0, likely temporary DB outage');
@@ -427,8 +445,8 @@ export async function fetchAssetClassCounts(): Promise<Record<string, number>> {
 
         return counts;
       },
-      ['asset-class-counts-v2'],
-      { revalidate: 3600 } // Cache for 1 hour
+      ['asset-class-counts-v3'],
+      { revalidate: 3600 }
     )();
   } catch (err: any) {
     console.warn('fetchAssetClassCounts error during fetch/prerender, using fallback counts:', err?.message || err);

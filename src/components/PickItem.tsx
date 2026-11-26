@@ -17,8 +17,11 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
 }
 
+import { formatAssetClassBadge } from "@/lib/asset-utils";
+
 const CLASS_COLORS: Record<string, { bg: string; text: string; glow: string; border: string }> = {
   Crypto: { bg: "rgba(139,92,246,0.08)", text: "text-violet-400", glow: "rgba(139,92,246,0.3)", border: "border-violet-500/20" },
+  Stocks: { bg: "rgba(6,182,212,0.08)", text: "text-cyan-400", glow: "rgba(6,182,212,0.3)", border: "border-cyan-500/20" },
   "US Stock": { bg: "rgba(6,182,212,0.08)", text: "text-cyan-400", glow: "rgba(6,182,212,0.3)", border: "border-cyan-500/20" },
   ETF: { bg: "rgba(59,130,246,0.08)", text: "text-blue-400", glow: "rgba(59,130,246,0.3)", border: "border-blue-500/20" },
   REIT: { bg: "rgba(245,158,11,0.08)", text: "text-amber-400", glow: "rgba(245,158,11,0.3)", border: "border-amber-500/20" },
@@ -28,7 +31,7 @@ const CLASS_COLORS: Record<string, { bg: string; text: string; glow: string; bor
   International: { bg: "rgba(168,85,247,0.08)", text: "text-purple-400", glow: "rgba(168,85,247,0.3)", border: "border-purple-500/20" },
 };
 
-const getClassStyle = (cls: string) => CLASS_COLORS[cls] || CLASS_COLORS["US Stock"];
+const getClassStyle = (cls: string) => CLASS_COLORS[cls] || CLASS_COLORS["Stocks"];
 
 export function PickItem({
   pick,
@@ -263,7 +266,7 @@ export function PickItem({
                       className={`px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider ${classStyle.text} ${classStyle.border} border`}
                       style={{ background: classStyle.bg }}
                     >
-                      {pickClass}
+                      {formatAssetClassBadge(pick.asset_class || pickClass, asset.symbol)}
                     </span>
                   </div>
                 </div>
