@@ -38,51 +38,46 @@ export const AVAILABLE_METRICS = [
   { id: "marketCap",     label: "Market Cap" },
   { id: "peRatio",       label: "P/E Ratio" },
   { id: "forwardPe",     label: "Fwd P/E" },
+  { id: "pegRatio",      label: "PEG Ratio" },
   { id: "priceToBook",   label: "P/B Ratio" },
   { id: "priceToSales",  label: "P/S Ratio" },
   { id: "evToEbitda",    label: "EV/EBITDA" },
   { id: "dividendYield", label: "Div Yield" },
+  { id: "dividendRate",  label: "Div Rate" },
+  { id: "payoutRatio",   label: "Payout Ratio" },
   { id: "earningsGrowth",label: "EPS Growth" },
   { id: "revenueGrowth", label: "Rev Growth" },
   { id: "profitMargins", label: "Net Margin" },
+  { id: "grossMargins",  label: "Gross Margin" },
+  { id: "operatingMargins", label: "Op Margin" },
+  { id: "returnOnEquity",   label: "ROE" },
+  { id: "returnOnAssets",   label: "ROA" },
+  { id: "totalRevenue",  label: "Revenue" },
+  { id: "ebitda",        label: "EBITDA" },
+  { id: "totalDebt",     label: "Total Debt" },
+  { id: "freeCashflow",  label: "Free CF" },
   { id: "high52Week",    label: "52W High" },
   { id: "low52Week",     label: "52W Low" },
   { id: "ma50Day",       label: "50D MA" },
   { id: "ma200Day",      label: "200D MA" },
   { id: "beta",          label: "Beta" },
+  { id: "volume",        label: "Live Volume" },
   { id: "sector",        label: "Sector" },
-  { id: "previousClose",           label: "Prev Close" },
-  { id: "enterpriseValue",         label: "Ent Value" },
-  { id: "pegRatio",                label: "PEG Ratio" },
-  { id: "dividendRate",            label: "Div Rate" },
-  { id: "payoutRatio",             label: "Payout Ratio" },
-  { id: "grossMargins",            label: "Gross Margin" },
-  { id: "operatingMargins",        label: "Op Margin" },
-  { id: "returnOnEquity",          label: "ROE" },
-  { id: "returnOnAssets",          label: "ROA" },
-  { id: "totalRevenue",            label: "Revenue" },
-  { id: "ebitda",                  label: "EBITDA" },
-  { id: "totalDebt",               label: "Total Debt" },
-  { id: "freeCashflow",            label: "Free CF" },
   { id: "heldPercentInsiders",     label: "Insider %" },
   { id: "heldPercentInstitutions", label: "Institution %" },
   { id: "recommendationMean",      label: "Analyst Score" },
   { id: "targetMeanPrice",         label: "Price Target" },
-  { id: "trailingEps",             label: "EPS" },
-  { id: "forwardEps",              label: "Fwd EPS" },
-  { id: "volume",                  label: "Volume" },
-  { id: "avgVolume",               label: "Avg Volume" },
-  { id: "dayHigh",                 label: "Day High" },
-  { id: "dayLow",                  label: "Day Low" },
-  { id: "currency",                label: "Currency" },
-  { id: "allTimeHigh",             label: "All Time High" },
-  { id: "allTimeLow",              label: "All Time Low" },
-  { id: "sharesOutstanding",       label: "Shares Out" },
+  { id: "trailingEps",   label: "EPS" },
+  { id: "forwardEps",    label: "Fwd EPS" },
+  { id: "currency",      label: "Currency" },
 ];
 
-const AnimatedPrice = ({ price, currency = 'USD' }: { price: number; currency?: string }) => {
+const AnimatedPrice = ({ price, currency = 'USD', assetClass }: { price: number; currency?: string; assetClass?: string }) => {
   const displayPrice = useCountUp(price, 800);
   if (price == null || Number.isNaN(price)) return <>—</>;
+  if (assetClass === 'Index') {
+    return <>{new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(displayPrice || 0)}</>;
+  }
   try {
     return <>{new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(displayPrice || 0)}</>;
   } catch {
@@ -93,7 +88,7 @@ const AnimatedPrice = ({ price, currency = 'USD' }: { price: number; currency?: 
 export const formatNumber = (num: number | undefined | null | string) => {
   if (num === null || num === undefined || num === "" || Number.isNaN(Number(num))) return "—";
   const val = Number(num);
-  if (val === 0) return "$0.00";
+  if (val === 0) return "—";
   const abs = Math.abs(val);
   const sign = val < 0 ? "-" : "";
   if (abs >= 1e12) return sign + "$" + (abs / 1e12).toFixed(2) + "T";
@@ -103,15 +98,25 @@ export const formatNumber = (num: number | undefined | null | string) => {
   return sign + "$" + abs.toFixed(2);
 };
 
+export const formatCount = (num: number | undefined | null | string) => {
+  if (num === null || num === undefined || num === "" || Number.isNaN(Number(num))) return "—";
+  const val = Number(num);
+  if (val <= 0) return "—";
+  if (val >= 1e9) return (val / 1e9).toFixed(2) + "B";
+  if (val >= 1e6) return (val / 1e6).toFixed(2) + "M";
+  if (val >= 1e3) return (val / 1e3).toFixed(1) + "K";
+  return val.toLocaleString("en-US");
+};
+
 export const getMetric = (id: string, asset: any, customFormatNumber?: any) => {
   const formatter = customFormatNumber || formatNumber;
   const sym = getCurrencySymbol(asset.currency || asset.symbol, asset.assetClass);
   switch(id) {
-    case "volume": return formatter(asset.volume);
-    case "avgVolume": return formatter(asset.avgVolume);
+    case "volume": return formatCount(asset.volume);
+    case "avgVolume": return formatCount(asset.avgVolume);
     case "marketCap": return formatter(asset.marketCap);
-    case "peRatio": return asset.peRatio != null ? asset.peRatio.toFixed(2) : "—";
-    case "forwardPe": return asset.forwardPe != null ? asset.forwardPe.toFixed(2) : "—";
+    case "peRatio": return asset.peRatio != null && asset.peRatio !== 0 ? asset.peRatio.toFixed(2) : "—";
+    case "forwardPe": return asset.forwardPe != null && asset.forwardPe !== 0 ? asset.forwardPe.toFixed(2) : "—";
     case "priceToBook": return asset.priceToBook != null ? asset.priceToBook.toFixed(2) : "—";
     case "priceToSales": return asset.priceToSales != null ? asset.priceToSales.toFixed(2) : "—";
     case "evToEbitda": return asset.evToEbitda != null ? asset.evToEbitda.toFixed(2) : "—";
@@ -119,15 +124,15 @@ export const getMetric = (id: string, asset: any, customFormatNumber?: any) => {
     case "earningsGrowth": return asset.earningsGrowth != null ? (asset.earningsGrowth * 100).toFixed(2) + "%" : "—";
     case "revenueGrowth": return asset.revenueGrowth != null ? (asset.revenueGrowth * 100).toFixed(2) + "%" : "—";
     case "profitMargins": return asset.profitMargins != null ? (asset.profitMargins * 100).toFixed(2) + "%" : "—";
-    case "high52Week": return asset.high52Week != null ? sym + asset.high52Week.toFixed(2) : "—";
-    case "low52Week": return asset.low52Week != null ? sym + asset.low52Week.toFixed(2) : "—";
-    case "ma50Day": return asset.ma50Day != null ? sym + asset.ma50Day.toFixed(2) : "—";
-    case "ma200Day": return asset.ma200Day != null ? sym + asset.ma200Day.toFixed(2) : "—";
+    case "high52Week": return asset.high52Week != null && asset.high52Week > 0 ? sym + asset.high52Week.toFixed(2) : "—";
+    case "low52Week": return asset.low52Week != null && asset.low52Week > 0 ? sym + asset.low52Week.toFixed(2) : "—";
+    case "ma50Day": return asset.ma50Day != null && asset.ma50Day > 0 ? sym + asset.ma50Day.toFixed(2) : "—";
+    case "ma200Day": return asset.ma200Day != null && asset.ma200Day > 0 ? sym + asset.ma200Day.toFixed(2) : "—";
     case "beta": return asset.beta != null ? asset.beta.toFixed(2) : "—";
-    case "dayHigh": return asset.dayHigh != null ? sym + asset.dayHigh.toFixed(2) : "—";
-    case "dayLow": return asset.dayLow != null ? sym + asset.dayLow.toFixed(2) : "—";
+    case "dayHigh": return asset.dayHigh != null && asset.dayHigh > 0 ? sym + asset.dayHigh.toFixed(2) : "—";
+    case "dayLow": return asset.dayLow != null && asset.dayLow > 0 ? sym + asset.dayLow.toFixed(2) : "—";
     case "sector": return asset.sector || "—";
-    case "previousClose": return asset.previousClose != null ? sym + asset.previousClose.toFixed(2) : "—";
+    case "previousClose": return asset.previousClose != null && asset.previousClose > 0 ? sym + asset.previousClose.toFixed(2) : "—";
     case "enterpriseValue": return formatter(asset.enterpriseValue);
     case "pegRatio": return asset.pegRatio != null ? asset.pegRatio.toFixed(2) : "—";
     case "dividendRate": return asset.dividendRate != null ? sym + asset.dividendRate.toFixed(2) : "—";
@@ -140,16 +145,16 @@ export const getMetric = (id: string, asset: any, customFormatNumber?: any) => {
     case "ebitda": return formatter(asset.ebitda);
     case "totalDebt": return formatter(asset.totalDebt);
     case "freeCashflow": return formatter(asset.freeCashflow);
-    case "allTimeHigh": return asset.allTimeHigh != null ? sym + asset.allTimeHigh.toFixed(2) : "—";
-    case "allTimeLow": return asset.allTimeLow != null ? sym + asset.allTimeLow.toFixed(2) : "—";
-    case "sharesOutstanding": return formatter(asset.sharesOutstanding);
+    case "allTimeHigh": return asset.allTimeHigh != null && asset.allTimeHigh > 0 ? sym + asset.allTimeHigh.toFixed(2) : "—";
+    case "allTimeLow": return asset.allTimeLow != null && asset.allTimeLow > 0 ? sym + asset.allTimeLow.toFixed(2) : "—";
+    case "sharesOutstanding": return formatCount(asset.sharesOutstanding);
     case "heldPercentInsiders": return asset.heldPercentInsiders != null ? (asset.heldPercentInsiders * 100).toFixed(2) + "%" : "—";
     case "heldPercentInstitutions": return asset.heldPercentInstitutions != null ? (asset.heldPercentInstitutions * 100).toFixed(2) + "%" : "—";
-    case "recommendationMean": return asset.recommendationMean != null ? asset.recommendationMean.toFixed(2) : "—";
-    case "targetMeanPrice": return asset.targetMeanPrice != null ? sym + asset.targetMeanPrice.toFixed(2) : "—";
+    case "recommendationMean": return asset.recommendationMean != null && asset.recommendationMean > 0 ? asset.recommendationMean.toFixed(2) : "—";
+    case "targetMeanPrice": return asset.targetMeanPrice != null && asset.targetMeanPrice > 0 ? sym + asset.targetMeanPrice.toFixed(2) : "—";
     case "trailingEps": return asset.trailingEps != null ? sym + asset.trailingEps.toFixed(2) : "—";
     case "forwardEps": return asset.forwardEps != null ? sym + asset.forwardEps.toFixed(2) : "—";
-    case "currency": return asset.currency || "USD";
+    case "currency": return asset.assetClass === 'Index' ? "PTS" : (asset.currency || "USD");
     default: return "—";
   }
 };
@@ -167,7 +172,12 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
   const displayAsset = {
     ...asset,
     price: displayPrice,
-    marketCap: liveData?.marketCap ?? asset.marketCap,
+    marketCap: (asset.marketCap && asset.marketCap > 0) ? asset.marketCap : (liveData?.marketCap ?? asset.marketCap),
+    volume: (asset.volume && asset.volume > 0) ? asset.volume : (liveData?.volume ?? asset.volume),
+    high52Week: (asset.high52Week && asset.high52Week > 0) ? asset.high52Week : (liveData?.high52Week ?? asset.high52Week),
+    low52Week: (asset.low52Week && asset.low52Week > 0) ? asset.low52Week : (liveData?.low52Week ?? asset.low52Week),
+    ma50Day: (asset.ma50Day && asset.ma50Day > 0) ? asset.ma50Day : (liveData?.ma50Day ?? asset.ma50Day),
+    ma200Day: (asset.ma200Day && asset.ma200Day > 0) ? asset.ma200Day : (liveData?.ma200Day ?? asset.ma200Day),
   };
 
   const getMetricLocal = (id: string) => getMetric(id, displayAsset, propFormatNumber || formatNumber);
@@ -191,7 +201,7 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
           rectRef.current = cardRef.current.getBoundingClientRect();
         }
       }}
-      className="group relative bg-zinc-950/90 md:bg-white/[0.04] md:backdrop-blur-md border border-white/10 rounded-3xl p-6 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/30 hover:shadow-[0_20px_60px_rgba(16,185,129,0.08)] will-change-transform"
+      className="group relative bg-zinc-950/90 md:bg-white/[0.04] md:backdrop-blur-md border border-white/10 rounded-3xl p-5 sm:p-6 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/30 hover:shadow-[0_20px_60px_rgba(16,185,129,0.08)] will-change-transform"
     >
       <div
         ref={glowRef}
@@ -200,19 +210,23 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
           background: `radial-gradient(circle 200px at var(--glow-x, 50%) var(--glow-y, 50%), rgba(16, 185, 129, 0.08), transparent)`
         }}
       />
-      <div className="flex justify-between items-start mb-6 relative z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-black/50 border border-white/10 flex items-center justify-center text-lg text-white group-hover:scale-110 transition-transform duration-500">
+      <div className="flex justify-between items-start gap-2 mb-5 relative z-10">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className="w-9 h-9 rounded-full bg-black/50 border border-white/10 flex items-center justify-center text-base text-white shrink-0 group-hover:scale-110 transition-transform duration-500">
             {classIcons[asset.assetClass] || "◈"}
           </div>
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-white/90 truncate max-w-[140px]">{asset.name}</h2>
-            <div className="text-zinc-400 text-xs font-mono">{asset.symbol}{asset.currency && asset.currency !== "USD" ? "/" + asset.currency : "/USD"}</div>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-bold tracking-tight text-white/90 truncate">{asset.name}</h2>
+            <div className="text-zinc-400 text-xs font-mono truncate">
+              {asset.assetClass === 'Index'
+                ? `${asset.symbol} · PTS`
+                : `${asset.symbol}${asset.currency && asset.currency !== "USD" ? "/" + asset.currency : "/USD"}`}
+            </div>
           </div>
         </div>
         
-        <div className="flex flex-col items-end gap-2">
-          <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium font-mono uppercase tracking-wider ${
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium font-mono uppercase tracking-wider whitespace-nowrap ${
             classColors[
               (asset as any).subClass === 'Indian'
                 ? 'Indian Stock'
@@ -223,8 +237,8 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
           }`}>
             {formatAssetClassBadge(asset.assetClass, asset.symbol, (asset as any).subClass)}
           </span>
-          <div className="flex items-center gap-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${displayIsUp ? "bg-emerald-500" : "bg-rose-500"} ${isLive ? "animate-pulse" : ""}`} />
+          <div className="flex items-center gap-1 whitespace-nowrap">
+            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${displayIsUp ? "bg-emerald-500" : "bg-rose-500"} ${isLive ? "animate-pulse" : ""}`} />
             <span suppressHydrationWarning className={`text-[10px] font-medium font-mono uppercase ${isLive ? "text-emerald-500" : "text-zinc-500"}`}>
               {isLive 
                 ? (liveData?.quoteTime ? `LIVE · ${new Date(liveData.quoteTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}` : "LIVE")
@@ -241,24 +255,24 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
         </div>
       </div>
 
-      <div className="flex justify-between items-end mb-6 relative z-10">
-        <div className="flex flex-col gap-1">
-          <span className="text-3xl font-light font-mono tracking-tighter text-white">
-            <AnimatedPrice price={displayPrice} currency={asset.currency} />
+      <div className="flex justify-between items-end gap-2 mb-5 relative z-10">
+        <div className="flex flex-col gap-1 min-w-0">
+          <span className="text-2xl sm:text-3xl font-light font-mono tracking-tighter text-white truncate">
+            <AnimatedPrice price={displayPrice} currency={asset.currency} assetClass={asset.assetClass} />
           </span>
           {displayChange && displayChange !== "—" ? (
             <span className={`flex items-center gap-1 font-mono text-xs font-bold ${displayIsUp ? "text-emerald-400" : "text-rose-400"}`}>
               {displayIsUp ? '▲' : '▼'} {displayChange.replace('-', '')}
             </span>
           ) : (
-            <span className="font-mono text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
-              {asset.assetClass}
+            <span className="font-mono text-[11px] font-medium text-zinc-500 uppercase tracking-wider truncate">
+              {formatAssetClassBadge(asset.assetClass, asset.symbol, (asset as any).subClass)}
             </span>
           )}
         </div>
 
-        <div className="absolute right-0 bottom-2 w-[100px] h-[35px] pointer-events-none transition-opacity duration-300 opacity-60 group-hover:opacity-100">
-          <Sparkline data={asset.history || []} isUp={displayIsUp} width={100} height={35} />
+        <div className="shrink-0 w-[86px] h-[34px] pointer-events-none transition-opacity duration-300 opacity-60 group-hover:opacity-100">
+          <Sparkline data={asset.history || []} isUp={displayIsUp} width={86} height={34} />
         </div>
       </div>
 

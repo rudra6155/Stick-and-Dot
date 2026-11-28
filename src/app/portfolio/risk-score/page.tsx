@@ -142,8 +142,14 @@ export default function RiskScorePage() {
                       <span className="text-sm text-zinc-300 truncate max-w-[220px]">{r.short_name || r.ticker}</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono">
-                      <span className="bg-zinc-800 px-2 py-0.5 rounded text-zinc-400">{r.asset_class}</span>
-                      {r.price && <span>${r.price.toFixed(2)}</span>}
+                      <span className="bg-zinc-800 px-2 py-0.5 rounded text-zinc-400">
+                        {r.asset_class}{r.sub_class ? ` · ${r.sub_class}` : ''}
+                      </span>
+                      {r.price != null && (
+                        <span>
+                          {getCurrencySymbol(r.ticker, r.asset_class)}{r.price.toFixed(2)}
+                        </span>
+                      )}
                     </div>
                   </button>
                 ))}

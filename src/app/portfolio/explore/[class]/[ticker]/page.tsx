@@ -12,6 +12,7 @@ import {
   classifyStockSubClass,
   expandAssetClassFilter,
   formatAssetClassBadge,
+  inferCurrency,
   normalizeAssetClass,
   normalizeDividendYieldPct,
   pickCanonicalAssetRow,
@@ -47,7 +48,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
       try {
         // 1. Fetch raw asset matching ticker and assetClass variants (US Stock/Stock/Equity),
         // falling back to ticker-only lookup if a cross-category link arrives.
-        const SELECT_COLS = 'id, ticker, short_name, asset_class, sector, industry, price, market_cap, pe_ratio, forward_pe, dividend_yield, dividend_rate, beta, high_52_week, low_52_week, ma_50_day, ma_200_day, fetched_at, revenue_growth, profit_margins, return_on_equity, currency, long_business_summary';
+        const SELECT_COLS = 'id, ticker, short_name, asset_class, sector, industry, country, price, market_cap, pe_ratio, forward_pe, dividend_yield, dividend_rate, beta, high_52_week, low_52_week, ma_50_day, ma_200_day, fetched_at, revenue_growth, profit_margins, return_on_equity';
         const classVariants = expandAssetClassFilter(assetClass);
         let { data: rows, error: assetErr } = await supabase
           .from('asset_snapshots')
@@ -66,6 +67,10 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
           assetErr = fallbackRes.error;
         }
 
+        if (assetErr) {
+          console.error('Asset detail query failed:', assetErr);
+        }
+
         const picked = pickCanonicalAssetRow(rows, assetClass);
         if (assetErr || !picked) throw new Error("Asset not found");
 
@@ -76,6 +81,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
           raw_asset_class: picked.asset_class,
           sub_class: subClass,
           asset_class: normClass,
+          currency: inferCurrency(picked.ticker, picked.asset_class),
           dividend_yield: normalizeDividendYieldPct(picked.dividend_yield, picked.dividend_rate, picked.price),
         };
 
@@ -112,7 +118,9 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
             setAsset((prev: any) => prev ? {
               ...prev,
               price: q.price ?? prev.price,
-              market_cap: q.marketCap ?? prev.market_cap,
+              market_cap: (prev.market_cap && prev.market_cap > 0) ? prev.market_cap : (q.marketCap ?? prev.market_cap),
+              high_52_week: prev.high_52_week ?? q.high52Week ?? null,
+              low_52_week: prev.low_52_week ?? q.low52Week ?? null,
               change: q.change ?? prev.change,
               isUp: q.isUp ?? prev.isUp,
               isLive: true,
@@ -120,9 +128,20 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
             } : prev);
           }
 
-          // Update risk score
+          // Update risk score & merge any live-enriched fundamentals missing from snapshot
           if (riskResultSettled.status === 'fulfilled' && !riskResultSettled.value.error && !riskResultSettled.value.hasError) {
             setRiskResult(riskResultSettled.value);
+            const ra = riskResultSettled.value.asset;
+            if (ra) {
+              setAsset((prev: any) => prev ? {
+                ...prev,
+                market_cap: (prev.market_cap && prev.market_cap > 0) ? prev.market_cap : (ra.market_cap ?? prev.market_cap),
+                pe_ratio: prev.pe_ratio ?? ra.pe_ratio ?? null,
+                beta: prev.beta ?? ra.beta ?? null,
+                high_52_week: prev.high_52_week ?? ra.high_52_week ?? null,
+                low_52_week: prev.low_52_week ?? ra.low_52_week ?? null,
+              } : prev);
+            }
           } else {
             setRiskResult({ hasError: true });
           }
@@ -212,7 +231,9 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
                     {formatAssetClassBadge(asset.raw_asset_class || asset.asset_class, asset.ticker, asset.sub_class)}
                   </span>
                 </div>
-                <p className="text-sm text-zinc-400 mt-1">{asset.sector || asset.long_business_summary?.slice(0, 80) || "Global Asset"}</p>
+                <p className="text-sm text-zinc-400 mt-1">
+                  {[asset.sector, asset.industry, asset.country].filter(Boolean).join(" · ") || "Global Asset"}
+                </p>
               </div>
 
               <div className="text-left sm:text-right">
@@ -240,7 +261,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
               <div>
                 <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Market Cap</p>
                 <p className="text-sm font-mono font-bold text-zinc-200 mt-0.5">
-                  {asset.market_cap 
+                  {asset.market_cap && asset.market_cap > 0
                     ? asset.market_cap > 1e12 
                       ? `${(asset.market_cap / 1e12).toFixed(2)}T` 
                       : asset.market_cap > 1e9 

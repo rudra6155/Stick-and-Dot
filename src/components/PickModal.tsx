@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
-import { classifyStockSubClass, normalizeAssetClass } from "@/lib/asset-utils";
+import { classifyStockSubClass, formatAssetClassBadge, getCurrencySymbol, normalizeAssetClass } from "@/lib/asset-utils";
 
 export function PickModal({ 
   isOpen, 
@@ -139,11 +139,15 @@ export function PickModal({
           <div className="flex justify-between items-center bg-zinc-900 rounded-xl p-4">
             <div>
               <p className="text-xs text-zinc-500 font-mono uppercase tracking-widest">Current Price</p>
-              <p className="text-lg font-mono font-bold">${(asset.price || 0).toFixed(2)}</p>
+              <p className="text-lg font-mono font-bold">
+                {getCurrencySymbol(asset.currency || asset.ticker, asset.raw_asset_class || asset.asset_class)}{(asset.price || 0).toFixed(2)}
+              </p>
             </div>
             <div className="text-right">
               <p className="text-xs text-zinc-500 font-mono uppercase tracking-widest">Class</p>
-              <p className="text-sm font-bold text-emerald-400">{asset.asset_class}</p>
+              <p className="text-sm font-bold text-emerald-400">
+                {formatAssetClassBadge(asset.raw_asset_class || asset.asset_class, asset.ticker, asset.sub_class)}
+              </p>
             </div>
           </div>
 

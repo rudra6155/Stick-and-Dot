@@ -17,10 +17,13 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
 }
 
-import { formatAssetClassBadge } from "@/lib/asset-utils";
+import { formatAssetClassBadge, getCurrencySymbol } from "@/lib/asset-utils";
 
 const CLASS_COLORS: Record<string, { bg: string; text: string; glow: string; border: string }> = {
   Crypto: { bg: "rgba(139,92,246,0.08)", text: "text-violet-400", glow: "rgba(139,92,246,0.3)", border: "border-violet-500/20" },
+  "Stocks · US": { bg: "rgba(6,182,212,0.08)", text: "text-cyan-400", glow: "rgba(6,182,212,0.3)", border: "border-cyan-500/20" },
+  "Stocks · Indian": { bg: "rgba(249,115,22,0.08)", text: "text-orange-400", glow: "rgba(249,115,22,0.3)", border: "border-orange-500/20" },
+  "Stocks · Intl": { bg: "rgba(168,85,247,0.08)", text: "text-purple-400", glow: "rgba(168,85,247,0.3)", border: "border-purple-500/20" },
   Stocks: { bg: "rgba(6,182,212,0.08)", text: "text-cyan-400", glow: "rgba(6,182,212,0.3)", border: "border-cyan-500/20" },
   "US Stock": { bg: "rgba(6,182,212,0.08)", text: "text-cyan-400", glow: "rgba(6,182,212,0.3)", border: "border-cyan-500/20" },
   ETF: { bg: "rgba(59,130,246,0.08)", text: "text-blue-400", glow: "rgba(59,130,246,0.3)", border: "border-blue-500/20" },
@@ -58,11 +61,13 @@ export function PickItem({
   const tiltRef = useRef<HTMLDivElement>(null);
   const amountRef = useRef<HTMLSpanElement>(null);
   const pickAmount = Number(pick.amount) || 0;
-  const pickClass = pick.asset_class || "Stock";
-  const classStyle = getClassStyle(pickClass);
+  const pickClass = pick.asset_class || "Stocks";
+  const pickBadge = formatAssetClassBadge(pickClass, asset.symbol || pick.ticker);
+  const sym = getCurrencySymbol(asset.currency || asset.symbol || pick.ticker, pickClass);
+  const classStyle = getClassStyle(pickBadge) !== CLASS_COLORS["Stocks"] ? getClassStyle(pickBadge) : getClassStyle(pickClass);
 
-  // Dimming when ring segment is hovered and this card's class doesn't match
-  const isDimmed = highlightClass !== null && highlightClass !== undefined && highlightClass !== pickClass;
+  // Dimming when ring segment is hovered and this card's segment label doesn't match
+  const isDimmed = highlightClass !== null && highlightClass !== undefined && highlightClass !== pickBadge;
 
   // GSAP Scroll-Driven entrance + value count-up
   useGSAP(() => {
@@ -200,7 +205,7 @@ export function PickItem({
       className={`relative group transition-all duration-500 ${
         isExpanded ? "col-span-1 lg:col-span-2" : ""
       } ${isDimmed ? "opacity-30 scale-[0.98]" : "opacity-100 scale-100"}`}
-      onMouseEnter={() => onHover?.(pickAmount, pickClass)}
+      onMouseEnter={() => onHover?.(pickAmount, pickBadge)}
       onMouseLeave={() => {
         onLeave?.();
         handleTiltLeave();
@@ -240,12 +245,12 @@ export function PickItem({
           aria-expanded={isExpanded}
         >
           {/* Asset Info */}
-          <div className="flex-1 p-5">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
+          <div className="flex-1 p-5 min-w-0">
+            <div className="flex items-start justify-between gap-2 mb-4">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 {/* Asset class icon with glow */}
                 <div
-                  className={`w-11 h-11 rounded-2xl flex items-center justify-center text-lg font-bold ${classStyle.text} relative`}
+                  className={`w-11 h-11 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0 ${classStyle.text} relative`}
                   style={{ background: classStyle.bg }}
                 >
                   {asset.symbol?.charAt(0) || "?"}
@@ -254,19 +259,19 @@ export function PickItem({
                     style={{ boxShadow: `0 0 20px ${classStyle.glow}` }}
                   />
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-white tracking-tight">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-bold text-white tracking-tight truncate">
                     {asset.name}
                   </h3>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs font-mono text-zinc-500">
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span className="text-xs font-mono text-zinc-500 truncate">
                       {asset.symbol}
                     </span>
                     <span
-                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider ${classStyle.text} ${classStyle.border} border`}
+                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider whitespace-nowrap ${classStyle.text} ${classStyle.border} border`}
                       style={{ background: classStyle.bg }}
                     >
-                      {formatAssetClassBadge(pick.asset_class || pickClass, asset.symbol)}
+                      {pickBadge}
                     </span>
                   </div>
                 </div>
@@ -286,7 +291,7 @@ export function PickItem({
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-2xl font-mono font-bold tracking-tight text-white">
-                  ${(asset.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {sym}{(asset.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
                 <div className={`flex items-center gap-1.5 mt-1 text-xs font-mono font-bold ${isProfit ? "text-emerald-400" : "text-rose-400"}`}>
                   <span>{isProfit ? "▲" : "▼"}</span>
@@ -295,7 +300,7 @@ export function PickItem({
                     {pnlPct.toFixed(2)}%
                   </span>
                   <span className="text-zinc-600">
-                    ({isProfit ? "+" : ""}${Math.abs(pnl).toLocaleString(undefined, { maximumFractionDigits: 2 })})
+                    ({isProfit ? "+" : "-"}{sym}{Math.abs(pnl).toLocaleString(undefined, { maximumFractionDigits: 2 })})
                   </span>
                 </div>
               </div>

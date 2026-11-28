@@ -1,6 +1,7 @@
 "use client";
 
 import Sparkline from "./Sparkline";
+import { getCurrencySymbol } from "@/lib/asset-utils";
 
 export function AssetBacktestPanel({ result }: { result: any }) {
   if (!result || !result.chart || result.chart.length === 0 || result.return_pct == null) {
@@ -11,6 +12,7 @@ export function AssetBacktestPanel({ result }: { result: any }) {
     );
   }
 
+  const sym = getCurrencySymbol(result.ticker, result.asset_class);
   const isPositive = result.return_pct >= 0;
   const color = isPositive ? "#10b981" : "#f43f5e";
   const data = result.chart.map((c: any) => c.close);
@@ -27,7 +29,7 @@ export function AssetBacktestPanel({ result }: { result: any }) {
             {isPositive ? "+" : ""}{result.return_pct.toFixed(2)}%
           </p>
           <p className="text-xs text-zinc-500 font-mono mt-1">
-            ${result.start_price} → ${result.end_price}
+            {sym}{result.start_price} → {sym}{result.end_price}
           </p>
         </div>
       </div>

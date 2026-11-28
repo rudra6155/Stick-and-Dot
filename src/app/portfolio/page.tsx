@@ -287,7 +287,7 @@ export default function MyPortfolioPage() {
     setAlignmentData(null);
     setError("");
     try {
-      const userHoldings = Array.from(new Set(picks.map((p) => toPortfolioModelClass(p.asset_class))));
+      const userHoldings = Array.from(new Set(picks.map((p) => toPortfolioModelClass(p.asset_class, p.ticker))));
       const res = await fetch("/api/scenario", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -251,13 +251,16 @@ export function inferCurrency(ticker: string, assetClass?: string): string {
   if (ticker.endsWith('.L') || ticker.endsWith('.IL')) return 'GBP';
   if (
     ticker.endsWith('.DE') ||
+    ticker.endsWith('.SG') ||
+    ticker.endsWith('.F') ||
     ticker.endsWith('.PA') ||
     ticker.endsWith('.AS') ||
     ticker.endsWith('.MI') ||
     ticker.endsWith('.MC') ||
     ticker.endsWith('.BR') ||
     ticker.endsWith('.LS') ||
-    ticker.endsWith('.VI')
+    ticker.endsWith('.VI') ||
+    ticker.endsWith('.HE')
   ) {
     return 'EUR';
   }
@@ -269,6 +272,16 @@ export function inferCurrency(ticker: string, assetClass?: string): string {
   if (ticker.endsWith('.BA')) return 'ARS';
   if (ticker.endsWith('.JK')) return 'IDR';
   if (ticker.endsWith('.MX')) return 'MXN';
+  if (ticker.endsWith('.KL')) return 'MYR';
+  if (ticker.endsWith('.TW') || ticker.endsWith('.TWO')) return 'TWD';
+  if (ticker.endsWith('.SS') || ticker.endsWith('.SZ')) return 'CNY';
+  if (ticker.endsWith('.SI')) return 'SGD';
+  if (ticker.endsWith('.KQ')) return 'KRW';
+  if (ticker.endsWith('.BK')) return 'THB';
+  if (ticker.endsWith('.CO')) return 'DKK';
+  if (ticker.endsWith('.ST')) return 'SEK';
+  if (ticker.endsWith('.OL')) return 'NOK';
+  if (ticker.endsWith('.NZ')) return 'NZD';
   return 'USD';
 }
 
@@ -278,10 +291,16 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   GBP: '£',
   EUR: '€',
   JPY: '¥',
+  CNY: 'CN¥',
   KRW: '₩',
   HKD: 'HK$',
+  TWD: 'NT$',
   CAD: 'C$',
   AUD: 'A$',
+  NZD: 'NZ$',
+  SGD: 'S$',
+  MYR: 'RM',
+  THB: '฿',
   CHF: 'CHF ',
   BRL: 'R$',
   MXN: 'MX$',
@@ -289,6 +308,9 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 
 /** Returns display currency symbol for an explicit currency code or ticker/class fallback. */
 export function getCurrencySymbol(currencyOrTicker?: string | null, assetClass?: string): string {
+  if (normalizeAssetClass(assetClass) === 'Index' || currencyOrTicker === 'PTS') {
+    return '';
+  }
   if (currencyOrTicker && CURRENCY_SYMBOLS[currencyOrTicker]) {
     return CURRENCY_SYMBOLS[currencyOrTicker];
   }

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ExternalLink, ArrowUpRight, ArrowDownRight, Layers } from "lucide-react";
 import { motion } from "framer-motion";
+import { normalizeAssetClass } from "@/lib/asset-utils";
 
 interface RelatedAsset {
   ticker: string;
@@ -130,7 +131,7 @@ export default function RelatedMarketsPanel({ ticker }: { ticker: string }) {
               {correlated.map(a => (
                 <motion.div key={a.ticker} variants={itemVariants}>
                   <Link
-                    href={`/portfolio/explore/${encodeURIComponent(a.asset_class)}/${encodeURIComponent(a.ticker)}`}
+                    href={`/portfolio/explore/${encodeURIComponent(normalizeAssetClass(a.asset_class))}/${encodeURIComponent(a.ticker)}`}
                     className={`group flex items-center justify-between p-4 rounded-2xl border transition-all shadow-sm ${corrBgColor(a.correlation)}`}
                   >
                     <div className="flex flex-col min-w-0 pr-4">
@@ -160,7 +161,7 @@ export default function RelatedMarketsPanel({ ticker }: { ticker: string }) {
               {inversely.map(a => (
                 <motion.div key={a.ticker} variants={itemVariants}>
                   <Link
-                    href={`/portfolio/explore/${encodeURIComponent(a.asset_class)}/${encodeURIComponent(a.ticker)}`}
+                    href={`/portfolio/explore/${encodeURIComponent(normalizeAssetClass(a.asset_class))}/${encodeURIComponent(a.ticker)}`}
                     className={`group flex items-center justify-between p-4 rounded-2xl border transition-all shadow-sm ${corrBgColor(a.correlation)}`}
                   >
                     <div className="flex flex-col min-w-0 pr-4">

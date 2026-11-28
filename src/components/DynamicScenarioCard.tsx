@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, ExternalLink, Plus, Check, AlertTriangle, X } from "lucide-react";
+import { getCurrencySymbol, normalizeAssetClass } from "@/lib/asset-utils";
 
 interface PresetAsset {
   ticker: string;
@@ -229,10 +230,10 @@ export default function DynamicScenarioCard({ scenario, onPresetApplied }: { sce
                           {scenario.watch_asset_classes.map((cls) => (
                             <Link
                               key={cls}
-                              href={`/portfolio/explore/${encodeURIComponent(cls)}`}
+                              href={`/portfolio/explore/${encodeURIComponent(normalizeAssetClass(cls))}`}
                               className="px-3 py-1.5 bg-violet-500/10 text-violet-300 text-xs font-medium rounded-full border border-violet-500/20 hover:bg-violet-500/20 transition-colors"
                             >
-                              {cls}
+                              {normalizeAssetClass(cls)}
                             </Link>
                           ))}
                         </div>
@@ -245,7 +246,7 @@ export default function DynamicScenarioCard({ scenario, onPresetApplied }: { sce
                         {scenario.top_5_tickers.map((t) => (
                           <Link
                             key={t.ticker}
-                            href={`/portfolio/explore/${encodeURIComponent(t.asset_class || 'Stock')}/${encodeURIComponent(t.ticker)}`}
+                            href={`/portfolio/explore/${encodeURIComponent(normalizeAssetClass(t.asset_class || 'Stocks'))}/${encodeURIComponent(t.ticker)}`}
                             className="flex items-start gap-4 group hover:bg-zinc-800/30 p-2 -mx-2 rounded-lg transition-colors"
                           >
                             <span className="text-sm font-mono font-bold text-emerald-400 group-hover:text-emerald-300 w-16 shrink-0">{t.ticker}</span>
@@ -324,11 +325,13 @@ export default function DynamicScenarioCard({ scenario, onPresetApplied }: { sce
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-800/30">
-                          {scenario.preset_portfolio.map((asset) => (
+                          {scenario.preset_portfolio.map((asset) => {
+                            const sym = getCurrencySymbol(asset.ticker, asset.asset_class);
+                            return (
                             <tr key={asset.ticker} className="hover:bg-zinc-900/30 transition-colors">
                               <td className="p-4">
                                 <Link
-                                  href={`/portfolio/explore/${encodeURIComponent(asset.asset_class)}/${encodeURIComponent(asset.ticker)}`}
+                                  href={`/portfolio/explore/${encodeURIComponent(normalizeAssetClass(asset.asset_class))}/${encodeURIComponent(asset.ticker)}`}
                                   className="flex flex-col group"
                                 >
                                   <span className="font-bold text-emerald-400 group-hover:text-emerald-300 font-mono transition-colors flex items-center gap-1.5">
@@ -341,7 +344,7 @@ export default function DynamicScenarioCard({ scenario, onPresetApplied }: { sce
                                 {asset.reason}
                               </td>
                               <td className="p-4 text-right font-mono text-zinc-300 whitespace-nowrap">
-                                ${(asset.price || 0).toFixed(2)}
+                                {sym}{(asset.price || 0).toFixed(2)}
                               </td>
                               <td className="p-4 text-right">
                                 <span className="font-mono text-white bg-white/10 px-2.5 py-1 rounded-md text-xs border border-white/5">
@@ -349,7 +352,7 @@ export default function DynamicScenarioCard({ scenario, onPresetApplied }: { sce
                                 </span>
                               </td>
                             </tr>
-                          ))}
+                          );})}
                         </tbody>
                       </table>
                     </div>

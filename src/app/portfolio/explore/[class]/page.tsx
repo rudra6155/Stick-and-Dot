@@ -13,6 +13,16 @@ type Asset = any;
 
 const sortOptions = ["Market Cap", "Price", "Revenue Growth", "P/E", "Div Yield", "52W High", "Beta"];
 
+function getDefaultMetrics(cls: string): string[] {
+  if (cls === "Index" || cls === "Bond" || cls === "Commodity" || cls === "Forex") {
+    return ["high52Week", "low52Week", "ma50Day", "ma200Day"];
+  }
+  if (cls === "Crypto") {
+    return ["marketCap", "volume", "high52Week", "low52Week"];
+  }
+  return ["marketCap", "peRatio", "dividendYield", "beta"];
+}
+
 export default function AssetClassPage({
   params,
   searchParams,
@@ -41,9 +51,11 @@ export default function AssetClassPage({
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isMetricsOpen, setIsMetricsOpen] = useState(false);
-  const [selectedMetrics, setSelectedMetrics] = useState<string[]>([
-    "marketCap", "volume", "peRatio", "dividendYield"
-  ]);
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(() => getDefaultMetrics(assetClass));
+
+  useEffect(() => {
+    setSelectedMetrics(getDefaultMetrics(assetClass));
+  }, [assetClass]);
 
   const toggleMetric = (id: string) => {
     setSelectedMetrics(prev =>

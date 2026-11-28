@@ -110,6 +110,9 @@ export async function POST(req: NextRequest) {
       if (q.sort_by === 'dividend_yield') {
         query = query.or('dividend_yield.is.null,dividend_yield.lte.50');
       }
+      if (q.sort_by === 'pe_ratio' && q.sort_dir === 'asc') {
+        query = query.gte('pe_ratio', 1).gte('market_cap', 500_000_000);
+      }
 
       query = query
         .order(q.sort_by, { ascending: q.sort_dir === 'asc', nullsFirst: false })
@@ -120,7 +123,10 @@ export async function POST(req: NextRequest) {
       }
       if (q.filters.sector) query = query.eq('sector', q.filters.sector);
 
-      const { data } = await query;
+      const { data, error: queryError } = await query;
+      if (queryError) {
+        console.error(`api/scenario query error (${q.label}):`, queryError);
+      }
       const uniqueAssets = deduplicateAssetRows(data, q.limit).map((a: any) => {
         const normCls = normalizeAssetClass(a.asset_class);
         return {

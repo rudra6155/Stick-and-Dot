@@ -119,6 +119,7 @@ export async function POST(req: NextRequest) {
       : 0;
     return {
       ...a,
+      raw_asset_class: a.asset_class,
       asset_class: normalizeAssetClass(a.asset_class),
       dividend_yield: normalizeDividendYieldPct(a.dividend_yield, a.dividend_rate, a.price),
       weight,
@@ -143,7 +144,7 @@ export async function POST(req: NextRequest) {
   // Stress tests
   const stress_tests = Object.entries(SCENARIO_IMPACTS).map(([scenario, impacts]) => {
     const scenario_return = assetDetails.reduce((s: number, a: any) => {
-      const modelClass = toPortfolioModelClass(a.asset_class, a.ticker);
+      const modelClass = toPortfolioModelClass(a.raw_asset_class || a.asset_class, a.ticker);
       const impact = impacts[modelClass] !== undefined ? impacts[modelClass] : -0.1;
       return s + impact * weight * 100;
     }, 0);

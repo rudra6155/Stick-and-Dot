@@ -47,6 +47,11 @@ export async function POST(req: NextRequest) {
         liveData[quote.symbol] = {
           price: quote.regularMarketPrice ?? null,
           marketCap: quote.marketCap ?? null,
+          volume: quote.regularMarketVolume ?? null,
+          high52Week: quote.fiftyTwoWeekHigh ?? null,
+          low52Week: quote.fiftyTwoWeekLow ?? null,
+          ma50Day: quote.fiftyDayAverage ?? null,
+          ma200Day: quote.twoHundredDayAverage ?? null,
           change: hasPct ? Math.abs(pct).toFixed(2) + "%" : null,
           isUp: hasPct ? pct >= 0 : true,
           quoteTime: quote.regularMarketTime

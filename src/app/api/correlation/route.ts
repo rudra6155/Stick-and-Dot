@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
-import { CANONICAL_SEARCH_ALIASES, pickCanonicalAssetRow } from '@/lib/asset-utils';
+import { CANONICAL_SEARCH_ALIASES, normalizeAssetClass, pickCanonicalAssetRow } from '@/lib/asset-utils';
 
 const supabase = createClient(
   getSupabaseUrl(),
@@ -169,8 +169,8 @@ async function fetchPriceHistory(ticker: string): Promise<{ date: string; close:
   try {
     const { data: snapshots } = await supabase
       .from('asset_snapshots')
-      .select('ticker, price, high_52_week, low_52_week, ma_50_day, ma_200_day, beta')
-      .ilike('ticker', cleanTicker)
+      .select('ticker, asset_class, market_cap, price, high_52_week, low_52_week, ma_50_day, ma_200_day, beta')
+      .eq('ticker', cleanTicker)
       .limit(5);
 
     const snapshot = pickCanonicalAssetRow(snapshots);
@@ -492,7 +492,7 @@ export async function POST(req: NextRequest) {
       results.push({
         ticker: asset.ticker,
         name: asset.short_name || asset.ticker,
-        asset_class: asset.asset_class,
+        asset_class: normalizeAssetClass(asset.asset_class),
         price: asset.price || 0,
         correlation: parseFloat(corr.toFixed(3)),
       });

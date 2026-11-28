@@ -47,9 +47,32 @@ export default function Sparkline({ data, isUp, width = 400, height = 120 }: { d
   const reactId = useId();
 
   if (!data || data.length === 0) {
+    if (width <= 160 || height <= 50) {
+      return (
+        <div
+          style={{ height }}
+          className="w-full flex items-center justify-end"
+          aria-label="No historical data"
+        >
+          <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+            <line
+              x1="4"
+              y1={height / 2}
+              x2={width - 4}
+              y2={height / 2}
+              stroke="rgba(161, 161, 170, 0.25)"
+              strokeWidth="1.25"
+              strokeDasharray="3 3"
+            />
+          </svg>
+        </div>
+      );
+    }
     return (
       <div style={{ height }} className="w-full flex items-center justify-center">
-        <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-600">No historical data</span>
+        <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-600 whitespace-nowrap">
+          No historical data
+        </span>
       </div>
     );
   }

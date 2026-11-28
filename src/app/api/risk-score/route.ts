@@ -1,13 +1,43 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
+import YahooFinance from 'yahoo-finance2';
 import { getSupabaseUrl, getSupabaseServiceKey } from '@/lib/supabase-config';
 import {
   classifyStockSubClass,
+  inferCurrency,
   normalizeAssetClass,
   normalizeDividendYieldPct,
   pickCanonicalAssetRow,
 } from '@/lib/asset-utils';
+
+const yf = new YahooFinance({ suppressNotices: ['yahooSurvey', 'ripHistorical'] });
+
+const FX_TO_USD_DIVISOR: Record<string, number> = {
+  USD: 1,
+  INR: 85,
+  JPY: 150,
+  KRW: 1400,
+  HKD: 7.8,
+  TWD: 32,
+  CNY: 7.2,
+  SGD: 1.35,
+  MYR: 4.4,
+  THB: 34,
+  IDR: 16000,
+  BRL: 5.8,
+  MXN: 20,
+  ARS: 1000,
+  GBP: 0.79,
+  EUR: 0.92,
+  CAD: 1.4,
+  AUD: 1.54,
+  NZD: 1.7,
+  CHF: 0.88,
+  DKK: 6.9,
+  SEK: 10.8,
+  NOK: 11,
+};
 
 const supabase = createClient(
   getSupabaseUrl(),
@@ -117,11 +147,16 @@ function scoreAsset(r: any) {
   // --- 4B. SPECIAL CASE: CRYPTOCURRENCIES ---
   if (assetClass === 'Crypto') {
     const cap = Number(r.market_cap) || 0;
-    const chg24 = Number(r.price_change_pct_24h) || 0;
-    const earn_score = Math.round(Math.max(8, Math.min(25, 16 + chg24 * 0.5)));
+    const price = Number(r.price) || 0;
+    const hi52 = Number(r.high_52_week) || 0;
+    const lo52 = Number(r.low_52_week) || 0;
+    const rangePos = (hi52 > lo52 && price > 0)
+      ? Math.max(0, Math.min(1, (price - lo52) / (hi52 - lo52)))
+      : 0.5;
+    const earn_score = Math.round(8 + rangePos * 17);
     const lose_score = cap > 1e11 ? 14 : cap > 1e10 ? 11 : cap > 1e9 ? 8 : 5;
     const exit_score = cap > 1e11 ? 25 : cap > 1e10 ? 22 : cap > 1e9 ? 16 : cap > 1e8 ? 10 : 5;
-    const value_score = cap > 5e10 ? 18 : cap > 5e9 ? 14 : 9;
+    const value_score = cap > 5e10 ? 18 : cap > 5e9 ? 14 : cap > 5e8 ? 10 : 6;
     const total = Math.max(0, Math.min(100, earn_score + lose_score + exit_score + value_score));
     const grade = total >= 80 ? 'A' : total >= 65 ? 'B' : total >= 50 ? 'C' : total >= 35 ? 'D' : 'F';
 
@@ -131,14 +166,14 @@ function scoreAsset(r: any) {
     ];
     const opportunities = [
       ...(cap > 1e10 ? ['Large-cap network adoption and deep exchange liquidity'] : ['High asymmetric beta to broader digital-asset cycle']),
-      ...(r.market_cap_rank && r.market_cap_rank <= 20 ? [`Top-${r.market_cap_rank} global crypto asset by market capitalization`] : []),
+      ...(rangePos >= 0.7 && hi52 > 0 ? ['Trading in upper 30% of its 52-week range'] : []),
     ];
 
     return {
       total_score: total,
       grade,
       breakdown: { earn_score, lose_score, exit_score, value_score },
-      earn_label: chg24 >= 0 ? 'Positive Momentum' : 'Volatile Drift',
+      earn_label: rangePos >= 0.6 ? 'Positive 52W Trend' : 'Range-Bound Drift',
       lose_label: lose_score >= 12 ? 'Moderate Crypto Risk' : 'High Crypto Risk',
       exit_label: exit_score >= 20 ? 'Deep Exchange Liquidity' : 'Moderate Liquidity',
       value_label: 'Network Scale',
@@ -262,11 +297,63 @@ export async function POST(req: NextRequest) {
   if (error || !canonical) return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
 
   const normCls = normalizeAssetClass(canonical.asset_class);
+  let enriched: Record<string, any> = { ...canonical };
+
+  // Enrich stocks/ETFs/REITs whose DB snapshot lacks fundamentals (e.g. Indian/global stocks)
+  const needsFundamentalEnrichment =
+    (normCls === 'Stocks' || normCls === 'ETF' || normCls === 'REIT') &&
+    (enriched.market_cap == null || (enriched.revenue_growth == null && enriched.pe_ratio == null));
+
+  if (needsFundamentalEnrichment) {
+    try {
+      const [quoteRes, summaryRes] = await Promise.allSettled([
+        yf.quote(canonical.ticker),
+        yf.quoteSummary(canonical.ticker, { modules: ['financialData', 'defaultKeyStatistics', 'summaryDetail'] }),
+      ]);
+      const rawQ: any = quoteRes.status === 'fulfilled' ? quoteRes.value : null;
+      const q: any = Array.isArray(rawQ) ? rawQ[0] : rawQ;
+      const qs: any = summaryRes.status === 'fulfilled' ? summaryRes.value : null;
+      const fin = qs?.financialData;
+      const stats = qs?.defaultKeyStatistics;
+      const detail = qs?.summaryDetail;
+
+      if (q || qs) {
+        const rawCurr = (q?.currency || fin?.financialCurrency || inferCurrency(canonical.ticker, canonical.asset_class)).toUpperCase();
+        const fxDiv = FX_TO_USD_DIVISOR[rawCurr] || 1;
+        const rawCap = q?.marketCap ?? detail?.marketCap;
+        const usdCap = rawCap && rawCap > 0 ? Math.round(rawCap / fxDiv) : enriched.market_cap;
+
+        enriched = {
+          ...enriched,
+          price: q?.regularMarketPrice ?? enriched.price,
+          market_cap: enriched.market_cap ?? usdCap,
+          pe_ratio: enriched.pe_ratio ?? q?.trailingPE ?? detail?.trailingPE ?? null,
+          forward_pe: enriched.forward_pe ?? q?.forwardPE ?? detail?.forwardPE ?? null,
+          beta: enriched.beta ?? q?.beta ?? stats?.beta ?? detail?.beta ?? null,
+          dividend_yield: enriched.dividend_yield ?? (q?.trailingAnnualDividendYield != null ? q.trailingAnnualDividendYield * 100 : null),
+          high_52_week: enriched.high_52_week ?? q?.fiftyTwoWeekHigh ?? detail?.fiftyTwoWeekHigh ?? null,
+          low_52_week: enriched.low_52_week ?? q?.fiftyTwoWeekLow ?? detail?.fiftyTwoWeekLow ?? null,
+          revenue_growth: enriched.revenue_growth ?? fin?.revenueGrowth ?? null,
+          earnings_growth: enriched.earnings_growth ?? fin?.earningsGrowth ?? null,
+          profit_margins: enriched.profit_margins ?? fin?.profitMargins ?? null,
+          return_on_equity: enriched.return_on_equity ?? fin?.returnOnEquity ?? null,
+          total_revenue: enriched.total_revenue ?? fin?.totalRevenue ?? null,
+          total_debt: enriched.total_debt ?? fin?.totalDebt ?? null,
+          free_cashflow: enriched.free_cashflow ?? fin?.freeCashflow ?? null,
+          recommendation_mean: enriched.recommendation_mean ?? fin?.recommendationMean ?? null,
+          target_mean_price: enriched.target_mean_price ?? fin?.targetMeanPrice ?? null,
+        };
+      }
+    } catch {
+      // Keep snapshot data on Yahoo transient failure
+    }
+  }
+
   const normalizedAsset = {
-    ...canonical,
+    ...enriched,
     asset_class: normCls,
     sub_class: normCls === 'Stocks' ? classifyStockSubClass(canonical.asset_class, canonical.ticker) : undefined,
-    dividend_yield: normalizeDividendYieldPct(canonical.dividend_yield, canonical.dividend_rate, canonical.price),
+    dividend_yield: normalizeDividendYieldPct(enriched.dividend_yield, enriched.dividend_rate, enriched.price),
   };
 
   const score = scoreAsset(normalizedAsset);

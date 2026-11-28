@@ -181,7 +181,7 @@ export default function SuperFinanceHub({
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isMetricsOpen, setIsMetricsOpen] = useState(false);
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([
-    "marketCap", "volume", "peRatio", "dividendYield", "high52Week", "beta"
+    "marketCap", "peRatio", "dividendYield", "high52Week", "ma50Day", "beta"
   ]);
   const [offset, setOffset] = useState(0);
   const [totalCount, setTotalCount] = useState(initialTotalCount || initialAssetClassCounts['All'] || 0);
