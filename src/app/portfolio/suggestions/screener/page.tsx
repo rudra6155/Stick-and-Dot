@@ -433,7 +433,9 @@ export default function ScreenerPage() {
                       <span className="text-zinc-400 whitespace-nowrap">{formatAssetClassBadge(r.asset_class, r.ticker, r.sub_class)}</span>
                       {r.sector && (
                         <>
-                          <span className="text-zinc-600 mx-1.5">·</span>
+                          {' '}
+                          <span className="text-zinc-600 mx-1">·</span>
+                          {' '}
                           <span className="text-zinc-400">{r.sector}</span>
                         </>
                       )}

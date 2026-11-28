@@ -64,9 +64,7 @@ export default async function LeaderboardPage({
   // 1. Fetch picks from leaderboard_picks view (includes safe username + picked_at_price)
   let picksQuery = adminClient
     .from('leaderboard_picks')
-    .select('pick_id, user_id, username, ticker, picked_at_price, created_at')
-    .not('picked_at_price', 'is', null)
-    .gt('picked_at_price', 0);
+    .select('pick_id, user_id, username, ticker, picked_at_price, created_at');
 
   if (thresholdIso) {
     picksQuery = picksQuery.gte('created_at', thresholdIso);

@@ -310,13 +310,15 @@ export async function POST(req: NextRequest) {
       const [quoteRes, summaryRes] = await Promise.allSettled([
         yf.quote(canonical.ticker),
         needsFundamentalEnrichment
-          ? yf.quoteSummary(canonical.ticker, { modules: ['price', 'financialData', 'defaultKeyStatistics', 'summaryDetail'] })
+          ? yf.quoteSummary(canonical.ticker, { modules: ['price', 'assetProfile', 'financialData', 'defaultKeyStatistics', 'summaryDetail'] })
+              .catch(() => yf.quoteSummary(canonical.ticker, { modules: ['financialData', 'defaultKeyStatistics', 'summaryDetail'] }))
           : Promise.resolve(null),
       ]);
       const rawQ: any = quoteRes.status === 'fulfilled' ? quoteRes.value : null;
       const q: any = Array.isArray(rawQ) ? rawQ[0] : rawQ;
       const qs: any = summaryRes.status === 'fulfilled' ? summaryRes.value : null;
       const priceMod = qs?.price;
+      const profileMod = qs?.assetProfile;
       const fin = qs?.financialData;
       const stats = qs?.defaultKeyStatistics;
       const detail = qs?.summaryDetail;
@@ -325,17 +327,32 @@ export async function POST(req: NextRequest) {
         const livePrice = q?.regularMarketPrice ?? priceMod?.regularMarketPrice ?? enriched.price;
         const rawCurr = (q?.currency || priceMod?.currency || fin?.financialCurrency || inferCurrency(canonical.ticker, canonical.asset_class)).toUpperCase();
         const fxDiv = FX_TO_USD_DIVISOR[rawCurr] || 1;
-        const sharesOut = stats?.sharesOutstanding ?? stats?.impliedSharesOutstanding ?? q?.sharesOutstanding;
+        const revImpliedShares =
+          fin?.totalRevenue > 0 && fin?.revenuePerShare > 0
+            ? fin.totalRevenue / fin.revenuePerShare
+            : null;
+        const sharesOut =
+          stats?.sharesOutstanding ??
+          stats?.impliedSharesOutstanding ??
+          q?.sharesOutstanding ??
+          revImpliedShares;
+        const evImpliedCap =
+          stats?.enterpriseValue && stats.enterpriseValue > 0
+            ? Math.max(0, stats.enterpriseValue - (fin?.totalDebt || 0) + (fin?.totalCash || 0))
+            : null;
         const rawCap =
           q?.marketCap ??
           priceMod?.marketCap ??
           detail?.marketCap ??
-          (sharesOut && livePrice ? sharesOut * livePrice : null);
+          (sharesOut && livePrice ? sharesOut * livePrice : null) ??
+          evImpliedCap;
         const usdCap = rawCap && rawCap > 0 ? Math.round(rawCap / fxDiv) : enriched.market_cap;
 
         enriched = {
           ...enriched,
           price: livePrice,
+          sector: enriched.sector ?? profileMod?.sector ?? null,
+          industry: enriched.industry ?? profileMod?.industry ?? null,
           market_cap: (enriched.market_cap && enriched.market_cap > 0) ? enriched.market_cap : usdCap,
           pe_ratio: enriched.pe_ratio ?? q?.trailingPE ?? detail?.trailingPE ?? null,
           forward_pe: enriched.forward_pe ?? q?.forwardPE ?? detail?.forwardPE ?? null,

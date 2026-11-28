@@ -400,7 +400,7 @@ export default function AssetClassPage({
             <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white">Try again</button>
           </div>
         ) : loading && assets.length === 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="bg-zinc-950/80 border border-zinc-800/80 rounded-3xl p-6 h-64 animate-pulse flex flex-col justify-between">
                 <div className="flex justify-between items-start">
@@ -425,7 +425,7 @@ export default function AssetClassPage({
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {assets.map((asset, index) => (
               <Link key={asset.symbol} href={`/portfolio/explore/${encodeURIComponent(assetClass)}/${encodeURIComponent(asset.symbol)}`} className="block min-w-0">
                 <AssetCard asset={asset} selectedMetrics={selectedMetrics} index={index} liveData={liveDataMap[asset.symbol]} />

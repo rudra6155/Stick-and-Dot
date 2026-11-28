@@ -104,7 +104,7 @@ function MatrixGrid({ labels, data }: { labels: LabelInfo[], data: MatrixEntry[]
       <div className="min-w-max inline-block pt-4">
         <div className="flex gap-1 items-end mb-2">
           {/* Top-Left Empty Corner */}
-          <div className="w-28 shrink-0" />
+          <div className="w-24 shrink-0" />
           {/* Column Headers */}
           {labels.map((col, i) => (
             <motion.div 
@@ -112,14 +112,14 @@ function MatrixGrid({ labels, data }: { labels: LabelInfo[], data: MatrixEntry[]
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className={`w-[72px] h-28 flex flex-col items-center justify-end pb-1.5 shrink-0 transition-opacity duration-300 ${
+              className={`w-[64px] h-28 flex flex-col items-center justify-end pb-1.5 shrink-0 transition-opacity duration-300 ${
                 hoveredCol && hoveredCol !== col.key ? 'opacity-30' : 'opacity-100'
               }`}
             >
               <span className="text-[10px] text-zinc-500 font-mono -rotate-45 origin-bottom-left translate-x-3 whitespace-nowrap mb-3">
                 {col.label}
               </span>
-              <span className="text-[11px] font-bold font-mono text-zinc-300 truncate max-w-full px-1 text-center" title={col.ticker}>
+              <span className="text-[11px] font-bold font-mono text-zinc-300 truncate max-w-full px-0.5 text-center" title={col.ticker}>
                 {col.ticker}
               </span>
             </motion.div>
@@ -134,7 +134,7 @@ function MatrixGrid({ labels, data }: { labels: LabelInfo[], data: MatrixEntry[]
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: rIdx * 0.05 }}
-              className={`w-28 shrink-0 flex flex-col items-end pr-3 transition-opacity duration-300 ${
+              className={`w-24 shrink-0 flex flex-col items-end pr-2.5 transition-opacity duration-300 ${
                 hoveredRow && hoveredRow !== row.key ? 'opacity-30' : 'opacity-100'
               }`}
             >
@@ -167,7 +167,7 @@ function MatrixGrid({ labels, data }: { labels: LabelInfo[], data: MatrixEntry[]
                       val
                     });
                   }}
-                  className={`w-[72px] h-12 shrink-0 rounded-xl border flex items-center justify-center cursor-crosshair transition-all duration-300 ${
+                  className={`w-[64px] h-12 shrink-0 rounded-xl border flex items-center justify-center cursor-crosshair transition-all duration-300 ${
                     isDimmed ? 'opacity-10 scale-95 grayscale' : 'opacity-100 hover:scale-110 hover:z-20'
                   } ${isDiagonal ? 'bg-zinc-800/30 border-transparent' : corrColor(val)}`}
                 >
