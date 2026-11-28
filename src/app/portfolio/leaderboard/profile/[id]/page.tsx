@@ -66,22 +66,22 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <div className="pt-24 max-w-5xl mx-auto px-4 md:px-8 py-12">
-      <Link href="/portfolio/leaderboard" className="text-zinc-500 hover:text-white flex items-center gap-2 mb-8 font-mono text-sm transition-colors">
+    <div className="pb-16">
+      <Link href="/portfolio/leaderboard" className="text-zinc-500 hover:text-white flex items-center gap-2 mb-6 font-mono text-sm transition-colors">
         <ArrowLeft className="w-4 h-4" /> Back to Leaderboard
       </Link>
 
-      <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-8 mb-8 flex flex-col md:flex-row items-center gap-6 shadow-2xl relative overflow-hidden">
+      <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6 sm:p-8 mb-8 flex flex-col lg:flex-row items-center gap-6 shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent pointer-events-none"></div>
-        <div className="w-24 h-24 rounded-full bg-zinc-800 flex flex-shrink-0 items-center justify-center border border-zinc-700">
-          <UserIcon className="w-10 h-10 text-zinc-500" />
+        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-zinc-800 flex flex-shrink-0 items-center justify-center border border-zinc-700">
+          <UserIcon className="w-9 h-9 text-zinc-500" />
         </div>
-        <div className="flex-1 text-center md:text-left z-10">
-          <h1 className="text-4xl font-black text-white">{username}</h1>
-          <p className="text-emerald-400 font-mono mt-2">Elite Investor Profile</p>
+        <div className="flex-1 min-w-0 text-center lg:text-left z-10 w-full">
+          <h1 className="text-2xl sm:text-3xl font-black text-white break-words">{username}</h1>
+          <p className="text-emerald-400 font-mono mt-1.5 text-sm">Elite Investor Profile</p>
         </div>
-        <div className="z-10 flex gap-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-center">
+        <div className="z-10 flex gap-4 shrink-0">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-5 py-3 text-center whitespace-nowrap">
             <div className="text-zinc-500 font-mono text-xs uppercase mb-1">Total Picks</div>
             <div className="text-2xl font-bold text-white">{picks.length}</div>
           </div>

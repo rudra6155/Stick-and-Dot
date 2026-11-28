@@ -4,6 +4,12 @@ import YahooFinance from 'yahoo-finance2';
 
 const yf = new YahooFinance({ suppressNotices: ['yahooSurvey', 'ripHistorical'] });
 
+const FX_TO_USD_DIVISOR: Record<string, number> = {
+  USD: 1, INR: 85, JPY: 150, KRW: 1400, HKD: 7.8, TWD: 32, CNY: 7.2,
+  SGD: 1.35, MYR: 4.4, THB: 34, IDR: 16000, BRL: 5.8, MXN: 20, ARS: 1000,
+  GBP: 0.79, EUR: 0.92, CAD: 1.4, AUD: 1.54, NZD: 1.7, CHF: 0.88, DKK: 6.9, SEK: 10.8, NOK: 11,
+};
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -44,9 +50,13 @@ export async function POST(req: NextRequest) {
       if (quote && quote.symbol) {
         const pct = quote.regularMarketChangePercent;
         const hasPct = typeof pct === 'number' && Number.isFinite(pct);
+        const curr = String(quote.currency || 'USD').toUpperCase();
+        const fxDiv = FX_TO_USD_DIVISOR[curr] || 1;
+        const rawCap = quote.marketCap ?? (quote.sharesOutstanding && quote.regularMarketPrice ? quote.sharesOutstanding * quote.regularMarketPrice : null);
+        const usdCap = rawCap && rawCap > 0 ? Math.round(rawCap / fxDiv) : null;
         liveData[quote.symbol] = {
           price: quote.regularMarketPrice ?? null,
-          marketCap: quote.marketCap ?? null,
+          marketCap: usdCap,
           volume: quote.regularMarketVolume ?? null,
           high52Week: quote.fiftyTwoWeekHigh ?? null,
           low52Week: quote.fiftyTwoWeekLow ?? null,

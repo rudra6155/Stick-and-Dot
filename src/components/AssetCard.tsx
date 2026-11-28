@@ -78,6 +78,10 @@ const AnimatedPrice = ({ price, currency = 'USD', assetClass }: { price: number;
   if (assetClass === 'Index') {
     return <>{new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(displayPrice || 0)}</>;
   }
+  if (assetClass === 'Forex') {
+    const decimals = Math.abs(price) < 10 ? 4 : 2;
+    return <>{new Intl.NumberFormat('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(displayPrice || 0)}</>;
+  }
   try {
     return <>{new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(displayPrice || 0)}</>;
   } catch {
@@ -110,7 +114,9 @@ export const formatCount = (num: number | undefined | null | string) => {
 
 export const getMetric = (id: string, asset: any, customFormatNumber?: any) => {
   const formatter = customFormatNumber || formatNumber;
+  const isForex = asset.assetClass === 'Forex';
   const sym = getCurrencySymbol(asset.currency || asset.symbol, asset.assetClass);
+  const fmtQuote = (v: number) => sym + v.toFixed(isForex && Math.abs(v) < 10 ? 4 : 2);
   switch(id) {
     case "volume": return formatCount(asset.volume);
     case "avgVolume": return formatCount(asset.avgVolume);
@@ -124,15 +130,15 @@ export const getMetric = (id: string, asset: any, customFormatNumber?: any) => {
     case "earningsGrowth": return asset.earningsGrowth != null ? (asset.earningsGrowth * 100).toFixed(2) + "%" : "—";
     case "revenueGrowth": return asset.revenueGrowth != null ? (asset.revenueGrowth * 100).toFixed(2) + "%" : "—";
     case "profitMargins": return asset.profitMargins != null ? (asset.profitMargins * 100).toFixed(2) + "%" : "—";
-    case "high52Week": return asset.high52Week != null && asset.high52Week > 0 ? sym + asset.high52Week.toFixed(2) : "—";
-    case "low52Week": return asset.low52Week != null && asset.low52Week > 0 ? sym + asset.low52Week.toFixed(2) : "—";
-    case "ma50Day": return asset.ma50Day != null && asset.ma50Day > 0 ? sym + asset.ma50Day.toFixed(2) : "—";
-    case "ma200Day": return asset.ma200Day != null && asset.ma200Day > 0 ? sym + asset.ma200Day.toFixed(2) : "—";
+    case "high52Week": return asset.high52Week != null && asset.high52Week > 0 ? fmtQuote(asset.high52Week) : "—";
+    case "low52Week": return asset.low52Week != null && asset.low52Week > 0 ? fmtQuote(asset.low52Week) : "—";
+    case "ma50Day": return asset.ma50Day != null && asset.ma50Day > 0 ? fmtQuote(asset.ma50Day) : "—";
+    case "ma200Day": return asset.ma200Day != null && asset.ma200Day > 0 ? fmtQuote(asset.ma200Day) : "—";
     case "beta": return asset.beta != null ? asset.beta.toFixed(2) : "—";
-    case "dayHigh": return asset.dayHigh != null && asset.dayHigh > 0 ? sym + asset.dayHigh.toFixed(2) : "—";
-    case "dayLow": return asset.dayLow != null && asset.dayLow > 0 ? sym + asset.dayLow.toFixed(2) : "—";
+    case "dayHigh": return asset.dayHigh != null && asset.dayHigh > 0 ? fmtQuote(asset.dayHigh) : "—";
+    case "dayLow": return asset.dayLow != null && asset.dayLow > 0 ? fmtQuote(asset.dayLow) : "—";
     case "sector": return asset.sector || "—";
-    case "previousClose": return asset.previousClose != null && asset.previousClose > 0 ? sym + asset.previousClose.toFixed(2) : "—";
+    case "previousClose": return asset.previousClose != null && asset.previousClose > 0 ? fmtQuote(asset.previousClose) : "—";
     case "enterpriseValue": return formatter(asset.enterpriseValue);
     case "pegRatio": return asset.pegRatio != null ? asset.pegRatio.toFixed(2) : "—";
     case "dividendRate": return asset.dividendRate != null ? sym + asset.dividendRate.toFixed(2) : "—";
@@ -169,13 +175,24 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
   const displayChange = liveData?.change ?? asset.change;
   const isLive = !!liveData;
 
+  const rawHigh = (asset.high52Week && asset.high52Week > 0) ? asset.high52Week : (liveData?.high52Week ?? asset.high52Week);
+  const rawLow = (asset.low52Week && asset.low52Week > 0) ? asset.low52Week : (liveData?.low52Week ?? asset.low52Week);
+  const boundedHigh =
+    rawHigh && rawHigh > 0
+      ? Math.max(rawHigh, liveData?.high52Week || 0, displayPrice || 0)
+      : (liveData?.high52Week ?? rawHigh);
+  const boundedLowCandidates = [rawLow, liveData?.low52Week, displayPrice].filter(
+    (v): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0
+  );
+  const boundedLow = boundedLowCandidates.length > 0 ? Math.min(...boundedLowCandidates) : rawLow;
+
   const displayAsset = {
     ...asset,
     price: displayPrice,
     marketCap: (asset.marketCap && asset.marketCap > 0) ? asset.marketCap : (liveData?.marketCap ?? asset.marketCap),
     volume: (asset.volume && asset.volume > 0) ? asset.volume : (liveData?.volume ?? asset.volume),
-    high52Week: (asset.high52Week && asset.high52Week > 0) ? asset.high52Week : (liveData?.high52Week ?? asset.high52Week),
-    low52Week: (asset.low52Week && asset.low52Week > 0) ? asset.low52Week : (liveData?.low52Week ?? asset.low52Week),
+    high52Week: boundedHigh,
+    low52Week: boundedLow,
     ma50Day: (asset.ma50Day && asset.ma50Day > 0) ? asset.ma50Day : (liveData?.ma50Day ?? asset.ma50Day),
     ma200Day: (asset.ma200Day && asset.ma200Day > 0) ? asset.ma200Day : (liveData?.ma200Day ?? asset.ma200Day),
   };
@@ -220,7 +237,9 @@ function AssetCardComponent({ asset, index, selectedMetrics, formatNumber: propF
             <div className="text-zinc-400 text-xs font-mono truncate">
               {asset.assetClass === 'Index'
                 ? `${asset.symbol} · PTS`
-                : `${asset.symbol}${asset.currency && asset.currency !== "USD" ? "/" + asset.currency : "/USD"}`}
+                : asset.assetClass === 'Forex'
+                  ? `${asset.symbol} · FX`
+                  : `${asset.symbol}${asset.currency && asset.currency !== "USD" ? "/" + asset.currency : "/USD"}`}
             </div>
           </div>
         </div>

@@ -110,30 +110,31 @@ export default async function LeaderboardPage({
   }
 
   // 3. Compute ROI per user
-  const userStats: Record<string, { userId: string, username: string, totalRoi: number, picksCount: number }> = {};
+  const userStats: Record<string, { userId: string, username: string, totalRoi: number, scoredCount: number, picksCount: number }> = {};
 
   validPicks.forEach(pick => {
+    const cleanName = pick.username ? String(pick.username).split('@')[0] : `Investor-${String(pick.user_id).slice(0, 6)}`;
+    if (!userStats[pick.user_id]) {
+      userStats[pick.user_id] = { userId: pick.user_id, username: cleanName, totalRoi: 0, scoredCount: 0, picksCount: 0 };
+    }
+    userStats[pick.user_id].picksCount += 1;
+
     const currentPrice = currentPrices[pick.ticker];
     if (currentPrice !== undefined && currentPrice !== 0 && pick.picked_at_price) {
       const roi = ((currentPrice - pick.picked_at_price) / pick.picked_at_price) * 100;
-      const cleanName = pick.username ? String(pick.username).split('@')[0] : `Investor-${String(pick.user_id).slice(0, 6)}`;
-
-      if (!userStats[pick.user_id]) {
-        userStats[pick.user_id] = { userId: pick.user_id, username: cleanName, totalRoi: 0, picksCount: 0 };
-      }
-      
       userStats[pick.user_id].totalRoi += roi;
-      userStats[pick.user_id].picksCount += 1;
+      userStats[pick.user_id].scoredCount += 1;
     }
   });
 
   // 4. Rank users
   const rankedUsers = Object.values(userStats)
+    .filter(stat => stat.scoredCount > 0)
     .map(stat => ({
       userId: stat.userId,
       username: stat.username,
       picksCount: stat.picksCount,
-      avgRoi: stat.totalRoi / stat.picksCount
+      avgRoi: stat.totalRoi / stat.scoredCount
     }))
     .sort((a, b) => b.avgRoi - a.avgRoi);
 
@@ -143,7 +144,7 @@ export default async function LeaderboardPage({
     return (
       <Link
         href={`/portfolio/leaderboard?window=${id}`}
-        className={`px-6 py-2 rounded-full font-medium transition-all text-sm ${
+        className={`px-4 py-1.5 rounded-full font-medium transition-all text-xs sm:text-sm whitespace-nowrap ${
           isActive 
             ? "bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.3)]" 
             : "bg-zinc-900/80 text-zinc-400 hover:text-white hover:bg-zinc-800"
@@ -157,11 +158,11 @@ export default async function LeaderboardPage({
   return (
     <>
       <LeaderboardClient hasAllAssetClasses={hasAllAssetClasses} missingClasses={missingClasses} />
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-800 pb-8">
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 min-w-0">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 border-b border-zinc-800 pb-8">
         <div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2 flex items-center gap-3">
-            <Trophy className="w-8 h-8 text-yellow-500" />
+            <Trophy className="w-8 h-8 text-yellow-500 shrink-0" />
             Top Investors
           </h1>
           <p className="text-zinc-500 font-mono text-sm">
@@ -170,7 +171,7 @@ export default async function LeaderboardPage({
         </div>
         
         {/* Tabs */}
-        <div className="flex items-center gap-2 p-1 bg-zinc-950/50 border border-zinc-800 rounded-full">
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-zinc-950/50 border border-zinc-800 rounded-2xl sm:rounded-full self-start lg:self-auto">
           <TabLink id="all" label="All Time" />
           <TabLink id="monthly" label="Monthly" />
           <TabLink id="weekly" label="Weekly" />
@@ -186,7 +187,7 @@ export default async function LeaderboardPage({
           </div>
         ) : (
         <div className="overflow-x-auto">
-          <div className="min-w-[600px]">
+          <div className="w-full">
             <div className="grid grid-cols-12 gap-4 px-4 md:px-8 py-4 border-b border-zinc-800 bg-zinc-900/20 text-xs font-mono text-zinc-500 uppercase tracking-widest">
           <div className="col-span-2 sm:col-span-1">Rank</div>
           <div className="col-span-5 sm:col-span-7">Investor</div>

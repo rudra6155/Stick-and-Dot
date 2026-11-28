@@ -115,17 +115,23 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
           // Update asset with live quote if resolved
           if (liveResult.status === 'fulfilled' && liveResult.value?.data?.[ticker]) {
             const q = liveResult.value.data[ticker];
-            setAsset((prev: any) => prev ? {
-              ...prev,
-              price: q.price ?? prev.price,
-              market_cap: (prev.market_cap && prev.market_cap > 0) ? prev.market_cap : (q.marketCap ?? prev.market_cap),
-              high_52_week: prev.high_52_week ?? q.high52Week ?? null,
-              low_52_week: prev.low_52_week ?? q.low52Week ?? null,
-              change: q.change ?? prev.change,
-              isUp: q.isUp ?? prev.isUp,
-              isLive: true,
-              quoteTime: q.quoteTime
-            } : prev);
+            setAsset((prev: any) => {
+              if (!prev) return prev;
+              const nextPrice = q.price ?? prev.price;
+              const hiCandidates = [prev.high_52_week, q.high52Week, nextPrice].filter((v): v is number => typeof v === 'number' && v > 0);
+              const loCandidates = [prev.low_52_week, q.low52Week, nextPrice].filter((v): v is number => typeof v === 'number' && v > 0);
+              return {
+                ...prev,
+                price: nextPrice,
+                market_cap: (prev.market_cap && prev.market_cap > 0) ? prev.market_cap : (q.marketCap ?? prev.market_cap),
+                high_52_week: hiCandidates.length > 0 ? Math.max(...hiCandidates) : prev.high_52_week,
+                low_52_week: loCandidates.length > 0 ? Math.min(...loCandidates) : prev.low_52_week,
+                change: q.change ?? prev.change,
+                isUp: q.isUp ?? prev.isUp,
+                isLive: true,
+                quoteTime: q.quoteTime
+              };
+            });
           }
 
           // Update risk score & merge any live-enriched fundamentals missing from snapshot
@@ -133,14 +139,21 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
             setRiskResult(riskResultSettled.value);
             const ra = riskResultSettled.value.asset;
             if (ra) {
-              setAsset((prev: any) => prev ? {
-                ...prev,
-                market_cap: (prev.market_cap && prev.market_cap > 0) ? prev.market_cap : (ra.market_cap ?? prev.market_cap),
-                pe_ratio: prev.pe_ratio ?? ra.pe_ratio ?? null,
-                beta: prev.beta ?? ra.beta ?? null,
-                high_52_week: prev.high_52_week ?? ra.high_52_week ?? null,
-                low_52_week: prev.low_52_week ?? ra.low_52_week ?? null,
-              } : prev);
+              setAsset((prev: any) => {
+                if (!prev) return prev;
+                const mergedPrice = prev.isLive ? prev.price : (ra.price ?? prev.price);
+                const hiCandidates = [prev.high_52_week, ra.high_52_week, mergedPrice].filter((v): v is number => typeof v === 'number' && v > 0);
+                const loCandidates = [prev.low_52_week, ra.low_52_week, mergedPrice].filter((v): v is number => typeof v === 'number' && v > 0);
+                return {
+                  ...prev,
+                  price: mergedPrice,
+                  market_cap: (prev.market_cap && prev.market_cap > 0) ? prev.market_cap : (ra.market_cap ?? prev.market_cap),
+                  pe_ratio: prev.pe_ratio ?? ra.pe_ratio ?? null,
+                  beta: prev.beta ?? ra.beta ?? null,
+                  high_52_week: hiCandidates.length > 0 ? Math.max(...hiCandidates) : prev.high_52_week,
+                  low_52_week: loCandidates.length > 0 ? Math.min(...loCandidates) : prev.low_52_week,
+                };
+              });
             }
           } else {
             setRiskResult({ hasError: true });
@@ -186,28 +199,28 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
   }
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans pt-24 pb-32">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+    <div className="bg-black text-white font-sans pb-20">
+      <div className="space-y-8">
         
         {/* Top Nav */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
             href={`/portfolio/explore/${encodeURIComponent(normalizeAssetClass(assetClass))}${asset?.sub_class ? `?sub=${encodeURIComponent(asset.sub_class)}` : ""}`}
             className="flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" />
-            Back to {normalizeAssetClass(assetClass)}{asset?.sub_class ? ` · ${asset.sub_class}` : ""}
+            <ArrowLeft className="w-4 h-4 shrink-0" />
+            <span>Back to {normalizeAssetClass(assetClass)}{asset?.sub_class ? ` · ${asset.sub_class}` : ""}</span>
           </Link>
           
           {(asset.asset_class?.toLowerCase() === 'index' || assetClass?.toLowerCase() === 'index' || asset.ticker?.startsWith('^')) ? (
-            <div className="px-5 py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-mono rounded-full flex items-center gap-2">
+            <div className="px-4 py-2 bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-mono rounded-full flex items-center gap-2 whitespace-nowrap shrink-0">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               Market Benchmark · Track Only
             </div>
           ) : (
             <button 
               onClick={() => setIsPickModalOpen(true)}
-              className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-full transition-colors flex items-center gap-2"
+              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-full transition-colors flex items-center gap-2 whitespace-nowrap shrink-0"
             >
               <span className="w-5 h-5 rounded-full bg-black/20 flex items-center justify-center text-xs">P</span>
               Pick Asset
@@ -218,36 +231,40 @@ export default function AssetDetailPage({ params }: { params: Promise<{ class: s
         {/* Asset Live Header Summary */}
         {asset && (
           <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6 sm:p-8 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white break-words min-w-0">
                     {asset.short_name || asset.ticker}
                   </h1>
-                  <span className="px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-400 font-bold">
+                  <span className="px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-400 font-bold whitespace-nowrap shrink-0">
                     {asset.ticker}
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono text-emerald-400 font-bold uppercase">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-mono text-emerald-400 font-bold uppercase whitespace-nowrap shrink-0">
                     {formatAssetClassBadge(asset.raw_asset_class || asset.asset_class, asset.ticker, asset.sub_class)}
                   </span>
                 </div>
-                <p className="text-sm text-zinc-400 mt-1">
+                <p className="text-sm text-zinc-400 mt-1.5 break-words">
                   {[asset.sector, asset.industry, asset.country].filter(Boolean).join(" · ") || "Global Asset"}
                 </p>
               </div>
 
-              <div className="text-left sm:text-right">
-                <div className="flex items-baseline sm:justify-end gap-3">
-                  <span className="text-3xl sm:text-4xl font-mono font-bold text-white">
-                    {getCurrencySymbol(asset.currency || asset.ticker, asset.asset_class)}{Number(asset.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <div className="text-left lg:text-right shrink-0">
+                <div className="flex items-baseline lg:justify-end gap-3 flex-wrap">
+                  <span className="text-3xl sm:text-4xl font-mono font-bold text-white whitespace-nowrap">
+                    {getCurrencySymbol(asset.currency || asset.ticker, asset.asset_class)}
+                    {Number(asset.price || 0).toLocaleString(undefined, {
+                      minimumFractionDigits: asset.asset_class === 'Forex' && Number(asset.price || 0) < 10 ? 4 : 2,
+                      maximumFractionDigits: asset.asset_class === 'Forex' && Number(asset.price || 0) < 10 ? 4 : 2,
+                    })}
                   </span>
                   {asset.change && (
-                    <span className={`text-sm font-mono font-bold ${asset.isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    <span className={`text-sm font-mono font-bold whitespace-nowrap ${asset.isUp ? 'text-emerald-400' : 'text-rose-400'}`}>
                       {asset.isUp ? '▲' : '▼'} {asset.change}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center sm:justify-end gap-1.5 mt-1">
+                <div className="flex items-center lg:justify-end gap-1.5 mt-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${asset.isLive ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'}`} />
                   <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
                     {asset.isLive ? "LIVE QUOTE" : asset.fetched_at ? `SNAPSHOT AS OF ${new Date(asset.fetched_at).toLocaleDateString()}` : "SNAPSHOT"}

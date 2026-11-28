@@ -300,7 +300,7 @@ export function PickItem({
                     {pnlPct.toFixed(2)}%
                   </span>
                   <span className="text-zinc-600">
-                    ({isProfit ? "+" : "-"}{sym}{Math.abs(pnl).toLocaleString(undefined, { maximumFractionDigits: 2 })})
+                    ({isProfit ? "+" : "-"}${Math.abs(pnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                   </span>
                 </div>
               </div>

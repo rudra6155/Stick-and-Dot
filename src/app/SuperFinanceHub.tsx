@@ -556,8 +556,15 @@ export default function SuperFinanceHub({
           </div>
 
           {/* Middle Row: Full-Width Dedicated Asset Class Tabs */}
-          <div className="w-full flex items-center gap-2 overflow-x-auto hide-scrollbar scrollbar-none py-1 scroll-smooth">
-            {assetClasses.map(cls => (
+          <div className="w-full flex flex-wrap items-center gap-1.5 py-1">
+            {assetClasses.map(cls => {
+              const unfilteredTab = !debouncedSearchQuery && (cls !== "Stocks" || (activeSubClass === "All" && activeSector === "All Sectors"));
+              const tabCount = activeClass === cls
+                ? (isRefreshing && unfilteredTab
+                    ? assetClassCounts[cls]
+                    : (totalCount > 0 ? totalCount : assetClassCounts[cls]))
+                : assetClassCounts[cls];
+              return (
               <button
                 key={cls}
                 onClick={() => { setActiveClass(cls); setActiveSubClass("All"); setActiveSector("All Sectors"); }}
@@ -573,20 +580,18 @@ export default function SuperFinanceHub({
                 <span className="relative z-10 flex items-center gap-1.5">
                   <span>{cls}</span>
                   <span className={`text-[11px] font-mono ${activeClass === cls ? "text-zinc-700 font-semibold" : "text-zinc-500"}`}>
-                    {activeClass === cls
-                      ? (totalCount > 0 ? `(${totalCount.toLocaleString('en-US')})` : '')
-                      : (assetClassCounts[cls] ? `(${assetClassCounts[cls].toLocaleString('en-US')})` : '')
-                    }
+                    {tabCount ? `(${tabCount.toLocaleString('en-US')})` : ''}
                   </span>
                 </span>
               </button>
-            ))}
+              );
+            })}
           </div>
 
           {/* Sector Row — only when Stock tab active */}
           {(activeClass === "Stocks") && (
             <div className="w-full flex flex-col gap-2 pt-1 pb-1">
-              <div className="w-full flex gap-2 overflow-x-auto hide-scrollbar scrollbar-none">
+              <div className="w-full flex flex-wrap gap-2">
                 {stockSubClasses.map(sub => {
                   const subCount = assetClassCounts[sub.countKey];
                   const isActiveSub = activeSubClass === sub.id;
@@ -611,7 +616,7 @@ export default function SuperFinanceHub({
                   );
                 })}
               </div>
-              <div className="w-full flex gap-2 overflow-x-auto hide-scrollbar scrollbar-none">
+              <div className="w-full flex flex-wrap gap-2">
                 {availableSectors.map(sector => (
                 <button
                   key={sector}
@@ -644,7 +649,12 @@ export default function SuperFinanceHub({
               <span>
                 {activeClass === "Stocks" && activeSubClass !== "All" ? `${activeSubClass} · ` : ''}
                 {activeClass === "Stocks" && activeSector !== "All Sectors" ? `${activeSector} · ` : ''}
-                {totalCount.toLocaleString('en-US')} assets tracked
+                {(() => {
+                  const subCountKey = activeClass === "Stocks" && activeSubClass !== "All" ? `Stocks:${activeSubClass}` : activeClass;
+                  const canShowKnown = isRefreshing && !debouncedSearchQuery && (activeClass !== "Stocks" || activeSector === "All Sectors") && assetClassCounts[subCountKey];
+                  const shown = canShowKnown ? assetClassCounts[subCountKey] : totalCount;
+                  return `${shown.toLocaleString('en-US')} assets tracked`;
+                })()}
               </span>
             </div>
           </div>

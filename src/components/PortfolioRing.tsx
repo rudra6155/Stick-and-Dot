@@ -53,26 +53,44 @@ export default function PortfolioRing({
   const svgRef = useRef<SVGSVGElement>(null);
   const [activeSegment, setActiveSegment] = useState<string | null>(null);
 
-  // Build segments from picks
-  const segments: Segment[] = useMemo(() => {
-    if (!picks || picks.length === 0 || totalValue === 0) return [];
+  // Build segments from picks normalized by total allocated amount so percentages sum to 100%
+  const segments: (Segment & { displayPct: number })[] = useMemo(() => {
+    if (!picks || picks.length === 0) return [];
 
     const classMap: Record<string, number> = {};
     picks.forEach((p) => {
       const cls = formatAssetClassBadge(p.asset_class, p.ticker);
-      classMap[cls] = (classMap[cls] || 0) + Number(p.amount);
+      classMap[cls] = (classMap[cls] || 0) + Math.max(0, Number(p.amount) || 0);
     });
 
-    const entries = Object.entries(classMap).sort((a, b) => b[1] - a[1]);
+    const entries = Object.entries(classMap)
+      .filter(([, val]) => val > 0)
+      .sort((a, b) => b[1] - a[1]);
+    const totalAllocated = entries.reduce((sum, [, val]) => sum + val, 0);
+    if (totalAllocated <= 0) return [];
+
+    // Largest Remainder Method so displayed integer percentages always sum cleanly to 100%
+    const rawPcts = entries.map(([, val]) => (val / totalAllocated) * 100);
+    const floored = rawPcts.map((p) => Math.floor(p));
+    let remainder = 100 - floored.reduce((s, n) => s + n, 0);
+    rawPcts
+      .map((p, idx) => ({ idx, frac: p - floored[idx] }))
+      .sort((a, b) => b.frac - a.frac)
+      .slice(0, remainder)
+      .forEach(({ idx }) => {
+        floored[idx] += 1;
+      });
+
     let currentAngle = -90; // Start from top
 
-    return entries.map(([assetClass, value]) => {
-      const percentage = value / totalValue;
+    return entries.map(([assetClass, value], idx) => {
+      const percentage = value / totalAllocated;
       const sweepAngle = percentage * 360;
-      const seg: Segment = {
+      const seg = {
         assetClass,
         value,
         percentage,
+        displayPct: floored[idx],
         color: CLASS_COLORS[assetClass] || "#71717a",
         startAngle: currentAngle,
         endAngle: currentAngle + sweepAngle,
@@ -80,7 +98,7 @@ export default function PortfolioRing({
       currentAngle += sweepAngle;
       return seg;
     });
-  }, [picks, totalValue]);
+  }, [picks]);
 
   // GSAP entrance animation
   useGSAP(
@@ -88,19 +106,21 @@ export default function PortfolioRing({
       if (!svgRef.current || segments.length === 0) return;
 
       const paths = svgRef.current.querySelectorAll(".ring-segment");
+      const circ = 2 * Math.PI * 45;
       gsap.fromTo(
         paths,
-        { strokeDashoffset: 283 }, // circumference of r=45
         {
           strokeDashoffset: (i: number) => {
             const seg = segments[i];
-            if (!seg) return 283;
-            return 283 - seg.percentage * 283;
+            return seg ? seg.percentage * circ : circ;
           },
-          duration: 1.4,
+        },
+        {
+          strokeDashoffset: 0,
+          duration: 1.2,
           stagger: 0.08,
           ease: "power3.out",
-          delay: 0.3,
+          delay: 0.2,
         }
       );
 
@@ -110,7 +130,7 @@ export default function PortfolioRing({
         gsap.fromTo(
           centerText,
           { opacity: 0, scale: 0.8 },
-          { opacity: 1, scale: 1, duration: 0.8, delay: 0.6, ease: "back.out(1.5)" }
+          { opacity: 1, scale: 1, duration: 0.8, delay: 0.5, ease: "back.out(1.5)" }
         );
       }
     },
@@ -193,7 +213,6 @@ export default function PortfolioRing({
         {segments.map((seg, i) => {
           const isHovered = effectiveHovered === seg.assetClass;
           const dashLength = seg.percentage * circumference;
-          const gap = circumference - dashLength;
 
           // Calculate rotation to position segment correctly
           let offset = -90;
@@ -211,9 +230,9 @@ export default function PortfolioRing({
               fill="none"
               stroke={seg.color}
               strokeWidth={isHovered ? 12 : 8}
-              strokeDasharray={`${dashLength} ${gap}`}
-              strokeDashoffset={circumference} // Will be animated by GSAP
-              strokeLinecap="round"
+              strokeDasharray={`${dashLength} ${circumference}`}
+              strokeDashoffset={dashLength} // Animated to 0 by GSAP
+              strokeLinecap={segments.length === 1 ? "round" : "butt"}
               transform={`rotate(${offset} ${cx} ${cy})`}
               style={{
                 transition: "stroke-width 0.3s ease, filter 0.3s ease, opacity 0.3s ease",
@@ -283,7 +302,7 @@ export default function PortfolioRing({
               style={{ backgroundColor: seg.color, boxShadow: `0 0 6px ${seg.color}40` }}
             />
             <span className="text-[10px] font-mono text-zinc-400">
-              {seg.assetClass} <span className="text-zinc-600">{(seg.percentage * 100).toFixed(0)}%</span>
+              {seg.assetClass} <span className="text-zinc-500">{seg.displayPct}%</span>
             </span>
           </div>
         ))}

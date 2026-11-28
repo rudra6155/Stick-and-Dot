@@ -308,7 +308,8 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 
 /** Returns display currency symbol for an explicit currency code or ticker/class fallback. */
 export function getCurrencySymbol(currencyOrTicker?: string | null, assetClass?: string): string {
-  if (normalizeAssetClass(assetClass) === 'Index' || currencyOrTicker === 'PTS') {
+  const norm = normalizeAssetClass(assetClass);
+  if (norm === 'Index' || norm === 'Forex' || currencyOrTicker === 'PTS') {
     return '';
   }
   if (currencyOrTicker && CURRENCY_SYMBOLS[currencyOrTicker]) {

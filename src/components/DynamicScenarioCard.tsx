@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, ExternalLink, Plus, Check, AlertTriangle, X } from "lucide-react";
-import { getCurrencySymbol, normalizeAssetClass } from "@/lib/asset-utils";
+import { getCurrencySymbol, normalizeAssetClass, TOP_LEVEL_ASSET_CLASSES } from "@/lib/asset-utils";
 
 interface PresetAsset {
   ticker: string;
@@ -71,6 +71,41 @@ export default function DynamicScenarioCard({ scenario, onPresetApplied }: { sce
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState<{ added: number; skipped: number; total_invested: number } | null>(null);
   const [applyError, setApplyError] = useState("");
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!expanded) return;
+    const tickers = Array.from(
+      new Set([
+        ...(scenario.preset_portfolio?.map((a) => a.ticker) || []),
+        ...(scenario.top_5_tickers?.map((t) => t.ticker) || []),
+      ])
+    ).filter(Boolean);
+    if (tickers.length === 0) return;
+
+    let active = true;
+    fetch("/api/live-prices", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tickers }),
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (!active || !json?.data) return;
+        const map: Record<string, number> = {};
+        for (const [sym, quote] of Object.entries<any>(json.data)) {
+          if (quote?.price && Number(quote.price) > 0) {
+            map[sym] = Number(quote.price);
+          }
+        }
+        setLivePrices(map);
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [expanded, scenario]);
 
   const conf = confidenceStyles[scenario.confidence] || confidenceStyles.Moderate;
   const timeAgo = getTimeAgo(scenario.created_at);
@@ -190,6 +225,8 @@ export default function DynamicScenarioCard({ scenario, onPresetApplied }: { sce
                   </span>
                 </div>
                 <button
+                  type="button"
+                  aria-label="Close scenario modal"
                   onClick={() => setExpanded(false)}
                   className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors border border-white/10"
                 >
@@ -227,15 +264,22 @@ export default function DynamicScenarioCard({ scenario, onPresetApplied }: { sce
                       <div className="bg-zinc-900/30 rounded-xl p-5 border border-zinc-800/50">
                         <p className="text-xs font-mono text-violet-500 uppercase tracking-widest mb-3">Target Asset Classes</p>
                         <div className="flex flex-wrap gap-2">
-                          {scenario.watch_asset_classes.map((cls) => (
-                            <Link
-                              key={cls}
-                              href={`/portfolio/explore/${encodeURIComponent(normalizeAssetClass(cls))}`}
-                              className="px-3 py-1.5 bg-violet-500/10 text-violet-300 text-xs font-medium rounded-full border border-violet-500/20 hover:bg-violet-500/20 transition-colors"
-                            >
-                              {normalizeAssetClass(cls)}
-                            </Link>
-                          ))}
+                          {scenario.watch_asset_classes.map((cls) => {
+                            const normCls = normalizeAssetClass(cls);
+                            const isTopClass = (TOP_LEVEL_ASSET_CLASSES as readonly string[]).includes(normCls);
+                            const href = isTopClass
+                              ? `/portfolio/explore/${encodeURIComponent(normCls)}`
+                              : `/portfolio/suggestions/screener?sector=${encodeURIComponent(cls)}`;
+                            return (
+                              <Link
+                                key={cls}
+                                href={href}
+                                className="px-3 py-1.5 bg-violet-500/10 text-violet-300 text-xs font-medium rounded-full border border-violet-500/20 hover:bg-violet-500/20 transition-colors"
+                              >
+                                {isTopClass ? normCls : cls}
+                              </Link>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -344,7 +388,7 @@ export default function DynamicScenarioCard({ scenario, onPresetApplied }: { sce
                                 {asset.reason}
                               </td>
                               <td className="p-4 text-right font-mono text-zinc-300 whitespace-nowrap">
-                                {sym}{(asset.price || 0).toFixed(2)}
+                                {sym}{Number(livePrices[asset.ticker] ?? asset.price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </td>
                               <td className="p-4 text-right">
                                 <span className="font-mono text-white bg-white/10 px-2.5 py-1 rounded-md text-xs border border-white/5">

@@ -66,14 +66,14 @@ export default function SuggestionsPage() {
           </h2>
           <p className="text-zinc-400 mt-2 font-mono text-sm uppercase tracking-widest">{subtitle}</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {items.map((asset) => {
             const normClass = normalizeAssetClass(asset.asset_class);
             return (
               <Link
                 key={asset.id || asset.ticker}
                 href={`/portfolio/explore/${encodeURIComponent(normClass)}/${encodeURIComponent(asset.ticker)}`}
-                className="block"
+                className="block min-w-0"
               >
                 <AssetCard asset={{
                   id: asset.id || asset.ticker,

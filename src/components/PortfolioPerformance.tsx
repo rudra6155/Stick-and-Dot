@@ -96,7 +96,7 @@ export default function PortfolioPerformance({ picks, assets, totalValue }: Perf
     {
       icon: isPositive ? TrendingUp : TrendingDown,
       label: "Total P&L",
-      value: `${isPositive ? "+" : ""}$${Math.abs(metrics.totalPnL).toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+      value: `${isPositive ? "+" : "-"}$${Math.abs(metrics.totalPnL).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       sub: `${isPositive ? "+" : ""}${metrics.pnlPct.toFixed(2)}%`,
       color: isPositive ? "text-emerald-400" : "text-rose-400",
       glow: isPositive ? "rgba(16,185,129,0.15)" : "rgba(244,63,94,0.15)",
@@ -105,7 +105,7 @@ export default function PortfolioPerformance({ picks, assets, totalValue }: Perf
       icon: Zap,
       label: "Best Performer",
       value: metrics.bestPick.ticker,
-      sub: `+$${metrics.bestPick.pnl.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+      sub: `${metrics.bestPick.pnl >= 0 ? "+" : "-"}$${Math.abs(metrics.bestPick.pnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       color: "text-emerald-400",
       glow: "rgba(16,185,129,0.1)",
     },
@@ -113,7 +113,7 @@ export default function PortfolioPerformance({ picks, assets, totalValue }: Perf
       icon: Activity,
       label: "Needs Attention",
       value: metrics.worstPick.ticker,
-      sub: `$${metrics.worstPick.pnl.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+      sub: `${metrics.worstPick.pnl >= 0 ? "+" : "-"}$${Math.abs(metrics.worstPick.pnl).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       color: "text-rose-400",
       glow: "rgba(244,63,94,0.1)",
     },
@@ -136,14 +136,14 @@ export default function PortfolioPerformance({ picks, assets, totalValue }: Perf
   ].filter(Boolean);
 
   return (
-    <div ref={stripRef} className="w-full overflow-x-auto hide-scrollbar">
-      <div className="flex gap-3 min-w-max px-1 py-1">
+    <div ref={stripRef} className="w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
         {stats.map((stat: any, i: number) => {
           const Icon = stat.icon;
           return (
             <div
               key={i}
-              className="perf-stat glass-card rounded-2xl px-5 py-4 flex items-center gap-3.5 min-w-[180px] relative overflow-hidden group hover:border-white/10 transition-all duration-300"
+              className="perf-stat glass-card rounded-2xl px-4 py-3.5 flex items-center gap-3 min-w-0 relative overflow-hidden group hover:border-white/10 transition-all duration-300"
             >
               {/* Background glow */}
               <div
@@ -159,13 +159,13 @@ export default function PortfolioPerformance({ picks, assets, totalValue }: Perf
               >
                 <Icon className="w-4 h-4" />
               </div>
-              <div className="relative z-10">
-                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-0.5">
+              <div className="relative z-10 min-w-0 flex-1">
+                <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-0.5 truncate">
                   {stat.label}
                 </p>
-                <p className={`text-sm font-bold font-mono ${stat.color}`}>{stat.value}</p>
+                <p className={`text-sm font-bold font-mono truncate ${stat.color}`}>{stat.value}</p>
                 {stat.sub && (
-                  <p className="text-[10px] font-mono text-zinc-500 mt-0.5">{stat.sub}</p>
+                  <p className="text-[10px] font-mono text-zinc-500 mt-0.5 truncate">{stat.sub}</p>
                 )}
               </div>
             </div>

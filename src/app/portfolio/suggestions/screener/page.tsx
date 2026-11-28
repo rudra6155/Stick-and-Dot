@@ -170,7 +170,49 @@ export default function ScreenerPage() {
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchResults(); return () => { abortControllerRef.current?.abort(); }; }, []);
+  useEffect(() => {
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const rawSector = params?.get("sector")?.trim();
+    const rawClass = params?.get("class")?.trim();
+    const KNOWN_SECTORS = [
+      "Technology", "Healthcare", "Financial Services", "Energy", "Industrials",
+      "Consumer Cyclical", "Consumer Defensive", "Basic Materials", "Real Estate",
+      "Utilities", "Communication Services",
+    ];
+    const SECTOR_ALIASES: Record<string, string> = {
+      defense: "Industrials",
+      aerospace: "Industrials",
+      tech: "Technology",
+      semiconductors: "Technology",
+      ai: "Technology",
+      fintech: "Financial Services",
+      financials: "Financial Services",
+      finance: "Financial Services",
+      consumer: "Consumer Cyclical",
+      materials: "Basic Materials",
+    };
+
+    const initialOverrides: Record<string, any> = {};
+    if (rawClass) {
+      setAssetClass(rawClass);
+      initialOverrides.asset_class = rawClass;
+    }
+    if (rawSector) {
+      const matched =
+        KNOWN_SECTORS.find((s) => s.toLowerCase() === rawSector.toLowerCase()) ||
+        SECTOR_ALIASES[rawSector.toLowerCase()] ||
+        null;
+      if (matched) {
+        setAssetClass("Stocks");
+        setSector(matched);
+        initialOverrides.asset_class = rawClass || "Stocks";
+        initialOverrides.sector = matched;
+      }
+    }
+
+    fetchResults(Object.keys(initialOverrides).length > 0 ? { sort_by: sortBy, sort_dir: sortDir, ...initialOverrides } : undefined);
+    return () => { abortControllerRef.current?.abort(); };
+  }, []);
 
   const applyPreset = (preset: typeof PRACTICAL_FILTERS[0]) => {
     setActivePreset(preset.id);
@@ -388,9 +430,13 @@ export default function ScreenerPage() {
                       </Link>
                     </td>
                     <td className="p-4 text-zinc-500 text-xs">
-                      <span className="text-zinc-400">{formatAssetClassBadge(r.asset_class, r.ticker, r.sub_class)}</span>
-                      {r.sector && <span className="text-zinc-700 mx-1">·</span>}
-                      {r.sector && <span>{r.sector}</span>}
+                      <span className="text-zinc-400 whitespace-nowrap">{formatAssetClassBadge(r.asset_class, r.ticker, r.sub_class)}</span>
+                      {r.sector && (
+                        <>
+                          <span className="text-zinc-600 mx-1.5">·</span>
+                          <span className="text-zinc-400">{r.sector}</span>
+                        </>
+                      )}
                     </td>
                     <td className="p-4 text-right font-mono">{r.price != null ? `${sym}${r.price.toFixed(2)}` : "—"}</td>
                     <td className="p-4 text-right font-mono text-emerald-400">

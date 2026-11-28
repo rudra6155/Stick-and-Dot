@@ -14,12 +14,12 @@ export default function SuggestionsLayout({ children }: { children: React.ReactN
   ];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-w-0">
       <div className="mb-8">
-        <h1 className="text-5xl font-black tracking-tight text-white mb-6">Discovery Hub</h1>
+        <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white mb-5">Discovery Hub</h1>
         
         {/* Simplified Tab Navigation */}
-        <div className="flex gap-2 overflow-x-auto hide-scrollbar border-b border-zinc-800 pb-px">
+        <div className="flex flex-wrap gap-1.5 border-b border-zinc-800 pb-px">
           {tabs.map((tab) => {
             const isActive = tab.exact ? pathname === tab.href : pathname.startsWith(tab.href);
             const Icon = tab.icon;
@@ -27,7 +27,7 @@ export default function SuggestionsLayout({ children }: { children: React.ReactN
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`flex items-center gap-2 px-6 py-3 font-semibold text-sm transition-all rounded-t-xl whitespace-nowrap ${
+                className={`flex items-center gap-2 px-4 py-2.5 font-semibold text-xs sm:text-sm transition-all rounded-t-xl whitespace-nowrap ${
                   isActive 
                     ? "bg-zinc-900 text-emerald-400 border-t border-x border-zinc-800 border-b-transparent translate-y-px" 
                     : "text-zinc-500 hover:text-white hover:bg-zinc-900/50"

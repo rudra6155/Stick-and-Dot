@@ -25,10 +25,10 @@ export default async function ExplorePage() {
   const assetClasses = ["Crypto", "ETF", "REIT", "Commodity", "Bond", "Forex", "Index"];
 
   return (
-    <div className="bg-black text-white font-sans min-h-screen">
-      <div className="pt-32 max-w-5xl mx-auto px-4 md:px-8 py-12 space-y-12">
+    <div className="bg-black text-white font-sans pb-12">
+      <div className="space-y-10">
         {/* Header */}
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-3">
           <h1 className="text-3xl md:text-4xl font-black tracking-tight">Explore the Market</h1>
           <p className="text-zinc-500 font-mono text-sm uppercase tracking-widest">
             {counts["All"]?.toLocaleString() || "..."} Assets Available
@@ -56,10 +56,10 @@ export default async function ExplorePage() {
           <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-6 text-center">Browse by Asset Class</p>
 
           {/* Featured Unified Stocks Card with 3 Regional Sub-Classes */}
-          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
             <Link
               href="/portfolio/explore/Stocks"
-              className="flex items-center gap-4 group"
+              className="flex items-center gap-4 group shrink-0"
             >
               <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xl text-zinc-400 group-hover:text-emerald-400 group-hover:border-emerald-500/30 transition-all shrink-0">
                 {classIcons["Stocks"]}
@@ -72,7 +72,7 @@ export default async function ExplorePage() {
               </div>
             </Link>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1 lg:max-w-2xl">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
               {[
                 { key: "US", label: "US", badge: "🇺🇸", countKey: "Stocks:US" },
                 { key: "Indian", label: "Indian", badge: "🇮🇳", countKey: "Stocks:Indian" },
@@ -81,13 +81,13 @@ export default async function ExplorePage() {
                 <Link
                   key={sub.key}
                   href={`/portfolio/explore/Stocks?sub=${encodeURIComponent(sub.key)}`}
-                  className="bg-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-3 flex items-center justify-between hover:bg-zinc-900 hover:border-emerald-500/40 transition-colors group"
+                  className="bg-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-3 flex items-center justify-between gap-3 min-w-0 hover:bg-zinc-900 hover:border-emerald-500/40 transition-colors group"
                 >
-                  <span className="flex items-center gap-2 text-sm font-semibold text-zinc-300 group-hover:text-white">
-                    <span>{sub.badge}</span>
-                    <span>{sub.label}</span>
+                  <span className="flex items-center gap-2 text-sm font-semibold text-zinc-300 group-hover:text-white min-w-0 truncate">
+                    <span className="shrink-0">{sub.badge}</span>
+                    <span className="truncate">{sub.label}</span>
                   </span>
-                  <span className="text-xs font-mono text-zinc-500 group-hover:text-emerald-400">
+                  <span className="text-xs font-mono text-zinc-500 group-hover:text-emerald-400 shrink-0 tabular-nums">
                     {counts[sub.countKey]?.toLocaleString() || 0}
                   </span>
                 </Link>
@@ -95,7 +95,7 @@ export default async function ExplorePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {assetClasses.map(cls => (
               <Link 
                 key={cls}

@@ -61,7 +61,7 @@ export default function OpportunitiesPage() {
   });
 
   return (
-    <div className="w-full font-sans animation-fade-in space-y-10">
+    <div className="w-full min-w-0 overflow-x-hidden font-sans animation-fade-in space-y-10">
       {/* Header */}
       <div>
         <p className="text-emerald-400 mt-2 font-mono text-sm uppercase tracking-widest">
@@ -71,7 +71,7 @@ export default function OpportunitiesPage() {
 
         {/* Stats bar */}
         {!loading && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {TYPE_FILTERS.slice(1).map(f => {
               const count = opportunities.filter(o => o.type === f.id).length;
               return (
@@ -85,7 +85,7 @@ export default function OpportunitiesPage() {
         )}
 
         {/* Filters + Search */}
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           <div className="flex gap-2 flex-wrap">
             {TYPE_FILTERS.map(f => (
               <button
@@ -106,7 +106,7 @@ export default function OpportunitiesPage() {
             placeholder="Search ticker or name..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 font-mono md:w-64"
+            className="w-full sm:max-w-xs xl:w-64 shrink-0 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 font-mono"
           />
         </div>
 
@@ -128,7 +128,7 @@ export default function OpportunitiesPage() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filtered.map((o, i) => {
               const sym = getCurrencySymbol(o.ticker, o.asset_class);
               const normClass = normalizeAssetClass(o.asset_class);
@@ -136,22 +136,22 @@ export default function OpportunitiesPage() {
               <Link
                 key={`${o.ticker}-${o.type}-${i}`}
                 href={`/portfolio/explore/${encodeURIComponent(normClass)}/${encodeURIComponent(o.ticker)}`}
-                className="block bg-zinc-950 border border-zinc-800 rounded-2xl p-6 hover:border-emerald-500/40 transition-colors"
+                className="block min-w-0 bg-zinc-950 border border-zinc-800 rounded-2xl p-5 hover:border-emerald-500/40 transition-colors"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="min-w-0 flex-1">
                     <span className={`inline-block px-2 py-1 rounded-lg text-xs font-mono border mb-2 ${COLOR_MAP[o.color]}`}>
                       {o.label}
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-black text-lg font-mono text-emerald-400">{o.ticker}</span>
-                      <span className="text-xs text-zinc-500">{formatAssetClassBadge(o.asset_class, o.ticker, o.sub_class)}</span>
+                      <span className="text-xs text-zinc-500 whitespace-nowrap">{formatAssetClassBadge(o.asset_class, o.ticker, o.sub_class)}</span>
                     </div>
-                    <p className="text-xs text-zinc-500 truncate max-w-[180px]">{o.short_name}</p>
+                    <p className="text-xs text-zinc-500 truncate">{o.short_name}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <p className="font-mono font-bold">{sym}{(o.price || 0).toFixed(2)}</p>
-                    <p className="text-xs text-zinc-500">{o.sector || "—"}</p>
+                    <p className="text-xs text-zinc-500 truncate max-w-[110px]">{o.sector || "—"}</p>
                   </div>
                 </div>
                 <p className="text-xs text-zinc-400 mb-4">{o.desc}</p>

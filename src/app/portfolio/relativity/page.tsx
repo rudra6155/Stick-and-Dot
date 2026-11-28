@@ -101,8 +101,8 @@ function MatrixGrid({ labels, data }: { labels: LabelInfo[], data: MatrixEntry[]
         setActiveTooltip(null);
       }}
     >
-      <div className="min-w-max inline-block">
-        <div className="flex">
+      <div className="min-w-max inline-block pt-4">
+        <div className="flex gap-1 items-end mb-2">
           {/* Top-Left Empty Corner */}
           <div className="w-28 shrink-0" />
           {/* Column Headers */}
@@ -112,14 +112,14 @@ function MatrixGrid({ labels, data }: { labels: LabelInfo[], data: MatrixEntry[]
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className={`w-12 h-20 flex flex-col items-center justify-end pb-2 shrink-0 transition-opacity duration-300 ${
+              className={`w-[72px] h-28 flex flex-col items-center justify-end pb-1.5 shrink-0 transition-opacity duration-300 ${
                 hoveredCol && hoveredCol !== col.key ? 'opacity-30' : 'opacity-100'
               }`}
             >
-              <span className="text-[10px] text-zinc-500 font-mono -rotate-45 origin-bottom-left whitespace-nowrap mb-2">
+              <span className="text-[10px] text-zinc-500 font-mono -rotate-45 origin-bottom-left translate-x-3 whitespace-nowrap mb-3">
                 {col.label}
               </span>
-              <span className="text-xs font-bold font-mono text-zinc-300">
+              <span className="text-[11px] font-bold font-mono text-zinc-300 truncate max-w-full px-1 text-center" title={col.ticker}>
                 {col.ticker}
               </span>
             </motion.div>
@@ -167,7 +167,7 @@ function MatrixGrid({ labels, data }: { labels: LabelInfo[], data: MatrixEntry[]
                       val
                     });
                   }}
-                  className={`w-12 h-12 shrink-0 rounded-xl border flex items-center justify-center cursor-crosshair transition-all duration-300 ${
+                  className={`w-[72px] h-12 shrink-0 rounded-xl border flex items-center justify-center cursor-crosshair transition-all duration-300 ${
                     isDimmed ? 'opacity-10 scale-95 grayscale' : 'opacity-100 hover:scale-110 hover:z-20'
                   } ${isDiagonal ? 'bg-zinc-800/30 border-transparent' : corrColor(val)}`}
                 >
@@ -622,6 +622,7 @@ export default function RelativityPage() {
   const handleCompare = useCallback(async (customTickers?: string[]) => {
     const list = (customTickers && customTickers.length >= 2) ? customTickers : compareTickers;
     if (list.length < 2) return;
+    setShowDropdown(false);
     setCompareLoading(true);
     setCompareError("");
     setCompareData(null);
@@ -650,7 +651,7 @@ export default function RelativityPage() {
   };
 
   return (
-    <div className="space-y-12 relative">
+    <div className="space-y-12 relative overflow-x-hidden min-w-0">
       {/* Background ambient glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none" />
 

@@ -299,40 +299,54 @@ export async function POST(req: NextRequest) {
   const normCls = normalizeAssetClass(canonical.asset_class);
   let enriched: Record<string, any> = { ...canonical };
 
-  // Enrich stocks/ETFs/REITs whose DB snapshot lacks fundamentals (e.g. Indian/global stocks)
+  // Enrich stocks/ETFs/REITs whose DB snapshot lacks fundamentals (e.g. Indian/global stocks),
+  // AND refresh live price for non-bond assets so risk headers match live market quotes.
   const needsFundamentalEnrichment =
     (normCls === 'Stocks' || normCls === 'ETF' || normCls === 'REIT') &&
     (enriched.market_cap == null || (enriched.revenue_growth == null && enriched.pe_ratio == null));
 
-  if (needsFundamentalEnrichment) {
+  if (needsFundamentalEnrichment || normCls !== 'Bond') {
     try {
       const [quoteRes, summaryRes] = await Promise.allSettled([
         yf.quote(canonical.ticker),
-        yf.quoteSummary(canonical.ticker, { modules: ['financialData', 'defaultKeyStatistics', 'summaryDetail'] }),
+        needsFundamentalEnrichment
+          ? yf.quoteSummary(canonical.ticker, { modules: ['price', 'financialData', 'defaultKeyStatistics', 'summaryDetail'] })
+          : Promise.resolve(null),
       ]);
       const rawQ: any = quoteRes.status === 'fulfilled' ? quoteRes.value : null;
       const q: any = Array.isArray(rawQ) ? rawQ[0] : rawQ;
       const qs: any = summaryRes.status === 'fulfilled' ? summaryRes.value : null;
+      const priceMod = qs?.price;
       const fin = qs?.financialData;
       const stats = qs?.defaultKeyStatistics;
       const detail = qs?.summaryDetail;
 
       if (q || qs) {
-        const rawCurr = (q?.currency || fin?.financialCurrency || inferCurrency(canonical.ticker, canonical.asset_class)).toUpperCase();
+        const livePrice = q?.regularMarketPrice ?? priceMod?.regularMarketPrice ?? enriched.price;
+        const rawCurr = (q?.currency || priceMod?.currency || fin?.financialCurrency || inferCurrency(canonical.ticker, canonical.asset_class)).toUpperCase();
         const fxDiv = FX_TO_USD_DIVISOR[rawCurr] || 1;
-        const rawCap = q?.marketCap ?? detail?.marketCap;
+        const sharesOut = stats?.sharesOutstanding ?? stats?.impliedSharesOutstanding ?? q?.sharesOutstanding;
+        const rawCap =
+          q?.marketCap ??
+          priceMod?.marketCap ??
+          detail?.marketCap ??
+          (sharesOut && livePrice ? sharesOut * livePrice : null);
         const usdCap = rawCap && rawCap > 0 ? Math.round(rawCap / fxDiv) : enriched.market_cap;
 
         enriched = {
           ...enriched,
-          price: q?.regularMarketPrice ?? enriched.price,
-          market_cap: enriched.market_cap ?? usdCap,
+          price: livePrice,
+          market_cap: (enriched.market_cap && enriched.market_cap > 0) ? enriched.market_cap : usdCap,
           pe_ratio: enriched.pe_ratio ?? q?.trailingPE ?? detail?.trailingPE ?? null,
           forward_pe: enriched.forward_pe ?? q?.forwardPE ?? detail?.forwardPE ?? null,
           beta: enriched.beta ?? q?.beta ?? stats?.beta ?? detail?.beta ?? null,
           dividend_yield: enriched.dividend_yield ?? (q?.trailingAnnualDividendYield != null ? q.trailingAnnualDividendYield * 100 : null),
-          high_52_week: enriched.high_52_week ?? q?.fiftyTwoWeekHigh ?? detail?.fiftyTwoWeekHigh ?? null,
-          low_52_week: enriched.low_52_week ?? q?.fiftyTwoWeekLow ?? detail?.fiftyTwoWeekLow ?? null,
+          high_52_week: (enriched.high_52_week && livePrice)
+            ? Math.max(enriched.high_52_week, q?.fiftyTwoWeekHigh ?? 0, livePrice)
+            : (enriched.high_52_week ?? q?.fiftyTwoWeekHigh ?? detail?.fiftyTwoWeekHigh ?? null),
+          low_52_week: (enriched.low_52_week && enriched.low_52_week > 0 && livePrice > 0)
+            ? Math.min(enriched.low_52_week, ...(q?.fiftyTwoWeekLow > 0 ? [q.fiftyTwoWeekLow] : []), livePrice)
+            : (enriched.low_52_week ?? q?.fiftyTwoWeekLow ?? detail?.fiftyTwoWeekLow ?? null),
           revenue_growth: enriched.revenue_growth ?? fin?.revenueGrowth ?? null,
           earnings_growth: enriched.earnings_growth ?? fin?.earningsGrowth ?? null,
           profit_margins: enriched.profit_margins ?? fin?.profitMargins ?? null,

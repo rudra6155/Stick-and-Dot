@@ -130,7 +130,7 @@ export default function BacktestPage() {
   }
 
   return (
-    <div className="w-full font-sans animation-fade-in space-y-10">
+    <div className="w-full min-w-0 overflow-x-hidden font-sans animation-fade-in space-y-10">
       {/* Header */}
       <div>
         <p className="text-emerald-400 mt-2 font-mono text-sm uppercase tracking-widest">
@@ -141,7 +141,7 @@ export default function BacktestPage() {
       {/* Presets */}
         <div>
           <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-4">Quick backtests</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {PRESETS.map(p => (
               <button
                 key={p.label}
@@ -161,7 +161,7 @@ export default function BacktestPage() {
         {/* Custom Filters */}
         <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6">
           <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-6">Custom filters</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <label htmlFor="assetClass" className="text-xs text-zinc-400">Asset Class</label>
               <select
@@ -285,26 +285,26 @@ export default function BacktestPage() {
                   <p className="text-3xl font-black font-mono text-zinc-600">N/A</p>
                 )}
               </div>
-              <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 text-center">
+              <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 text-center min-w-0 overflow-hidden">
                 <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-2">Best Performer</p>
                 {best ? (
                   <>
-                    <p className="text-3xl font-black font-mono text-emerald-400">{best.ticker}</p>
+                    <p className="text-xl sm:text-2xl font-black font-mono text-emerald-400 truncate" title={best.ticker}>{best.ticker}</p>
                     <p className="text-sm text-zinc-500 mt-1">{best.return_pct >= 0 ? '+' : ''}{best.return_pct}%</p>
                   </>
                 ) : (
-                  <p className="text-3xl font-black font-mono text-zinc-600">N/A</p>
+                  <p className="text-2xl font-black font-mono text-zinc-600">N/A</p>
                 )}
               </div>
-              <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 text-center">
+              <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 text-center min-w-0 overflow-hidden">
                 <p className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-2">Worst Performer</p>
                 {worst ? (
                   <>
-                    <p className="text-3xl font-black font-mono text-rose-400">{worst.ticker}</p>
+                    <p className="text-xl sm:text-2xl font-black font-mono text-rose-400 truncate" title={worst.ticker}>{worst.ticker}</p>
                     <p className="text-sm text-zinc-500 mt-1">{worst.return_pct}%</p>
                   </>
                 ) : (
-                  <p className="text-3xl font-black font-mono text-zinc-600">N/A</p>
+                  <p className="text-2xl font-black font-mono text-zinc-600">N/A</p>
                 )}
               </div>
             </div>

@@ -127,9 +127,9 @@ function StartupIntelHub({ markets = [], searchQuery = "" }: { markets?: Predict
   return (
     <div className="mb-6 rounded-2xl border border-violet-500/10 bg-zinc-950/50 backdrop-blur-xl p-6 shadow-2xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
             <Building2 className="w-5 h-5 text-violet-400" />
           </div>
           <div>
@@ -138,12 +138,12 @@ function StartupIntelHub({ markets = [], searchQuery = "" }: { markets?: Predict
           </div>
         </div>
         {/* Region filter */}
-        <div className="flex gap-1.5 overflow-x-auto">
+        <div className="flex flex-wrap gap-1.5">
           {regions.map(r => (
             <button
               key={r}
               onClick={() => setRegionFilter(r)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
                 regionFilter === r
                   ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/25'
                   : 'bg-zinc-800/80 text-zinc-500 hover:text-zinc-300 border border-zinc-700/50'
@@ -177,14 +177,14 @@ function StartupIntelHub({ markets = [], searchQuery = "" }: { markets?: Predict
             >
               <div className="p-4">
                 {/* Top row */}
-                <div className="flex items-start justify-between mb-3">
-                  <div>
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="min-w-0">
                     <p className="font-black text-white text-sm group-hover:text-violet-300 transition-colors">{s.name}</p>
                     <p className="text-xs text-zinc-500 mt-0.5">{s.sector}</p>
                   </div>
-                  <div className="text-right flex items-center gap-2">
+                  <div className="text-right flex items-center gap-2 shrink-0">
                     <div>
-                      <p className="text-lg font-black font-mono text-violet-400">{formatValuation(s.valuation)}</p>
+                      <p className="text-lg font-black font-mono text-violet-400 whitespace-nowrap">{formatValuation(s.valuation)}</p>
                       <p className="text-[10px] text-zinc-600 font-mono">valuation</p>
                     </div>
                     <ChevronDown
@@ -218,9 +218,9 @@ function StartupIntelHub({ markets = [], searchQuery = "" }: { markets?: Predict
                 </div>
 
                 {/* Region + Direct Quick Bet Buttons */}
-                <div className="flex items-center justify-between pt-1">
-                  <div className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-zinc-600" />
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <div className="flex items-center gap-1 whitespace-nowrap">
+                    <MapPin className="w-3 h-3 text-zinc-600 shrink-0" />
                     <span className={`text-xs font-bold ${REGION_COLORS[s.region] || 'text-zinc-400'}`}>{s.region}</span>
                     <span className="text-zinc-700 text-xs ml-1">· Est. {s.founded}</span>
                   </div>
@@ -527,7 +527,7 @@ export default function PredictionsDashboard() {
       : "Novice";
 
   return (
-    <main className="space-y-6 animate-in fade-in duration-500 pb-20">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-20 min-w-0">
       {/* Simulation / Virtual Disclaimer Banner */}
       <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs sm:text-sm">
         <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
@@ -555,90 +555,92 @@ export default function PredictionsDashboard() {
       )}
 
       {/* Command Bar */}
-      <section className="sticky top-24 z-30 rounded-2xl border border-zinc-800/60 bg-black/85 backdrop-blur-xl">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <BettorProfileCard
-            name="You"
-            rank={rank}
-            winRate={winRate}
-            roi={roi}
-            totalBets={activeBets.length}
-            overallRating={overallRating}
-          />
+      <section className="rounded-2xl border border-zinc-800/60 bg-zinc-950/90 backdrop-blur-xl">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
+            <BettorProfileCard
+              name="You"
+              rank={rank}
+              winRate={winRate}
+              roi={roi}
+              totalBets={activeBets.length}
+              overallRating={overallRating}
+            />
 
-          <div className="hidden sm:block h-8 w-px bg-zinc-800 shrink-0" />
+            <div className="hidden sm:block h-8 w-px bg-zinc-800 shrink-0" />
 
-          <div className="flex-1 min-w-0 flex items-center gap-4 overflow-x-auto hide-scrollbar">
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2 shrink-0">
+                <CommandStat
+                  icon={<DollarSign className="w-3.5 h-3.5" />}
+                  label="Balance"
+                  value={`$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  valueClass={balance <= 0 ? "text-rose-400" : "text-white"}
+                />
+                <button
+                  onClick={() => topUpBalance(10000)}
+                  title="Claim +$10,000 in simulated paper trading funds"
+                  className="px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 whitespace-nowrap shrink-0"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>$10k Faucet</span>
+                </button>
+              </div>
               <CommandStat
-                icon={<DollarSign className="w-3.5 h-3.5" />}
-                label="Balance"
-                value={`$${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                valueClass={balance <= 0 ? "text-rose-400" : "text-white"}
+                icon={<Eye className="w-3.5 h-3.5" />}
+                label="Exposure"
+                value={`$${totalExposure.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                valueClass="text-amber-400"
+              />
+              <CommandStat
+                icon={<TrendingUp className="w-3.5 h-3.5" />}
+                label="Potential"
+                value={`+$${totalPotentialReturn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                valueClass="text-emerald-400"
               />
               <button
-                onClick={() => topUpBalance(10000)}
-                title="Claim +$10,000 in simulated paper trading funds"
-                className="px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95"
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById('active-positions');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  setPositionsExpanded(true);
+                }}
+                className="text-left hover:opacity-80 transition-opacity cursor-pointer"
+                title="Click to jump to your active bets"
               >
-                <Plus className="w-3 h-3" />
-                <span>$10k Faucet</span>
+                <CommandStat
+                  icon={<Target className="w-3.5 h-3.5" />}
+                  label="Active"
+                  value={activeBets.length.toString()}
+                  valueClass={activeBets.length > 0 ? "text-emerald-400 font-bold" : "text-white"}
+                />
               </button>
-            </div>
-            <CommandStat
-              icon={<Eye className="w-3.5 h-3.5" />}
-              label="Exposure"
-              value={`$${totalExposure.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              valueClass="text-amber-400"
-            />
-            <CommandStat
-              icon={<TrendingUp className="w-3.5 h-3.5" />}
-              label="Potential"
-              value={`+$${totalPotentialReturn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              valueClass="text-emerald-400"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                const el = document.getElementById('active-positions');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-                setPositionsExpanded(true);
-              }}
-              className="text-left hover:opacity-80 transition-opacity cursor-pointer"
-              title="Click to jump to your active bets"
-            >
-              <CommandStat
-                icon={<Target className="w-3.5 h-3.5" />}
-                label="Active"
-                value={activeBets.length.toString()}
-                valueClass={activeBets.length > 0 ? "text-emerald-400 font-bold" : "text-white"}
-              />
-            </button>
-            {liveCount > 0 && (
-              <span className="flex items-center gap-1.5 text-xs font-mono text-rose-400 shrink-0">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+              {liveCount > 0 && (
+                <span className="flex items-center gap-1.5 text-xs font-mono text-rose-400 shrink-0 whitespace-nowrap">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+                  </span>
+                  {liveCount} Live
                 </span>
-                {liveCount} Live
-              </span>
-            )}
+              )}
+            </div>
           </div>
 
           <button
             onClick={() => setIsModalOpen(true)}
             aria-label="Create Prediction"
-            className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black font-black uppercase tracking-wider text-[11px] hover:bg-zinc-200 transition-all active:scale-95"
+            className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-black font-black uppercase tracking-wider text-[11px] hover:bg-zinc-200 transition-all active:scale-95 whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
-            <span className="hidden md:inline">Create Prediction</span>
+            <span>Create Prediction</span>
           </button>
         </div>
       </section>
 
       {/* Tabs + Search + Sort */}
-      <section className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar pb-1 lg:pb-0">
+      <section className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-1.5">
           {CATEGORY_TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -841,7 +843,7 @@ export default function PredictionsDashboard() {
       />
 
       <BetSlipSidebar />
-    </main>
+    </div>
   );
 }
 

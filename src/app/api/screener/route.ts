@@ -103,10 +103,11 @@ export async function POST(req: NextRequest) {
   // Compute investment scores for each result
   const scored = uniqueData.map((r: any) => {
     const earn_score = Math.min(Math.max((r.revenue_growth || 0) * 100, 0), 40);
-    const lose_score = Math.max(40 - (r.beta || 1) * 20, 0);
-    const exit_score = Math.min((r.market_cap || 0) / 1e11, 10);
+    const absBeta = Math.abs(Number(r.beta ?? 1));
+    const lose_score = Math.min(40, Math.max(40 - absBeta * 20, 0));
+    const exit_score = Math.min(10, Math.max((r.market_cap || 0) / 1e11, 0));
     const value_score = r.pe_ratio && r.pe_ratio > 0 && r.pe_ratio < 30 ? 10 : 0;
-    const total_score = earn_score + lose_score + exit_score + value_score;
+    const total_score = Math.min(100, Math.max(0, Math.round(earn_score + lose_score + exit_score + value_score)));
     const growthDisplay = r.revenue_growth != null 
       ? r.revenue_growth > 5 
         ? '>500% rev growth' 

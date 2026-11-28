@@ -222,8 +222,8 @@ export default function AssetClassPage({
   };
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans pt-24 pb-20">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+    <div className="bg-black text-white font-sans pb-16">
+      <div className="space-y-6">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -278,9 +278,9 @@ export default function AssetClassPage({
         </div>
 
         {/* Filters Bar */}
-        <div className="relative z-50 flex flex-col sm:flex-row items-stretch sm:items-center gap-4 bg-zinc-950/50 p-4 border border-zinc-800/50 rounded-2xl backdrop-blur-xl">
+        <div className="relative z-40 flex flex-wrap items-center gap-3 bg-zinc-950/50 p-4 border border-zinc-800/50 rounded-2xl backdrop-blur-xl">
           {/* Search */}
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
             <input 
               type="text" 
@@ -293,7 +293,7 @@ export default function AssetClassPage({
           </div>
 
           {/* Controls */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
             {/* Metrics Dropdown */}
             <div className="relative shrink-0">
               <button 
@@ -400,8 +400,8 @@ export default function AssetClassPage({
             <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-md text-sm text-white">Try again</button>
           </div>
         ) : loading && assets.length === 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="bg-zinc-950/80 border border-zinc-800/80 rounded-3xl p-6 h-64 animate-pulse flex flex-col justify-between">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
@@ -425,9 +425,9 @@ export default function AssetClassPage({
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {assets.map((asset, index) => (
-              <Link key={asset.symbol} href={`/portfolio/explore/${encodeURIComponent(assetClass)}/${encodeURIComponent(asset.symbol)}`} className="block">
+              <Link key={asset.symbol} href={`/portfolio/explore/${encodeURIComponent(assetClass)}/${encodeURIComponent(asset.symbol)}`} className="block min-w-0">
                 <AssetCard asset={asset} selectedMetrics={selectedMetrics} index={index} liveData={liveDataMap[asset.symbol]} />
               </Link>
             ))}
